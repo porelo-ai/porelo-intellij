@@ -1,0 +1,31 @@
+# Builds the plugin on every change to it: compiled, its tests run, the shared checks, and the plugin verifier
+# against every IntelliJ IDEA it supports, which gradle.properties names.
+name: Build
+run-name: "${{ github.workflow }} · ${{ github.ref_name }}: ${{ github.event.head_commit.message || github.event.pull_request.title || github.workflow }}"
+
+on:
+  push:
+    branches: [main]
+    # A change to documents alone is checked on the host before its hand-over, and by the Shared rules check once a day.
+    paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: The pinned GraalVM
+        uses: ./.github/actions/pinned-jdk
+
+      - name: Build, tests and the shared checks
+        run: ./gradlew --no-daemon build
+
+      - name: The plugin verifier
+        run: ./gradlew --no-daemon verifyPlugin

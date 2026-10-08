@@ -1,0 +1,11 @@
+# Changes here wait for the owner's review.
+/.github/                 @michael-schnell
+/AGENTS.md                @michael-schnell
+/CLAUDE.md                @michael-schnell
+/build.gradle.kts         @michael-schnell
+/settings.gradle.kts      @michael-schnell
+/gradle.properties        @michael-schnell
+/gradle/                  @michael-schnell
+/gradlew                  @michael-schnell
+/gradlew.bat              @michael-schnell
+/mkdocs.yml               @michael-schnell

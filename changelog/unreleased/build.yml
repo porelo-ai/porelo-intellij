@@ -1,0 +1,2 @@
+title: Build the plugin with Gradle - compiled, tested, checked by the plugin verifier against IntelliJ IDEA 2026.1 and 2026.2, and the shared checks run on every push
+type: added

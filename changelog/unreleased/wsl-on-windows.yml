@@ -1,0 +1,2 @@
+title: On Windows the plugin reads the interface's machines from APPDATA and reaches a Sokar in a running WSL 2 distribution through wsl.exe and sokar daemon connect, with no ssh and no port opened, never starting a stopped distribution
+type: added

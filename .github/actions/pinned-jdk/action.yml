@@ -1,0 +1,36 @@
+# The GraalVM the CI snapshots pin, installed on a GitHub runner and checked against its digest - so a
+# job compiles with the same JDK a leg builds with, and never with whatever release a moving name ('25')
+# resolved to that day. The pin lives in sokar-buildtools, in the published sokar-machines, and is moved
+# by that repository's Machines workflow once a release is three days old.
+#
+# Bootstrapped from the runner's own Java 25 (JAVA_HOME_25_X64), which runs sokar-machines once through
+# Gradle to install the pinned one; nothing that JDK compiles is published. Needs the repository checked out.
+name: Pinned GraalVM
+description: Installs the GraalVM sokar-machines pins, checked against its digest, as JAVA_HOME for the rest of the job.
+runs:
+  using: composite
+  steps:
+    # Gradle's distribution, the IntelliJ IDEA the plugin builds against and the libraries, between runs.
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml', '*.gradle.kts', 'gradle.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
+
+    # gradlew runs gradle-wrapper.jar; it is checked against the checksums Gradle publishes before it first runs.
+    - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+    - name: Install the pinned GraalVM
+      shell: bash
+      run: |
+        set -eu
+        if [ -z "${JAVA_HOME_25_X64:-}" ]; then
+            echo "::error::this runner has no Java 25 to install the pinned GraalVM with (JAVA_HOME_25_X64)"
+            exit 1
+        fi
+        export JAVA_HOME="$JAVA_HOME_25_X64"
+        # sokar-machines from Central at gradle/libs.versions.toml's sokar-buildtools, run by that Java. The
+        # daemon is not kept: the next step's Gradle runs on the GraalVM this installs.
+        ./gradlew -q --no-daemon machines -Pmachines.args="jdk --github"

@@ -1,0 +1,31 @@
+# Every version the build names, in one place Dependabot reads. The test libraries, Error Prone and NullAway are
+# the ones sokar-parent pins for the Maven repositories.
+[versions]
+intellij-platform = "2.19.0"
+logchange = "1.19.16"
+plugin-verifier = "1.410"
+sokar-buildtools = "0.4.5-SNAPSHOT"
+junit = "5.14.2"
+sokar-wire = "0.4.2-SNAPSHOT"
+jspecify = "1.0.0"
+errorprone-plugin = "5.1.1"
+errorprone = "2.50.0"
+nullaway = "0.14.2"
+assertj = "3.27.7"
+
+[libraries]
+sokar-release = { module = "org.fuin.sokar:sokar-release", version.ref = "sokar-buildtools" }
+sokar-machines = { module = "org.fuin.sokar:sokar-machines", version.ref = "sokar-buildtools" }
+sokar-wire = { module = "org.fuin.sokar:sokar-wire", version.ref = "sokar-wire" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+errorprone = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-platform" }
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
+logchange = { id = "dev.logchange", version.ref = "logchange" }
