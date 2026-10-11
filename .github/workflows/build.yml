@@ -27,5 +27,17 @@ jobs:
       - name: Build, tests and the shared checks
         run: ./gradlew --no-daemon build
 
+      # The verifier fetches and unpacks a whole IntelliJ IDEA for every version gradle.properties names, which fills
+      # the hosted runner's disk; the toolchains the image carries and this job never uses make room for them.
+      - name: Room for the IDEs the verifier checks against
+        run: |
+          set -eu
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force > /dev/null
+          df -h /
+
       - name: The plugin verifier
-        run: ./gradlew --no-daemon verifyPlugin
+        run: |
+          ./gradlew --no-daemon verifyPlugin
+          df -h /
