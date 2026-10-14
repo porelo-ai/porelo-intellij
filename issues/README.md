@@ -14,6 +14,7 @@ is `IJ`.
 
 | # | size | blocked by | what it covers | open questions |
 |---|---|---|---|---|
+| <a id="ij06"></a>[IJ06](IJ06-The-Code-Read-Against-Its-Skills.md) | M | | All of the plugin's code, its tests and its build read against the five skills `AGENTS.md` names, in the versions recorded; each finding fixed with a test seen to fail first, or declined with the reason | — |
 | <a id="ij05"></a>[IJ05](IJ05-A-Waiting-Push-Opened-In-Its-Project.md) | M | | *Open in <project>*: a waiting push fetched as `refs/remotes/sokar/<push>` into the open project that holds its upstream, working tree untouched; that remote fetched there after approving | — |
 
 ## Estimated
