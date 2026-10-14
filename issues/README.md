@@ -14,7 +14,6 @@ is `IJ`.
 
 | # | size | blocked by | what it covers | open questions |
 |---|---|---|---|---|
-| <a id="ij07"></a>[IJ07](IJ07-Sokar-Is-Renamed-Porelo.md) | S | `sokar-project` [PJ41](https://github.com/sokar-ai/sokar-project/blob/main/issues/README.md#pj41) | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo by a script with a short list of exceptions, speaking to a Porelo daemon; a test of the documents refuses the old name | — |
 | <a id="ij06"></a>[IJ06](IJ06-The-Code-Read-Against-Its-Skills.md) | M | | All of the plugin's code, its tests and its build read against the five skills `AGENTS.md` names, in the versions recorded; each finding fixed with a test seen to fail first, or declined with the reason | — |
 | <a id="ij05"></a>[IJ05](IJ05-A-Waiting-Push-Opened-In-Its-Project.md) | M | | *Open in <project>*: a waiting push fetched as `refs/remotes/sokar/<push>` into the open project that holds its upstream, working tree untouched; that remote fetched there after approving | — |
 
@@ -22,5 +21,6 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
+| <a id="ij07"></a>[IJ07](IJ07-Sokar-Is-Renamed-Porelo.md) | S | `sokar-project` [PJ41](https://github.com/sokar-ai/sokar-project/blob/main/issues/README.md#pj41) | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo by a script with a short list of exceptions, speaking to a Porelo daemon; a test of the documents refuses the old name |
 | <a id="ij02"></a>[IJ02](IJ02-Live-Notices-And-A-Guide.md) | M | | Notices within seconds through `WatchProjects`; a `doc/` chapter for people |
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | XL | `sokar` [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166), [B171](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b171) | Comments on a push's lines written in the review tab and shown as threads with their origin; suggestions shown, never applied; outgoing forge comments and held incoming ones released one at a time |

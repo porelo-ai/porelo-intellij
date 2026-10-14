@@ -1,6 +1,6 @@
 # IJ07 — Sokar is renamed Porelo
 
-**Status:** Analyzed; blocked by `sokar-project` [PJ41](https://github.com/sokar-ai/sokar-project/blob/main/issues/README.md#pj41)'s
+**Status:** Estimated; blocked by `sokar-project` [PJ41](https://github.com/sokar-ai/sokar-project/blob/main/issues/README.md#pj41)'s
 preparation, `sokar-buildtools` and `sokar` renamed and published.
 **Size:** S - one module, 483 occurrences in 64 of 80 tracked files and 44 paths before this issue, all of them made by the script; no
 image draws the name, and every contract the plugin reads is renamed by another repository first, so the work is the
