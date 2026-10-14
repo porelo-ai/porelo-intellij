@@ -24,7 +24,7 @@ It is installed afresh: nothing the Sokar plugin kept in the IDE or on disk is r
   - from `sokar`: the varlink interface `org.fuin.sokar.Tasks1` (`Gate.INTERFACE`), the gate's refs `refs/sokar/base/`
     and `refs/sokar/incoming/`, the forwarded branch `sokar/<push>`, the daemon's socket
     `$XDG_RUNTIME_DIR/sokar/sokard.sock` (becomes `porelo/porelod.sock`), the command `sokar daemon connect` the WSL
-    bridge runs, the artifact `sokar-wire`;
+    bridge runs, the artifact `sokar-wire` - each the plain replacement there too, nothing kept under the old name;
   - from `sokar-frontend`: the machines file `~/.config/sokar/frontend.json` and `%APPDATA%\sokar` on Windows,
     which becomes `porelo` there by the same replacement, nothing kept under the old name;
   - from `sokar-buildtools`: `sokar-release` and `sokar-machines` with their main classes `org.fuin.sokar.release.Main`
@@ -67,8 +67,3 @@ links.
 ## Open questions
 
 - None.
-
-## To be checked
-
-- With `sokar`'s agent: that the gate's refs become `refs/porelo/base/` and `refs/porelo/incoming/`, the
-  forwarded branch `porelo/<push>`, and the command `porelo daemon connect`, with nothing kept under the old name.
