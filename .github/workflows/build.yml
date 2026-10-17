@@ -21,14 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: The pinned GraalVM
-        uses: ./.github/actions/pinned-jdk
-
-      - name: Build, tests and the shared checks
-        run: ./gradlew --no-daemon build
-
       # The verifier fetches and unpacks a whole IntelliJ IDEA for every version gradle.properties names, which fills
-      # the hosted runner's disk; the toolchains the image carries and this job never uses make room for them.
+      # the hosted runner's disk; the toolchains the image carries and this job never uses make room for them,
+      # first, before anything is restored or downloaded.
       - name: Room for the IDEs the verifier checks against
         run: |
           set -eu
@@ -36,6 +31,12 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           docker image prune --all --force > /dev/null
           df -h /
+
+      - name: The pinned GraalVM
+        uses: ./.github/actions/pinned-jdk
+
+      - name: Build, tests and the shared checks
+        run: ./gradlew --no-daemon build
 
       - name: The plugin verifier
         run: |
