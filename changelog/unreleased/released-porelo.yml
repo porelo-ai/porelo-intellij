@@ -1,0 +1,2 @@
+title: Build against the released porelo-wire 0.5.0 and Porelo's build tools 0.5.0 instead of their snapshots
+type: dependency_update
