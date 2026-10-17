@@ -1,8 +1,6 @@
 package org.fuin.porelo.intellij.cache;
 
-/**
- * The cache could not do what it was asked; the message says what git said.
- */
+/** The cache could not do what it was asked; the message says what git said. */
 public final class CacheException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
@@ -25,5 +23,4 @@ public final class CacheException extends RuntimeException {
     public CacheException(String message, Throwable cause) {
         super(message, cause);
     }
-
 }

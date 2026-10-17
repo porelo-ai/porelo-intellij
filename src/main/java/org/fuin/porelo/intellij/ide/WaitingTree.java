@@ -1,21 +1,5 @@
 package org.fuin.porelo.intellij.ide;
 
-import java.awt.BorderLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.stream.Collectors;
-
-import javax.swing.JComponent;
-import javax.swing.JPanel;
-import javax.swing.JTree;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreePath;
-import javax.swing.tree.TreeSelectionModel;
-
-import org.fuin.porelo.intellij.gate.Waiting;
-import org.jspecify.annotations.Nullable;
-
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.Disposable;
@@ -36,10 +20,24 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.tree.TreeUtil;
+import java.awt.BorderLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.stream.Collectors;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import javax.swing.JTree;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
+import org.fuin.porelo.intellij.gate.Waiting;
+import org.jspecify.annotations.Nullable;
 
 /**
- * The tool window's content: the projects and repositories where something waits, each with its pushes; a click
- * opens a push for review. The machines that did not answer are said below the list.
+ * The tool window's content: the projects and repositories where something waits, each with its
+ * pushes; a click opens a push for review. The machines that did not answer are said below the
+ * list.
  */
 final class WaitingTree extends SimpleToolWindowPanel {
 
@@ -68,16 +66,17 @@ final class WaitingTree extends SimpleToolWindowPanel {
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
         tree.getEmptyText().setText("Nothing waits for review");
         tree.setCellRenderer(new Renderer());
-        tree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent event) {
-                final TreePath path = tree.getPathForLocation(event.getX(), event.getY());
-                if (path != null && push(path) != null) {
-                    tree.setSelectionPath(path);
-                    openSelected();
-                }
-            }
-        });
+        tree.addMouseListener(
+                new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent event) {
+                        final TreePath path = tree.getPathForLocation(event.getX(), event.getY());
+                        if (path != null && push(path) != null) {
+                            tree.setSelectionPath(path);
+                            openSelected();
+                        }
+                    }
+                });
         state.setBorder(JBUI.Borders.empty(6, 8));
         final JPanel content = new JPanel(new BorderLayout());
         content.add(new JBScrollPane(tree), BorderLayout.CENTER);
@@ -85,43 +84,53 @@ final class WaitingTree extends SimpleToolWindowPanel {
         setContent(content);
         setToolbar(toolbar());
         final PoreloWatch watch = PoreloWatch.get();
-        watch.listen(snapshot -> ApplicationManager.getApplication().invokeLater(() -> show(snapshot)), parent);
+        watch.listen(
+                snapshot -> ApplicationManager.getApplication().invokeLater(() -> show(snapshot)),
+                parent);
         show(watch.last());
         watch.start();
     }
 
     private JComponent toolbar() {
         final DefaultActionGroup actions = new DefaultActionGroup();
-        actions.add(new DumbAwareAction("Read Again", "Ask every machine again what waits", AllIcons.Actions.Refresh) {
-            @Override
-            public void actionPerformed(AnActionEvent event) {
-                PoreloWatch.get().readNow();
-            }
+        actions.add(
+                new DumbAwareAction(
+                        "Read Again",
+                        "Ask every machine again what waits",
+                        AllIcons.Actions.Refresh) {
+                    @Override
+                    public void actionPerformed(AnActionEvent event) {
+                        PoreloWatch.get().readNow();
+                    }
 
-            @Override
-            public ActionUpdateThread getActionUpdateThread() {
-                return ActionUpdateThread.BGT;
-            }
-        });
-        actions.add(new DumbAwareToggleAction("Group by Machine", "Show what waits under the machine it waits on",
-                AllIcons.Actions.GroupBy) {
-            @Override
-            public boolean isSelected(AnActionEvent event) {
-                return byMachine();
-            }
+                    @Override
+                    public ActionUpdateThread getActionUpdateThread() {
+                        return ActionUpdateThread.BGT;
+                    }
+                });
+        actions.add(
+                new DumbAwareToggleAction(
+                        "Group by Machine",
+                        "Show what waits under the machine it waits on",
+                        AllIcons.Actions.GroupBy) {
+                    @Override
+                    public boolean isSelected(AnActionEvent event) {
+                        return byMachine();
+                    }
 
-            @Override
-            public void setSelected(AnActionEvent event, boolean selected) {
-                PropertiesComponent.getInstance().setValue(BY_MACHINE, selected);
-                show(shown);
-            }
+                    @Override
+                    public void setSelected(AnActionEvent event, boolean selected) {
+                        PropertiesComponent.getInstance().setValue(BY_MACHINE, selected);
+                        show(shown);
+                    }
 
-            @Override
-            public ActionUpdateThread getActionUpdateThread() {
-                return ActionUpdateThread.EDT;
-            }
-        });
-        final var bar = ActionManager.getInstance().createActionToolbar("PoreloWaiting", actions, true);
+                    @Override
+                    public ActionUpdateThread getActionUpdateThread() {
+                        return ActionUpdateThread.EDT;
+                    }
+                });
+        final var bar =
+                ActionManager.getInstance().createActionToolbar("PoreloWaiting", actions, true);
         bar.setTargetComponent(tree);
         return bar.getComponent();
     }
@@ -136,7 +145,9 @@ final class WaitingTree extends SimpleToolWindowPanel {
 
     private static Waiting.@Nullable Entry push(TreePath path) {
         return path.getLastPathComponent() instanceof DefaultMutableTreeNode node
-                && node.getUserObject() instanceof Waiting.Entry entry ? entry : null;
+                        && node.getUserObject() instanceof Waiting.Entry entry
+                ? entry
+                : null;
     }
 
     private static boolean byMachine() {
@@ -164,9 +175,16 @@ final class WaitingTree extends SimpleToolWindowPanel {
             said.append("The machines cannot be read: ").append(escape(snapshot.unreadable()));
         }
         if (!snapshot.waiting().silent().isEmpty()) {
-            said.append(said.length() > "<html>".length() ? "<br>" : "").append(snapshot.waiting().silent().stream()
-                    .map(silent -> "⚠ <b>" + escape(silent.machine()) + "</b> " + escape(silent.why()))
-                    .collect(Collectors.joining("<br>")));
+            said.append(said.length() > "<html>".length() ? "<br>" : "")
+                    .append(
+                            snapshot.waiting().silent().stream()
+                                    .map(
+                                            silent ->
+                                                    "⚠ <b>"
+                                                            + escape(silent.machine())
+                                                            + "</b> "
+                                                            + escape(silent.why()))
+                                    .collect(Collectors.joining("<br>")));
         }
         state.setText(said.append("</html>").toString());
         state.setVisible(said.length() > "<html></html>".length());
@@ -188,15 +206,25 @@ final class WaitingTree extends SimpleToolWindowPanel {
         private static final long serialVersionUID = 1L;
 
         @Override
-        public void customizeCellRenderer(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf,
-                int row, boolean hasFocus) {
+        public void customizeCellRenderer(
+                JTree tree,
+                Object value,
+                boolean selected,
+                boolean expanded,
+                boolean leaf,
+                int row,
+                boolean hasFocus) {
             if (!(value instanceof DefaultMutableTreeNode node)) {
                 return;
             }
             if (node.getUserObject() instanceof Waiting.MachineGroup machine) {
                 setIcon(AllIcons.Nodes.Folder);
                 append(machine.machine(), SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES);
-                append("  " + machine.groups().stream().mapToInt(group -> group.pushes().size()).sum(),
+                append(
+                        "  "
+                                + machine.groups().stream()
+                                        .mapToInt(group -> group.pushes().size())
+                                        .sum(),
                         SimpleTextAttributes.GRAYED_ATTRIBUTES);
             } else if (node.getUserObject() instanceof Waiting.Group group) {
                 setIcon(AllIcons.Nodes.Module);
@@ -209,13 +237,13 @@ final class WaitingTree extends SimpleToolWindowPanel {
                 append("  " + entry.push().waiting(), SimpleTextAttributes.GRAYED_ATTRIBUTES);
                 if (entry.farReaching() > 0) {
                     append("  ⚠ " + entry.farReaching(), SimpleTextAttributes.ERROR_ATTRIBUTES);
-                    setToolTipText(entry.farReaching() + " far-reaching file(s): build, CI, hooks or IDE settings");
+                    setToolTipText(
+                            entry.farReaching()
+                                    + " far-reaching file(s): build, CI, hooks or IDE settings");
                 } else {
                     setToolTipText(null);
                 }
             }
         }
-
     }
-
 }

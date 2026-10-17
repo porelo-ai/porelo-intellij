@@ -4,7 +4,7 @@
 intellij-platform = "2.19.0"
 logchange = "1.19.16"
 plugin-verifier = "1.410"
-porelo-buildtools = "0.5.0"
+porelo-buildtools = "0.5.1-SNAPSHOT"
 junit = "5.14.2"
 porelo-wire = "0.5.0"
 jspecify = "1.0.0"
@@ -12,6 +12,9 @@ errorprone-plugin = "5.1.1"
 errorprone = "2.50.0"
 nullaway = "0.14.2"
 assertj = "3.27.7"
+spotless = "8.10.4"
+# 1.37.0 is not taken: run through Spotless, it fails on every file, while 1.36.0 formats; porelo-parent pins the same.
+google-java-format = "1.36.0"
 
 [libraries]
 porelo-release = { module = "org.fuin.porelo:porelo-release", version.ref = "porelo-buildtools" }
@@ -29,3 +32,4 @@ assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-platform" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 logchange = { id = "dev.logchange", version.ref = "logchange" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

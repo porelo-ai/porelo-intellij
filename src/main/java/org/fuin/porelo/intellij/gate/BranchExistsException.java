@@ -4,8 +4,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Approving was refused because the branch already holds a commit the reviewed work did not grow from: nothing was
- * forwarded, and the existing branch is never forced.
+ * Approving was refused because the branch already holds a commit the reviewed work did not grow
+ * from: nothing was forwarded, and the existing branch is never forced.
  */
 public final class BranchExistsException extends GateException {
 
@@ -48,8 +48,8 @@ public final class BranchExistsException extends GateException {
     }
 
     /**
-     * Returns the name to offer instead: {@code <branch>-2}, or the next number where the branch already ends in one,
-     * so a second refusal offers {@code -3}.
+     * Returns the name to offer instead: {@code <branch>-2}, or the next number where the branch
+     * already ends in one, so a second refusal offers {@code -3}.
      *
      * @return The name.
      */
@@ -60,5 +60,4 @@ public final class BranchExistsException extends GateException {
         }
         return branch + "-2";
     }
-
 }

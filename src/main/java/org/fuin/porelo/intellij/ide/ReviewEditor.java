@@ -1,19 +1,5 @@
 package org.fuin.porelo.intellij.ide;
 
-import java.awt.BorderLayout;
-import java.beans.PropertyChangeListener;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.swing.JComponent;
-import javax.swing.JPanel;
-
-import org.fuin.porelo.intellij.gate.Waiting;
-import org.jspecify.annotations.Nullable;
-
 import com.intellij.diff.DiffContentFactory;
 import com.intellij.diff.DiffManager;
 import com.intellij.diff.DiffRequestPanel;
@@ -46,10 +32,22 @@ import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.JBUI;
 import com.intellij.vcsUtil.VcsUtil;
+import java.awt.BorderLayout;
+import java.beans.PropertyChangeListener;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import org.fuin.porelo.intellij.gate.Waiting;
+import org.jspecify.annotations.Nullable;
 
 /**
- * A review as IntelliJ shows a comparison with a branch: the tree of the changed files on the left, the far-reaching
- * ones marked; the diff of the selected file on the right; Approve, Reject and what the push is, above.
+ * A review as IntelliJ shows a comparison with a branch: the tree of the changed files on the left,
+ * the far-reaching ones marked; the diff of the selected file on the right; Approve, Reject and
+ * what the push is, above.
  */
 final class ReviewEditor extends UserDataHolderBase implements FileEditor {
 
@@ -93,34 +91,66 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         split.setSecondComponent(diff.getComponent());
         component.add(header(entry, read), BorderLayout.NORTH);
         component.add(split, BorderLayout.CENTER);
-        // The tree is built in the background; the first file - the most far-reaching - is selected once it is.
+        // The tree is built in the background; the first file - the most far-reaching - is selected
+        // once it is.
         final Change selectFirst = first;
         if (selectFirst != null) {
-            tree.getViewer().invokeAfterRefresh(() -> tree.getViewer().setSelectedChanges(List.of(selectFirst)));
+            tree.getViewer()
+                    .invokeAfterRefresh(
+                            () -> tree.getViewer().setSelectedChanges(List.of(selectFirst)));
         }
         showSelected();
     }
 
     private JComponent header(Waiting.Entry entry, ReviewTab.Read read) {
         final DefaultActionGroup actions = new DefaultActionGroup();
-        actions.add(new Act("Approve", "Forward exactly " + shortId(entry.push().commit()) + ", the commit shown",
-                AllIcons.Actions.Checked, () -> Decisions.approve(project, entry, this::close)));
-        actions.add(new Act("Reject", "Drop this push and tell its task why", AllIcons.Actions.Cancel,
-                () -> Decisions.reject(project, entry, this::close)));
-        actions.add(new Act("Read Again", "Read this push again from its machine", AllIcons.Actions.Refresh, () -> {
-            closeEvery(project, entry);
-            ReviewTab.open(project, entry);
-        }));
-        final var bar = ActionManager.getInstance().createActionToolbar("PoreloReview", actions, true);
+        actions.add(
+                new Act(
+                        "Approve",
+                        "Forward exactly " + shortId(entry.push().commit()) + ", the commit shown",
+                        AllIcons.Actions.Checked,
+                        () -> Decisions.approve(project, entry, this::close)));
+        actions.add(
+                new Act(
+                        "Reject",
+                        "Drop this push and tell its task why",
+                        AllIcons.Actions.Cancel,
+                        () -> Decisions.reject(project, entry, this::close)));
+        actions.add(
+                new Act(
+                        "Read Again",
+                        "Read this push again from its machine",
+                        AllIcons.Actions.Refresh,
+                        () -> {
+                            closeEvery(project, entry);
+                            ReviewTab.open(project, entry);
+                        }));
+        final var bar =
+                ActionManager.getInstance().createActionToolbar("PoreloReview", actions, true);
         bar.setTargetComponent(component);
         final String asked = read.review().asked();
-        final JBLabel what = new JBLabel("<html><b>" + escape(entry.push().subject()) + "</b> &nbsp; "
-                + escape(entry.push().name()) + " " + shortId(entry.push().commit()) + " against "
-                + escape(read.changes().branch()) + " " + shortId(read.changes().base()) + " &nbsp;·&nbsp; "
-                + escape(entry.project() + " / " + entry.repository()) + " on " + escape(entry.machine().name())
-                + ", waiting " + escape(entry.push().waiting())
-                + (asked == null ? "<br>Its task is gone from the machine."
-                        : asked.isEmpty() ? "" : "<br>Asked: " + escape(asked)) + "</html>");
+        final JBLabel what =
+                new JBLabel(
+                        "<html><b>"
+                                + escape(entry.push().subject())
+                                + "</b> &nbsp; "
+                                + escape(entry.push().name())
+                                + " "
+                                + shortId(entry.push().commit())
+                                + " against "
+                                + escape(read.changes().branch())
+                                + " "
+                                + shortId(read.changes().base())
+                                + " &nbsp;·&nbsp; "
+                                + escape(entry.project() + " / " + entry.repository())
+                                + " on "
+                                + escape(entry.machine().name())
+                                + ", waiting "
+                                + escape(entry.push().waiting())
+                                + (asked == null
+                                        ? "<br>Its task is gone from the machine."
+                                        : asked.isEmpty() ? "" : "<br>Asked: " + escape(asked))
+                                + "</html>");
         what.setBorder(JBUI.Borders.empty(4, 8));
         final JPanel header = new JPanel(new BorderLayout());
         header.add(bar.getComponent(), BorderLayout.WEST);
@@ -138,9 +168,13 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         }
         final String path = side.change().path();
         final ReviewTab.Read read = file.read();
-        diff.setRequest(new SimpleDiffRequest(path, content(side.base(), path), content(side.pushed(), path),
-                read.changes().branch() + " " + shortId(read.changes().base()),
-                file.entry().push().name() + " " + shortId(read.changes().commit())));
+        diff.setRequest(
+                new SimpleDiffRequest(
+                        path,
+                        content(side.base(), path),
+                        content(side.pushed(), path),
+                        read.changes().branch() + " " + shortId(read.changes().base()),
+                        file.entry().push().name() + " " + shortId(read.changes().commit())));
     }
 
     private DiffContent content(byte @Nullable [] bytes, String path) {
@@ -149,18 +183,27 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         }
         final String name = path.substring(path.lastIndexOf('/') + 1);
         try {
-            return DiffContentFactory.getInstance().createFromBytes(project, bytes,
-                    FileTypeManager.getInstance().getFileTypeByFileName(name), name);
+            return DiffContentFactory.getInstance()
+                    .createFromBytes(
+                            project,
+                            bytes,
+                            FileTypeManager.getInstance().getFileTypeByFileName(name),
+                            name);
         } catch (java.io.IOException ex) {
-            return DiffContentFactory.getInstance().create("Cannot show " + path + ": " + ex.getMessage());
+            return DiffContentFactory.getInstance()
+                    .create("Cannot show " + path + ": " + ex.getMessage());
         }
     }
 
     private static Change change(Waiting.Entry entry, ReviewTab.Read read, ReviewTab.Side side) {
         // Under the repository's name, so the tree's root says whose files these are.
-        final FilePath path = VcsUtil.getFilePath("/" + entry.repository() + "/" + side.change().path(), false);
-        return new Change(side.base() == null ? null : new Revision(path, side.base(), read.changes().base()),
-                side.pushed() == null ? null : new Revision(path, side.pushed(), read.changes().commit()));
+        final FilePath path =
+                VcsUtil.getFilePath("/" + entry.repository() + "/" + side.change().path(), false);
+        return new Change(
+                side.base() == null ? null : new Revision(path, side.base(), read.changes().base()),
+                side.pushed() == null
+                        ? null
+                        : new Revision(path, side.pushed(), read.changes().commit()));
     }
 
     private void close() {
@@ -169,8 +212,8 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
     }
 
     /**
-     * Closes every review of a push that is open in a project's window: the one a decision was taken in, and any
-     * other of the same push, which shows something that waits no more.
+     * Closes every review of a push that is open in a project's window: the one a decision was
+     * taken in, and any other of the same push, which shows something that waits no more.
      *
      * @param project The project.
      * @param entry The push.
@@ -178,11 +221,24 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
     static void closeEvery(Project project, Waiting.Entry entry) {
         final FileEditorManager editors = FileEditorManager.getInstance(project);
         final List<VirtualFile> open = List.of(editors.getOpenFiles());
-        final List<VirtualFile> reviews = open.stream().filter(candidate -> candidate instanceof ReviewFile review
-                && review.entry().machine().name().equals(entry.machine().name())
-                && review.entry().project().equals(entry.project())
-                && review.entry().repository().equals(entry.repository())
-                && review.entry().push().name().equals(entry.push().name())).toList();
+        final List<VirtualFile> reviews =
+                open.stream()
+                        .filter(
+                                candidate ->
+                                        candidate instanceof ReviewFile review
+                                                && review.entry()
+                                                        .machine()
+                                                        .name()
+                                                        .equals(entry.machine().name())
+                                                && review.entry().project().equals(entry.project())
+                                                && review.entry()
+                                                        .repository()
+                                                        .equals(entry.repository())
+                                                && review.entry()
+                                                        .push()
+                                                        .name()
+                                                        .equals(entry.push().name()))
+                        .toList();
         if (reviews.isEmpty()) {
             LOG.warn("No open review of " + entry.push().name() + " to close among " + open);
         }
@@ -255,19 +311,21 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         public void decorate(Change change, SimpleColoredComponent component, boolean flatten) {
             final ReviewTab.Side side = sides.get(change);
             if (side != null && side.farReaching() && side.ranked() != null) {
-                component.append("  ⚠ " + side.ranked().reason(), SimpleTextAttributes.ERROR_ATTRIBUTES);
+                component.append(
+                        "  ⚠ " + side.ranked().reason(), SimpleTextAttributes.ERROR_ATTRIBUTES);
             }
         }
 
         @Override
-        public void preDecorate(Change change, ChangesBrowserNodeRenderer renderer, boolean flatten) {
+        public void preDecorate(
+                Change change, ChangesBrowserNodeRenderer renderer, boolean flatten) {
             // Only the text after the name is the plugin's.
         }
-
     }
 
     /** One side of a file, from the cache. */
-    private record Revision(FilePath path, byte[] bytes, String commit) implements ByteBackedContentRevision {
+    private record Revision(FilePath path, byte[] bytes, String commit)
+            implements ByteBackedContentRevision {
 
         @Override
         public byte[] getContentAsBytes() {
@@ -288,7 +346,6 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         public VcsRevisionNumber getRevisionNumber() {
             return new Commit(commit);
         }
-
     }
 
     /** A commit id as the change tree shows it. */
@@ -303,7 +360,6 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         public int compareTo(VcsRevisionNumber other) {
             return id.compareTo(other.asString());
         }
-
     }
 
     /** One toolbar button of the review. */
@@ -325,7 +381,5 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         public ActionUpdateThread getActionUpdateThread() {
             return ActionUpdateThread.BGT;
         }
-
     }
-
 }

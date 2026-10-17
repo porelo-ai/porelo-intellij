@@ -7,25 +7,28 @@ run-name: "${{ github.workflow }} · ${{ github.ref_name }}: ${{ github.event.he
 # Once a day, not on a push: every hand-over runs the same checks locally on its exact commit first, and a run per
 # push spent build minutes on what was already known. 03:17 UTC lies outside the hours the repositories are worked in.
 on:
-  schedule:
-    - cron: '17 3 * * *'
-  pull_request:
-  workflow_dispatch:
+    schedule:
+        - cron: '17 3 * * *'
+    pull_request:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    check:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              # No step pushes with git, so the job's token is not kept in .git/config for the build's code to read.
+              with:
+                  persist-credentials: false
 
-      - name: The pinned GraalVM
-        uses: ./.github/actions/pinned-jdk
+            - name: The pinned GraalVM
+              uses: ./.github/actions/pinned-jdk
 
-      # check-actions, check-shared, check-citations and check-doc-site with porelo-release from Central, the
-      # changelog's lint, and the tests tagged documents.
-      - name: The documents
-        run: ./gradlew --no-daemon documents
+            # check-actions, check-shared, check-citations and check-doc-site with porelo-release from Central, the
+            # changelog's lint, and the tests tagged documents.
+            - name: The documents
+              run: ./gradlew --no-daemon documents

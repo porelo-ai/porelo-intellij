@@ -18,9 +18,10 @@ import java.util.Set;
 
 /**
  * An ssh forward of a machine's daemon socket to a socket of the plugin's own.
- * <p>
- * Its own and never the interface's, so neither ends or refuses the other's. ssh runs without a prompt, with the
- * person's own configuration and agent: an unknown host key or a key it cannot use fails, and ssh's words say why.
+ *
+ * <p>Its own and never the interface's, so neither ends or refuses the other's. ssh runs without a
+ * prompt, with the person's own configuration and agent: an unknown host key or a key it cannot use
+ * fails, and ssh's words say why.
  */
 public final class Tunnel implements AutoCloseable {
 
@@ -28,7 +29,8 @@ public final class Tunnel implements AutoCloseable {
 
     private static final int SAID_AT_MOST = 8192;
 
-    private static final Set<PosixFilePermission> OWNER_ONLY = PosixFilePermissions.fromString("rw-------");
+    private static final Set<PosixFilePermission> OWNER_ONLY =
+            PosixFilePermissions.fromString("rw-------");
 
     private final Machine machine;
 
@@ -45,7 +47,8 @@ public final class Tunnel implements AutoCloseable {
         this.socket = socket;
         this.ssh = ssh;
         // Read as it comes: a pipe nobody empties stops ssh once it is full.
-        this.listener = Thread.ofVirtual().name("porelo-tunnel-" + machine.name()).start(this::listen);
+        this.listener =
+                Thread.ofVirtual().name("porelo-tunnel-" + machine.name()).start(this::listen);
     }
 
     /**
@@ -53,12 +56,12 @@ public final class Tunnel implements AutoCloseable {
      *
      * @param runtimeDirectory The person's runtime directory.
      * @param machine The machine.
-     * @return {@code <runtime>/porelo-intellij-<name>.sock}, the name with every character but letters, digits,
-     *     {@code _} and {@code -} made {@code -}, as the interface names its own.
+     * @return {@code <runtime>/porelo-intellij-<name>.sock}, the name with every character but
+     *     letters, digits, {@code _} and {@code -} made {@code -}, as the interface names its own.
      */
     public static Path socketFor(Path runtimeDirectory, Machine machine) {
-        return runtimeDirectory.resolve("porelo-intellij-" + machine.name().replaceAll("[^A-Za-z0-9_-]", "-")
-                + ".sock");
+        return runtimeDirectory.resolve(
+                "porelo-intellij-" + machine.name().replaceAll("[^A-Za-z0-9_-]", "-") + ".sock");
     }
 
     /**
@@ -68,33 +71,58 @@ public final class Tunnel implements AutoCloseable {
      * @param runtimeDirectory The person's runtime directory, where the plugin's end goes.
      * @param ssh The ssh command, {@code ssh} unless a test stands in for it.
      * @return The tunnel, up.
-     * @throws MachinesException If something already answers at the plugin's end, or ssh ends or does not forward
-     *     in time - with ssh's own words.
+     * @throws MachinesException If something already answers at the plugin's end, or ssh ends or
+     *     does not forward in time - with ssh's own words.
      */
     public static Tunnel raise(Machine machine, Path runtimeDirectory, List<String> ssh) {
         return raise(machine, runtimeDirectory, ssh, READY);
     }
 
     static Tunnel raise(Machine machine, Path runtimeDirectory, List<String> ssh, Duration ready) {
-        final String host = Objects.requireNonNull(machine.host(), "a machine without a tunnel has no host");
-        final String remote = Objects.requireNonNull(machine.remoteSocket(), "a machine without a tunnel");
+        final String host =
+                Objects.requireNonNull(machine.host(), "a machine without a tunnel has no host");
+        final String remote =
+                Objects.requireNonNull(machine.remoteSocket(), "a machine without a tunnel");
         // ssh would read a host that starts with '-' as one of its own options.
         if (host.startsWith("-")) {
-            throw new MachinesException("Machine '" + machine.name() + "' names the host '" + host
-                    + "', which ssh would read as an option");
+            throw new MachinesException(
+                    "Machine '"
+                            + machine.name()
+                            + "' names the host '"
+                            + host
+                            + "', which ssh would read as an option");
         }
         final Path socket = socketFor(runtimeDirectory, machine);
         clear(machine, socket);
         final List<String> command = new ArrayList<>(ssh);
-        command.addAll(List.of("-N", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
-                "-o", "ServerAliveInterval=15", "-o", "ControlMaster=no", "-o", "ControlPath=none",
-                "-L", socket + ":" + remote, "--", host));
+        command.addAll(
+                List.of(
+                        "-N",
+                        "-o",
+                        "BatchMode=yes",
+                        "-o",
+                        "ExitOnForwardFailure=yes",
+                        "-o",
+                        "ServerAliveInterval=15",
+                        "-o",
+                        "ControlMaster=no",
+                        "-o",
+                        "ControlPath=none",
+                        "-L",
+                        socket + ":" + remote,
+                        "--",
+                        host));
         final Process process;
         try {
-            process = new ProcessBuilder(command).redirectInput(ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
-                    .redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+            process =
+                    new ProcessBuilder(command)
+                            .redirectInput(
+                                    ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
+                            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                            .start();
         } catch (IOException ex) {
-            throw new MachinesException("Cannot start ssh for '" + machine.name() + "': " + ex.getMessage(), ex);
+            throw new MachinesException(
+                    "Cannot start ssh for '" + machine.name() + "': " + ex.getMessage(), ex);
         }
         final Tunnel tunnel = new Tunnel(machine, socket, process);
         try {
@@ -145,13 +173,18 @@ public final class Tunnel implements AutoCloseable {
             return;
         }
         if (answers(socket)) {
-            throw new MachinesException("Something already answers at " + socket + ", where the tunnel to '"
-                    + machine.name() + "' goes; it is left alone. End it, then try again.");
+            throw new MachinesException(
+                    "Something already answers at "
+                            + socket
+                            + ", where the tunnel to '"
+                            + machine.name()
+                            + "' goes; it is left alone. End it, then try again.");
         }
         try {
             Files.delete(socket);
         } catch (IOException ex) {
-            throw new MachinesException("Cannot remove the stale " + socket + ": " + ex.getMessage(), ex);
+            throw new MachinesException(
+                    "Cannot remove the stale " + socket + ": " + ex.getMessage(), ex);
         }
     }
 
@@ -159,8 +192,13 @@ public final class Tunnel implements AutoCloseable {
         final long deadline = System.nanoTime() + ready.toNanos();
         while (System.nanoTime() < deadline) {
             if (!ssh.isAlive()) {
-                throw new MachinesException("ssh to '" + machine.name() + "' ended with exit code " + ssh.exitValue()
-                        + ": " + said());
+                throw new MachinesException(
+                        "ssh to '"
+                                + machine.name()
+                                + "' ended with exit code "
+                                + ssh.exitValue()
+                                + ": "
+                                + said());
             }
             if (Files.exists(socket) && answers(socket)) {
                 ownerOnly();
@@ -168,8 +206,14 @@ public final class Tunnel implements AutoCloseable {
             }
             pause();
         }
-        throw new MachinesException("ssh to '" + machine.name() + "' did not forward " + machine.remoteSocket()
-                + " within " + ready.toMillis() + " ms");
+        throw new MachinesException(
+                "ssh to '"
+                        + machine.name()
+                        + "' did not forward "
+                        + machine.remoteSocket()
+                        + " within "
+                        + ready.toMillis()
+                        + " ms");
     }
 
     private void ownerOnly() {
@@ -179,7 +223,8 @@ public final class Tunnel implements AutoCloseable {
                 throw new MachinesException(socket + " is not readable by its owner alone");
             }
         } catch (IOException ex) {
-            throw new MachinesException("Cannot make " + socket + " its owner's alone: " + ex.getMessage(), ex);
+            throw new MachinesException(
+                    "Cannot make " + socket + " its owner's alone: " + ex.getMessage(), ex);
         }
     }
 
@@ -204,7 +249,8 @@ public final class Tunnel implements AutoCloseable {
 
     private String said() {
         try {
-            // ssh has ended, so its pipe ends too; what it said last is read once the listener sees that.
+            // ssh has ended, so its pipe ends too; what it said last is read once the listener sees
+            // that.
             listener.join(READY);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -232,5 +278,4 @@ public final class Tunnel implements AutoCloseable {
             throw new MachinesException("Interrupted while waiting for the tunnel", ex);
         }
     }
-
 }

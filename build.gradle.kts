@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.intellij.platform)
     alias(libs.plugins.logchange)
     alias(libs.plugins.errorprone)
+    alias(libs.plugins.spotless)
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -15,9 +16,10 @@ version = providers.gradleProperty("pluginVersion").get()
 repositories {
     mavenCentral()
     // Porelo's own artifacts are built against while they are developed; this serves those snapshots and nothing else.
+    // -PporeloSnapshots names another such repository, as a handover's local Maven repository is before it is published.
     exclusiveContent {
         forRepository {
-            maven("https://central.sonatype.com/repository/maven-snapshots/") {
+            maven(providers.gradleProperty("poreloSnapshots").orElse("https://central.sonatype.com/repository/maven-snapshots/")) {
                 mavenContent { snapshotsOnly() }
             }
         }
@@ -71,6 +73,13 @@ intellijPlatform {
                 create(IntelliJPlatformType.IntellijIdea, it.trim())
             }
         }
+    }
+}
+
+// Google Java Style in its AOSP variant, as every Porelo repository's build checks it; `check` runs spotlessCheck.
+spotless {
+    java {
+        googleJavaFormat(libs.versions.google.java.format.get()).aosp()
     }
 }
 
@@ -128,8 +137,8 @@ fun poreloRelease(name: String, what: String, vararg arguments: String) = tasks.
 val checkActions = poreloRelease("checkActions", "Every workflow step pinned by commit.",
     "check-actions", ".github")
 val checkShared = poreloRelease("checkShared",
-    "The shared block of AGENTS.md carries the hash of its text, so a copy edited on its own fails.",
-    "check-shared", "AGENTS.md")
+    "The shared block of AGENTS.md carries the hash of its text, and .editorconfig is the shared one, so a copy edited on its own fails.",
+    "check-shared", "AGENTS.md", ".editorconfig")
 val checkCitations = poreloRelease("checkCitations",
     "No file cites an issue in a way that goes stale once the issue is finished and deleted.",
     "check-citations", ".")

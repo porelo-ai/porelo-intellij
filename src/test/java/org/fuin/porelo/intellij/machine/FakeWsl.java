@@ -13,28 +13,33 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Stands in for {@code wsl.exe} in a separate process. {@code -l -v} prints the distributions of a file, in UTF-16LE
- * as {@code wsl.exe} does; {@code -d <distribution> --exec porelo daemon connect} joins standard input and output to a
- * daemon's socket as that command does, or says what {@code wsl.exe} says of a distribution it does not have.
+ * Stands in for {@code wsl.exe} in a separate process. {@code -l -v} prints the distributions of a
+ * file, in UTF-16LE as {@code wsl.exe} does; {@code -d <distribution> --exec porelo daemon connect}
+ * joins standard input and output to a daemon's socket as that command does, or says what {@code
+ * wsl.exe} says of a distribution it does not have.
  */
 public final class FakeWsl {
 
-    private FakeWsl() {
-    }
+    private FakeWsl() {}
 
     /**
      * Runs it.
      *
-     * @param args {@code <file the distributions are read from> <the daemon's socket> <file the arguments go to>}
-     *     followed by the arguments {@code wsl.exe} is given.
+     * @param args {@code <file the distributions are read from> <the daemon's socket> <file the
+     *     arguments go to>} followed by the arguments {@code wsl.exe} is given.
      * @throws IOException If a file or the socket cannot be used.
      */
     public static void main(String[] args) throws IOException {
         final List<String> given = List.of(args).subList(3, args.length);
-        Files.write(Path.of(args[2]), given, StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.CREATE,
+        Files.write(
+                Path.of(args[2]),
+                given,
+                StandardCharsets.UTF_8,
+                java.nio.file.StandardOpenOption.CREATE,
                 java.nio.file.StandardOpenOption.APPEND);
         if (given.equals(List.of("-l", "-v"))) {
-            final String table = "  NAME      STATE           VERSION\r\n" + Files.readString(Path.of(args[0]));
+            final String table =
+                    "  NAME      STATE           VERSION\r\n" + Files.readString(Path.of(args[0]));
             System.out.write(table.getBytes(StandardCharsets.UTF_16LE));
             System.out.flush();
             return;
@@ -48,11 +53,14 @@ public final class FakeWsl {
             try {
                 daemon.connect(UnixDomainSocketAddress.of(args[1]));
             } catch (IOException ex) {
-                // As 'porelo daemon connect' says it: on standard error, never on the stream a client decodes.
+                // As 'porelo daemon connect' says it: on standard error, never on the stream a
+                // client decodes.
                 System.err.println("porelo: no daemon answers at " + args[1]);
                 System.exit(69);
             }
-            final Thread in = Thread.ofPlatform().start(() -> copy(System.in, Channels.newOutputStream(daemon)));
+            final Thread in =
+                    Thread.ofPlatform()
+                            .start(() -> copy(System.in, Channels.newOutputStream(daemon)));
             copy(Channels.newInputStream(daemon), System.out);
             in.interrupt();
         }
@@ -70,5 +78,4 @@ public final class FakeWsl {
             // One side ended; the other ends with it.
         }
     }
-
 }

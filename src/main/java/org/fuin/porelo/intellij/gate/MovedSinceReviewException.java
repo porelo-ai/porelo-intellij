@@ -1,8 +1,8 @@
 package org.fuin.porelo.intellij.gate;
 
 /**
- * Approving was refused because the push moved after it was shown: nothing was forwarded, and what it holds now
- * has to be read before it can be approved.
+ * Approving was refused because the push moved after it was shown: nothing was forwarded, and what
+ * it holds now has to be read before it can be approved.
  */
 public final class MovedSinceReviewException extends GateException {
 
@@ -20,7 +20,13 @@ public final class MovedSinceReviewException extends GateException {
      * @param now The commit the push holds now.
      */
     public MovedSinceReviewException(String name, String reviewed, String now) {
-        super(name + " moved from " + reviewed + " to " + now + " after it was shown; nothing was forwarded");
+        super(
+                name
+                        + " moved from "
+                        + reviewed
+                        + " to "
+                        + now
+                        + " after it was shown; nothing was forwarded");
         this.reviewed = reviewed;
         this.now = now;
     }
@@ -42,5 +48,4 @@ public final class MovedSinceReviewException extends GateException {
     public String now() {
         return now;
     }
-
 }

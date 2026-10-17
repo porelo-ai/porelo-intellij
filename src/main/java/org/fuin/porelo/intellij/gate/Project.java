@@ -6,8 +6,8 @@ import java.util.List;
  * A project a machine knows, with the repositories its gate is asked about.
  *
  * @param name The project's name, which every gate call takes.
- * @param repositories Its repositories, its own first; empty when the daemon could not read the project's file,
- *     which is not a project with one repository.
+ * @param repositories Its repositories, its own first; empty when the daemon could not read the
+ *     project's file, which is not a project with one repository.
  * @param pending How many pushes wait in all of them.
  */
 public record Project(String name, List<Repository> repositories, int pending) {
@@ -31,7 +31,5 @@ public record Project(String name, List<Repository> repositories, int pending) {
      * @param upstream Where approved work goes, or {@code ""} when it stays on the machine.
      * @param pending How many pushes wait in its mirror.
      */
-    public record Repository(String name, boolean own, String upstream, int pending) {
-    }
-
+    public record Repository(String name, boolean own, String upstream, int pending) {}
 }

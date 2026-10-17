@@ -1,7 +1,6 @@
 package org.fuin.porelo.intellij.gate;
 
 import java.util.List;
-
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -10,7 +9,8 @@ import org.jspecify.annotations.Nullable;
  * @param diff The unified diff, the far-reaching files first.
  * @param log The commit log over the same range.
  * @param files What it changes, in the order to read them.
- * @param asked What the task that pushed it was asked, {@code ""} when nothing, {@code null} when the task is gone.
+ * @param asked What the task that pushed it was asked, {@code ""} when nothing, {@code null} when
+ *     the task is gone.
  */
 public record Review(String diff, String log, List<File> files, @Nullable String asked) {
 
@@ -36,18 +36,18 @@ public record Review(String diff, String log, List<File> files, @Nullable String
      * @param rank {@code DANGEROUS}, {@code ORDINARY}, {@code GENERATED} or {@code REFORMATTING}.
      * @param reason Why it has that rank, {@code ""} for an ordinary file.
      */
-    public record File(String path, String status, int added, int removed, String rank, String reason) {
+    public record File(
+            String path, String status, int added, int removed, String rank, String reason) {
 
         /**
-         * Tells whether the file is of a kind whose change reaches far: a build or CI definition, a hook, a
-         * dependency manifest, something that runs on checkout, a file made executable, a symbolic link.
+         * Tells whether the file is of a kind whose change reaches far: a build or CI definition, a
+         * hook, a dependency manifest, something that runs on checkout, a file made executable, a
+         * symbolic link.
          *
          * @return {@code true} for a {@code DANGEROUS} file.
          */
         public boolean farReaching() {
             return "DANGEROUS".equals(rank);
         }
-
     }
-
 }

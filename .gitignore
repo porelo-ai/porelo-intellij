@@ -1,8 +1,11 @@
 # Dot files and directories are not checked in - which is what makes a local '.AGENTS.md'
 # private and a shared 'AGENTS.md' tracked, without either needing a rule of its own. The
-# exceptions below are what this Gradle build needs; '.gradle' is Gradle's cache and stays out.
+# exceptions below are what this Gradle build and the shared code style need; '.gradle' is Gradle's
+# cache and stays out.
 .*
 !.gitignore
+!.editorconfig
+!.git-blame-ignore-revs
 !.gitkeep
 !.github
 build

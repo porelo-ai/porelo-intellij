@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.fuin.porelo.intellij.gate.BranchExistsException;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Waiting;
@@ -17,19 +16,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Approves a push onto branches that already hold other work, against a real daemon on a machine somebody keeps,
- * through a real ssh tunnel - run alone, as {@code ./gradlew liveTest}, never in the build. It forwards the push.
- * <p>
- * The machine has a task {@code PORELO_LIVE_TASK} whose push {@code PORELO_LIVE_COMMIT} waits, and its upstream holds
- * {@code porelo/<task>} with work the push did not grow from, possibly {@code -2} and on too; {@code
- * PORELO_LIVE_FREE_BRANCH} names the first free one, which the push ends on. {@code PORELO_LIVE_HOST}, {@code
- * PORELO_LIVE_SOCKET} and {@code PORELO_LIVE_SSH_CONFIG} reach the machine, as for {@link LiveGateTest}.
+ * Approves a push onto branches that already hold other work, against a real daemon on a machine
+ * somebody keeps, through a real ssh tunnel - run alone, as {@code ./gradlew liveTest}, never in
+ * the build. It forwards the push.
+ *
+ * <p>The machine has a task {@code PORELO_LIVE_TASK} whose push {@code PORELO_LIVE_COMMIT} waits,
+ * and its upstream holds {@code porelo/<task>} with work the push did not grow from, possibly
+ * {@code -2} and on too; {@code PORELO_LIVE_FREE_BRANCH} names the first free one, which the push
+ * ends on. {@code PORELO_LIVE_HOST}, {@code PORELO_LIVE_SOCKET} and {@code PORELO_LIVE_SSH_CONFIG}
+ * reach the machine, as for {@link LiveGateTest}.
  */
 @Tag("live")
 class LiveTakenBranchTest {
 
-    @TempDir
-    Path runtime;
+    @TempDir Path runtime;
 
     private static String env(String name) {
         final String value = System.getenv(name);
@@ -38,36 +38,59 @@ class LiveTakenBranchTest {
     }
 
     @Test
-    @DisplayName("A taken branch is refused in words with the next name, and the push goes onto the first free one")
+    @DisplayName(
+            "A taken branch is refused in words with the next name, and the push goes onto the first free one")
     void aTakenBranchIsSaidAndTheNextNameTaken() {
-        final Machine machine = new Machine("live", Path.of("/nowhere.sock"), env("PORELO_LIVE_HOST"),
-                env("PORELO_LIVE_SOCKET"));
+        final Machine machine =
+                new Machine(
+                        "live",
+                        Path.of("/nowhere.sock"),
+                        env("PORELO_LIVE_HOST"),
+                        env("PORELO_LIVE_SOCKET"));
         final String task = env("PORELO_LIVE_TASK");
         final String commit = env("PORELO_LIVE_COMMIT");
         final String free = env("PORELO_LIVE_FREE_BRANCH");
 
-        try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG")));
+        try (Tunnel tunnel =
+                        Tunnel.raise(
+                                machine,
+                                runtime,
+                                List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG")));
                 Gate gate = new Gate(tunnel.socket())) {
-            final Waiting.Entry entry = Waiting.read(List.of(machine), any -> new Gate(tunnel.socket())).pushes()
-                    .stream().filter(push -> push.push().name().equals(task)).findFirst()
-                    .orElseThrow(() -> new AssertionError("no push of " + task));
+            final Waiting.Entry entry =
+                    Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()))
+                            .pushes()
+                            .stream()
+                            .filter(push -> push.push().name().equals(task))
+                            .findFirst()
+                            .orElseThrow(() -> new AssertionError("no push of " + task));
             final List<String> refused = new ArrayList<>();
             String branch = "porelo/" + task;
             String forwarded = null;
             for (int tries = 0; tries < 5 && forwarded == null; tries++) {
                 try {
-                    forwarded = gate.approve(entry.project(), entry.repository(), task, branch, commit);
+                    forwarded =
+                            gate.approve(entry.project(), entry.repository(), task, branch, commit);
                 } catch (BranchExistsException taken) {
                     refused.add(taken.getMessage());
                     branch = taken.next();
                 }
             }
 
-            assertThat(refused).as("the refusals, in words").isNotEmpty().allSatisfy(said -> assertThat(said)
-                    .matches("porelo/" + task + "(-[0-9]+)? already holds [0-9a-f]+, from earlier work\\. Nothing was"
-                            + " forwarded\\."));
-            assertThat(forwarded).as("what was forwarded, and where").isEqualTo(task + " onto " + free);
+            assertThat(refused)
+                    .as("the refusals, in words")
+                    .isNotEmpty()
+                    .allSatisfy(
+                            said ->
+                                    assertThat(said)
+                                            .matches(
+                                                    "porelo/"
+                                                            + task
+                                                            + "(-[0-9]+)? already holds [0-9a-f]+, from earlier work\\. Nothing was"
+                                                            + " forwarded\\."));
+            assertThat(forwarded)
+                    .as("what was forwarded, and where")
+                    .isEqualTo(task + " onto " + free);
         }
     }
-
 }

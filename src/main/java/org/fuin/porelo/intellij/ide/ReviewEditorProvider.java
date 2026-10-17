@@ -7,9 +7,7 @@ import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 
-/**
- * Shows a {@link ReviewFile} as a review, and nothing else.
- */
+/** Shows a {@link ReviewFile} as a review, and nothing else. */
 public final class ReviewEditorProvider implements FileEditorProvider, DumbAware {
 
     @Override
@@ -36,5 +34,4 @@ public final class ReviewEditorProvider implements FileEditorProvider, DumbAware
     public FileEditorPolicy getPolicy() {
         return FileEditorPolicy.HIDE_DEFAULT_EDITOR;
     }
-
 }

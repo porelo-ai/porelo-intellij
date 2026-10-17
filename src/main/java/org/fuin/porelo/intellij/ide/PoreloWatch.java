@@ -1,5 +1,13 @@
 package org.fuin.porelo.intellij.ide;
 
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationAction;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.components.Service;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -9,7 +17,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-
 import org.fuin.porelo.intellij.cache.Changes;
 import org.fuin.porelo.intellij.cache.ReviewCache;
 import org.fuin.porelo.intellij.gate.Gate;
@@ -21,21 +28,12 @@ import org.fuin.porelo.intellij.machine.Tunnel;
 import org.fuin.porelo.intellij.machine.WslBridge;
 import org.jspecify.annotations.Nullable;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationAction;
-import com.intellij.notification.NotificationGroupManager;
-import com.intellij.notification.NotificationType;
-import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.components.Service;
-import com.intellij.util.concurrency.AppExecutorUtil;
-
 /**
- * Reads what waits at every machine's gates, once a minute and on demand, whatever project is open or none, and
- * says when something new waits.
- * <p>
- * Each tunnel it raises is kept while it forwards and closed with the IDE; a tunnel that dropped is raised again at
- * the next read.
+ * Reads what waits at every machine's gates, once a minute and on demand, whatever project is open
+ * or none, and says when something new waits.
+ *
+ * <p>Each tunnel it raises is kept while it forwards and closed with the IDE; a tunnel that dropped
+ * is raised again at the next read.
  */
 @Service(Service.Level.APP)
 public final class PoreloWatch implements Disposable {
@@ -64,19 +62,16 @@ public final class PoreloWatch implements Disposable {
         return ApplicationManager.getApplication().getService(PoreloWatch.class);
     }
 
-    /**
-     * Starts reading once a minute, from now; a second call changes nothing.
-     */
+    /** Starts reading once a minute, from now; a second call changes nothing. */
     public synchronized void start() {
         if (schedule == null) {
-            schedule = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(this::read, 0,
-                    EVERY_SECONDS, TimeUnit.SECONDS);
+            schedule =
+                    AppExecutorUtil.getAppScheduledExecutorService()
+                            .scheduleWithFixedDelay(this::read, 0, EVERY_SECONDS, TimeUnit.SECONDS);
         }
     }
 
-    /**
-     * Reads again now, in the background.
-     */
+    /** Reads again now, in the background. */
     public void readNow() {
         AppExecutorUtil.getAppExecutorService().execute(this::read);
     }
@@ -91,7 +86,8 @@ public final class PoreloWatch implements Disposable {
     }
 
     /**
-     * Tells a listener every new snapshot, on the thread that read it, until the given parent is disposed.
+     * Tells a listener every new snapshot, on the thread that read it, until the given parent is
+     * disposed.
      *
      * @param listener Gets each snapshot.
      * @param parent Ends the listening when it is disposed.
@@ -103,8 +99,8 @@ public final class PoreloWatch implements Disposable {
 
     /**
      * Fetches a waiting push and the branch it is read against into the plugin's own cache.
-     * <p>
-     * From where {@link Waiting.Entry#source} says.
+     *
+     * <p>From where {@link Waiting.Entry#source} says.
      *
      * @param entry The push.
      * @return What it changes.
@@ -132,8 +128,10 @@ public final class PoreloWatch implements Disposable {
 
     private static ReviewCache cache() {
         final String set = System.getenv("XDG_CACHE_HOME");
-        final Path root = set == null || set.isEmpty() || !Path.of(set).isAbsolute()
-                ? Path.of(System.getProperty("user.home"), ".cache") : Path.of(set);
+        final Path root =
+                set == null || set.isEmpty() || !Path.of(set).isAbsolute()
+                        ? Path.of(System.getProperty("user.home"), ".cache")
+                        : Path.of(set);
         return new ReviewCache(root.resolve("porelo-intellij"), Map.of());
     }
 
@@ -177,56 +175,83 @@ public final class PoreloWatch implements Disposable {
         if (before.at() == null) {
             final int waiting = now.waiting().pushes().size();
             if (waiting > 0) {
-                notification(waiting == 1 ? "One push waits for review" : waiting + " pushes wait for review", "")
+                notification(
+                                waiting == 1
+                                        ? "One push waits for review"
+                                        : waiting + " pushes wait for review",
+                                "")
                         .notify(null);
             }
             return;
         }
         for (final Waiting.Entry entry : now.waiting().newSince(before.waiting())) {
-            final Notification notification = notification("Waits for review: " + entry.push().subject(),
-                    entry.push().name() + " in " + entry.project() + " / " + entry.repository() + " on "
-                            + entry.machine().name() + (entry.farReaching() > 0 ? " - " + entry.farReaching()
-                                    + " far-reaching file(s)" : ""));
-            notification.addAction(NotificationAction.create("Review", (event, shown) -> {
-                // A review opens in a project's window; from the welcome screen the tool window is a project away.
-                if (event.getProject() != null) {
-                    ReviewTab.open(event.getProject(), entry);
-                    shown.expire();
-                }
-            }));
+            final Notification notification =
+                    notification(
+                            "Waits for review: " + entry.push().subject(),
+                            entry.push().name()
+                                    + " in "
+                                    + entry.project()
+                                    + " / "
+                                    + entry.repository()
+                                    + " on "
+                                    + entry.machine().name()
+                                    + (entry.farReaching() > 0
+                                            ? " - " + entry.farReaching() + " far-reaching file(s)"
+                                            : ""));
+            notification.addAction(
+                    NotificationAction.create(
+                            "Review",
+                            (event, shown) -> {
+                                // A review opens in a project's window; from the welcome screen the
+                                // tool window is a project away.
+                                if (event.getProject() != null) {
+                                    ReviewTab.open(event.getProject(), entry);
+                                    shown.expire();
+                                }
+                            }));
             notification.notify(null);
         }
     }
 
     private static Notification notification(String title, String content) {
-        return NotificationGroupManager.getInstance().getNotificationGroup(NOTIFICATIONS)
+        return NotificationGroupManager.getInstance()
+                .getNotificationGroup(NOTIFICATIONS)
                 .createNotification(title, content, NotificationType.INFORMATION);
     }
 
     private Path socketOf(Machine machine) {
         if (machine.inWsl()) {
-            return bridges.compute(machine.name(), (name, existing) -> {
-                if (existing != null && existing.up()) {
-                    return existing;
-                }
-                if (existing != null) {
-                    existing.close();
-                }
-                return WslBridge.open(machine, runtimeDirectory(), List.of("wsl.exe"));
-            }).socket();
+            return bridges.compute(
+                            machine.name(),
+                            (name, existing) -> {
+                                if (existing != null && existing.up()) {
+                                    return existing;
+                                }
+                                if (existing != null) {
+                                    existing.close();
+                                }
+                                return WslBridge.open(
+                                        machine, runtimeDirectory(), List.of("wsl.exe"));
+                            })
+                    .socket();
         }
         if (!machine.needsATunnel()) {
-            return java.util.Objects.requireNonNull(machine.socket(), "a machine reached directly has a socket");
+            return java.util.Objects.requireNonNull(
+                    machine.socket(), "a machine reached directly has a socket");
         }
-        final Tunnel tunnel = tunnels.compute(machine.name(), (name, existing) -> {
-            if (existing != null && existing.up()) {
-                return existing;
-            }
-            if (existing != null) {
-                existing.close();
-            }
-            return Tunnel.raise(machine, machines().runtimeDirectory(), List.of("ssh"));
-        });
+        final Tunnel tunnel =
+                tunnels.compute(
+                        machine.name(),
+                        (name, existing) -> {
+                            if (existing != null && existing.up()) {
+                                return existing;
+                            }
+                            if (existing != null) {
+                                existing.close();
+                            }
+                            return Tunnel.raise(
+                                    machine, machines().runtimeDirectory(), List.of("ssh"));
+                        });
         return tunnel.socket();
     }
 
@@ -241,8 +266,9 @@ public final class PoreloWatch implements Disposable {
     }
 
     private static Machines machines() {
-        return new Machines(System.getenv(), Path.of(System.getProperty("user.home")),
+        return new Machines(
+                System.getenv(),
+                Path.of(System.getProperty("user.home")),
                 System.getProperty("os.name", "").startsWith("Windows"));
     }
-
 }

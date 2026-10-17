@@ -1,8 +1,6 @@
 package org.fuin.porelo.intellij.gate;
 
-/**
- * A gate call did not do what it was asked; the message says what the daemon answered.
- */
+/** A gate call did not do what it was asked; the message says what the daemon answered. */
 public class GateException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
@@ -25,5 +23,4 @@ public class GateException extends RuntimeException {
     public GateException(String message, Throwable cause) {
         super(message, cause);
     }
-
 }

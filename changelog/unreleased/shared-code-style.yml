@@ -1,0 +1,2 @@
+title: The build checks the Java code against Google Java Style in its AOSP variant with Spotless, and takes Porelo's build tools 0.5.1 with the shared .editorconfig and the check that no checkout keeps the job's token
+type: changed

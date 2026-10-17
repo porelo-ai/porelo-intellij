@@ -4,41 +4,44 @@ name: Build
 run-name: "${{ github.workflow }} · ${{ github.ref_name }}: ${{ github.event.head_commit.message || github.event.pull_request.title || github.workflow }}"
 
 on:
-  push:
-    branches: [main]
-    # A change to documents alone is checked on the host before its hand-over, and by the Shared rules check once a day.
-    paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml']
-  pull_request:
-  workflow_dispatch:
+    push:
+        branches: [main]
+        # A change to documents alone is checked on the host before its hand-over, and by the Shared rules check once a day.
+        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml']
+    pull_request:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              # No step pushes with git, so the job's token is not kept in .git/config for the build's code to read.
+              with:
+                  persist-credentials: false
 
-      # The verifier fetches and unpacks a whole IntelliJ IDEA for every version gradle.properties names, which fills
-      # the hosted runner's disk; the toolchains the image carries and this job never uses make room for them,
-      # first, before anything is restored or downloaded.
-      - name: Room for the IDEs the verifier checks against
-        run: |
-          set -eu
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
-          docker image prune --all --force > /dev/null
-          df -h /
+            # The verifier fetches and unpacks a whole IntelliJ IDEA for every version gradle.properties names, which fills
+            # the hosted runner's disk; the toolchains the image carries and this job never uses make room for them,
+            # first, before anything is restored or downloaded.
+            - name: Room for the IDEs the verifier checks against
+              run: |
+                  set -eu
+                  df -h /
+                  sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+                  docker image prune --all --force > /dev/null
+                  df -h /
 
-      - name: The pinned GraalVM
-        uses: ./.github/actions/pinned-jdk
+            - name: The pinned GraalVM
+              uses: ./.github/actions/pinned-jdk
 
-      - name: Build, tests and the shared checks
-        run: ./gradlew --no-daemon build
+            - name: Build, tests and the shared checks
+              run: ./gradlew --no-daemon build
 
-      - name: The plugin verifier
-        run: |
-          ./gradlew --no-daemon verifyPlugin
-          df -h /
+            - name: The plugin verifier
+              run: |
+                  ./gradlew --no-daemon verifyPlugin
+                  df -h /

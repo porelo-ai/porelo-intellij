@@ -6,16 +6,16 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.fuin.porelo.wire.varlink.VarlinkClient;
 import org.fuin.porelo.wire.varlink.VarlinkException;
 import org.jspecify.annotations.Nullable;
 
 /**
  * One connection to a machine's daemon, for its gate.
- * <p>
- * Speaks {@code org.fuin.porelo.Tasks1} with {@code porelo-wire}, the client that defines it. Every answer is checked
- * for the fields this plugin reads, and one that lacks them is refused rather than read as empty.
+ *
+ * <p>Speaks {@code org.fuin.porelo.Tasks1} with {@code porelo-wire}, the client that defines it.
+ * Every answer is checked for the fields this plugin reads, and one that lacks them is refused
+ * rather than read as empty.
  */
 public final class Gate implements AutoCloseable {
 
@@ -49,11 +49,15 @@ public final class Gate implements AutoCloseable {
         for (final Map<String, Object> project : objects(reply, "projects")) {
             final List<Project.Repository> repositories = new ArrayList<>();
             for (final Map<String, Object> repository : objects(project, "repositories")) {
-                repositories.add(new Project.Repository(string(repository, "name"),
-                        Boolean.TRUE.equals(repository.get("own")), string(repository, "upstream"),
-                        number(repository, "pending")));
+                repositories.add(
+                        new Project.Repository(
+                                string(repository, "name"),
+                                Boolean.TRUE.equals(repository.get("own")),
+                                string(repository, "upstream"),
+                                number(repository, "pending")));
             }
-            projects.add(new Project(string(project, "name"), repositories, number(project, "pending")));
+            projects.add(
+                    new Project(string(project, "name"), repositories, number(project, "pending")));
         }
         return projects;
     }
@@ -69,8 +73,14 @@ public final class Gate implements AutoCloseable {
         final Map<String, Object> reply = call("Pending", parameters(project, repository));
         final List<PendingPush> pushes = new ArrayList<>();
         for (final Map<String, Object> push : objects(reply, "pending")) {
-            pushes.add(new PendingPush(string(push, "name"), string(push, "commit"), string(push, "subject"),
-                    string(push, "waiting"), string(push, "at"), string(push, "fetch")));
+            pushes.add(
+                    new PendingPush(
+                            string(push, "name"),
+                            string(push, "commit"),
+                            string(push, "subject"),
+                            string(push, "waiting"),
+                            string(push, "at"),
+                            string(push, "fetch")));
         }
         pushes.sort((one, other) -> other.at().compareTo(one.at()));
         return new Pending(string(reply, "mirror"), pushes);
@@ -93,7 +103,6 @@ public final class Gate implements AutoCloseable {
         public Pending {
             pushes = List.copyOf(pushes);
         }
-
     }
 
     /**
@@ -110,10 +119,19 @@ public final class Gate implements AutoCloseable {
         final Map<String, Object> reply = call("Review", call);
         final List<Review.File> files = new ArrayList<>();
         for (final Map<String, Object> file : objects(reply, "files")) {
-            files.add(new Review.File(string(file, "path"), string(file, "status"), number(file, "added"),
-                    number(file, "removed"), string(file, "rank"), string(file, "reason")));
+            files.add(
+                    new Review.File(
+                            string(file, "path"),
+                            string(file, "status"),
+                            number(file, "added"),
+                            number(file, "removed"),
+                            string(file, "rank"),
+                            string(file, "reason")));
         }
-        return new Review(string(reply, "diff"), string(reply, "log"), files,
+        return new Review(
+                string(reply, "diff"),
+                string(reply, "log"),
+                files,
                 reply.get("asked") instanceof String asked ? asked : null);
     }
 
@@ -126,10 +144,13 @@ public final class Gate implements AutoCloseable {
      * @param branch The branch it goes onto; never guessed.
      * @param commit The full commit id the person reviewed.
      * @return What was forwarded, as the daemon says it.
-     * @throws MovedSinceReviewException If the push moved after it was shown; nothing was forwarded.
-     * @throws BranchExistsException If the branch holds a commit the work did not grow from; nothing was forwarded.
+     * @throws MovedSinceReviewException If the push moved after it was shown; nothing was
+     *     forwarded.
+     * @throws BranchExistsException If the branch holds a commit the work did not grow from;
+     *     nothing was forwarded.
      */
-    public String approve(String project, String repository, String name, String branch, String commit) {
+    public String approve(
+            String project, String repository, String name, String branch, String commit) {
         final Map<String, Object> call = parameters(project, repository);
         call.put("name", name);
         call.put("branch", branch);
@@ -163,7 +184,8 @@ public final class Gate implements AutoCloseable {
         try {
             client.close();
         } catch (IOException ex) {
-            throw new GateException("Cannot close the connection to the daemon: " + ex.getMessage(), ex);
+            throw new GateException(
+                    "Cannot close the connection to the daemon: " + ex.getMessage(), ex);
         }
     }
 
@@ -183,16 +205,21 @@ public final class Gate implements AutoCloseable {
         final @Nullable Map<String, Object> parameters = ex.getParameters();
         final Map<String, Object> answer = parameters == null ? Map.of() : parameters;
         if (error.equals(INTERFACE + ".MovedSinceReview")) {
-            return new MovedSinceReviewException(string(answer, "name"), string(answer, "reviewed"),
-                    string(answer, "now"));
+            return new MovedSinceReviewException(
+                    string(answer, "name"), string(answer, "reviewed"), string(answer, "now"));
         }
         // Without its fields it cannot be said in words; then the daemon's own words below stand.
-        if (error.equals(INTERFACE + ".BranchExists") && answer.get("branch") instanceof String branch
+        if (error.equals(INTERFACE + ".BranchExists")
+                && answer.get("branch") instanceof String branch
                 && answer.get("at") instanceof String at) {
             return new BranchExistsException(branch, at);
         }
-        return new GateException(method + " was refused: " + error.substring(error.lastIndexOf('.') + 1)
-                + (answer.isEmpty() ? "" : " " + answer), ex);
+        return new GateException(
+                method
+                        + " was refused: "
+                        + error.substring(error.lastIndexOf('.') + 1)
+                        + (answer.isEmpty() ? "" : " " + answer),
+                ex);
     }
 
     private static Map<String, Object> parameters(String project, String repository) {
@@ -210,8 +237,11 @@ public final class Gate implements AutoCloseable {
         final List<Map<String, Object>> objects = new ArrayList<>();
         for (final Object entry : list) {
             if (!(entry instanceof Map<?, ?> map)) {
-                throw new GateException("The daemon's '" + field + "' holds something that is not an object: "
-                        + entry);
+                throw new GateException(
+                        "The daemon's '"
+                                + field
+                                + "' holds something that is not an object: "
+                                + entry);
             }
             objects.add((Map<String, Object>) map);
         }
@@ -234,8 +264,8 @@ public final class Gate implements AutoCloseable {
 
     private static String causeOf(Throwable ex) {
         final @Nullable Throwable cause = ex.getCause();
-        return cause == null || cause.getMessage() == null ? String.valueOf(ex.getMessage())
+        return cause == null || cause.getMessage() == null
+                ? String.valueOf(ex.getMessage())
                 : ex.getMessage() + " (" + cause.getMessage() + ")";
     }
-
 }

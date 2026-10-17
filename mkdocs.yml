@@ -2,9 +2,9 @@ site_name: Porelo IntelliJ
 docs_dir: doc
 strict: true
 nav:
-  - Overview: index.md
+    - Overview: index.md
 validation:
-  links:
-    anchors: warn
-    unrecognized_links: warn
-    absolute_links: warn
+    links:
+        anchors: warn
+        unrecognized_links: warn
+        absolute_links: warn

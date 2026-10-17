@@ -2,7 +2,6 @@ package org.fuin.porelo.intellij.ide;
 
 import java.time.Instant;
 import java.util.List;
-
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.jspecify.annotations.Nullable;
 
@@ -17,5 +16,4 @@ public record Snapshot(Waiting waiting, @Nullable String unreadable, @Nullable I
 
     /** Nothing read yet. */
     public static final Snapshot NONE = new Snapshot(new Waiting(List.of(), List.of()), null, null);
-
 }

@@ -12,14 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
- * The repository was renamed by a script; a word it left behind, or one written later out of habit, names something
- * that is no longer there. The old name is spelled here in two pieces, so that this file does not say it.
+ * The repository was renamed by a script; a word it left behind, or one written later out of habit,
+ * names something that is no longer there. The old name is spelled here in two pieces, so that this
+ * file does not say it.
  */
 @Tag("documents")
 class NoOldNameTest {
@@ -27,14 +27,20 @@ class NoOldNameTest {
     private static final String OLD = "so" + "kar";
 
     /**
-     * Paths that keep the old name in their text: the changelog entry that announces the rename, and once it is
-     * released, every released version's entries and summary and the changelog generated from them.
+     * Paths that keep the old name in their text: the changelog entry that announces the rename,
+     * and once it is released, every released version's entries and summary and the changelog
+     * generated from them.
      */
-    private static final Pattern KEPT_PATHS = Pattern.compile(
-            "changelog/unreleased/renamed-porelo\\.yml|changelog/v[^/]+/.*|CHANGELOG\\.md"); // not-a-citation
+    private static final Pattern KEPT_PATHS =
+            Pattern.compile(
+                    "changelog/unreleased/renamed-porelo\\.yml|changelog/v[^/]+/.*|CHANGELOG\\.md"); // not-a-citation
 
-    /** Lines that keep it: the rename's row under Finished in the issue index, which keeps the issue's title. */
-    private static final Pattern KEPT_LINES = Pattern.compile(".*\\| " + "So" + "kar is renamed Porelo \\|.*");
+    /**
+     * Lines that keep it: the rename's row under Finished in the issue index, which keeps the
+     * issue's title.
+     */
+    private static final Pattern KEPT_LINES =
+            Pattern.compile(".*\\| " + "So" + "kar is renamed Porelo \\|.*");
 
     @Test
     @DisplayName("No tracked file says the old name in its path or its text, but the kept ones")
@@ -58,13 +64,19 @@ class NoOldNameTest {
         }
 
         // A guard that reads nothing passes forever: assert what it read, then what it checks.
-        assertThat(files).as("the tracked files the guard reads")
-                .contains("build.gradle.kts", "AGENTS.md", "issues/README.md", "src/main/resources/META-INF/plugin.xml");
+        assertThat(files)
+                .as("the tracked files the guard reads")
+                .contains(
+                        "build.gradle.kts",
+                        "AGENTS.md",
+                        "issues/README.md",
+                        "src/main/resources/META-INF/plugin.xml");
         assertThat(found).as("tracked files that say the old name").isEmpty();
     }
 
     private static List<String> tracked() throws IOException, InterruptedException {
-        final Process git = new ProcessBuilder("git", "ls-files", "-z").redirectErrorStream(true).start();
+        final Process git =
+                new ProcessBuilder("git", "ls-files", "-z").redirectErrorStream(true).start();
         final String out = new String(git.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         assertThat(git.waitFor()).as("exit code of git ls-files, which printed: %s", out).isZero();
         return List.of(out.split("\0"));
@@ -80,5 +92,4 @@ class NoOldNameTest {
             throw new UncheckedIOException("Cannot read " + path, ex);
         }
     }
-
 }

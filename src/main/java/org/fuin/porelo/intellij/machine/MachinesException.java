@@ -1,8 +1,6 @@
 package org.fuin.porelo.intellij.machine;
 
-/**
- * The machines cannot be read as the interface keeps them; the message says where and why.
- */
+/** The machines cannot be read as the interface keeps them; the message says where and why. */
 public final class MachinesException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
@@ -25,5 +23,4 @@ public final class MachinesException extends RuntimeException {
     public MachinesException(String message, Throwable cause) {
         super(message, cause);
     }
-
 }

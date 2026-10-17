@@ -11,19 +11,19 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Stands in for {@code ssh} in a separate process: it writes the arguments it was given, then does what its first
- * argument says - binds the local end of {@code -L} as ssh would, says what ssh says when a host key is unknown and
- * ends with 255, or does nothing at all.
+ * Stands in for {@code ssh} in a separate process: it writes the arguments it was given, then does
+ * what its first argument says - binds the local end of {@code -L} as ssh would, says what ssh says
+ * when a host key is unknown and ends with 255, or does nothing at all.
  */
 public final class FakeSsh {
 
-    private FakeSsh() {
-    }
+    private FakeSsh() {}
 
     /**
      * Runs it.
      *
-     * @param args {@code <forward|refuse|hang> <file the arguments go to>} followed by the arguments ssh is given.
+     * @param args {@code <forward|refuse|hang> <file the arguments go to>} followed by the
+     *     arguments ssh is given.
      * @throws IOException If the socket cannot be bound.
      * @throws InterruptedException Never expected; the process is destroyed.
      */
@@ -51,5 +51,4 @@ public final class FakeSsh {
             }
         }
     }
-
 }

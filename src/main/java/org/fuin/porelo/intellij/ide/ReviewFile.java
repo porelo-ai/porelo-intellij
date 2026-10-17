@@ -1,12 +1,9 @@
 package org.fuin.porelo.intellij.ide;
 
+import com.intellij.testFramework.LightVirtualFile;
 import org.fuin.porelo.intellij.gate.Waiting;
 
-import com.intellij.testFramework.LightVirtualFile;
-
-/**
- * The editor tab of one waiting push; it holds what was read, never a file of the person's.
- */
+/** The editor tab of one waiting push; it holds what was read, never a file of the person's. */
 final class ReviewFile extends LightVirtualFile {
 
     private final transient Waiting.Entry entry;
@@ -27,5 +24,4 @@ final class ReviewFile extends LightVirtualFile {
     ReviewTab.Read read() {
         return read;
     }
-
 }
