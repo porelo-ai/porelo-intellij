@@ -3,12 +3,6 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
-## Review
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij07"></a>[IJ07](IJ07-Sokar-Is-Renamed-Porelo.md) | S | | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo by a script with a short list of exceptions, speaking to a Porelo daemon; a test of the documents refuses the old name |
-
 ## Implementing
 
 | # | size | blocked by | what it covers |
@@ -29,3 +23,9 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij02"></a>[IJ02](IJ02-Live-Notices-And-A-Guide.md) | M | | Notices within seconds through `WatchProjects`; a `doc/` chapter for people |
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | XL | `porelo` [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171) | Comments on a push's lines written in the review tab and shown as threads with their origin; suggestions shown, never applied; outgoing forge comments and held incoming ones released one at a time |
+
+## Finished
+
+| # | Title | What was built |
+|---|---|---|
+| <a id="ij07"></a>[IJ07](README.md#ij07) | Sokar is renamed Porelo | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo, speaking to a Porelo daemon and installed afresh; a test of the documents refuses the old name. |
