@@ -26,9 +26,12 @@ class NoOldNameTest {
 
     private static final String OLD = "so" + "kar";
 
-    /** Paths that keep the old name, name and text: the rename's issue and the changelog entry that announces it. */
-    private static final Pattern KEPT_PATHS =
-            Pattern.compile("issues/IJ07-[^/]+\\.md|changelog/unreleased/renamed-porelo\\.yml"); // not-a-citation
+    /**
+     * Paths that keep the old name, name and text: the rename's issue, the changelog entry that announces it, and once
+     * it is released, every released version's entries and summary and the changelog generated from them.
+     */
+    private static final Pattern KEPT_PATHS = Pattern.compile(
+            "issues/IJ07-[^/]+\\.md|changelog/unreleased/renamed-porelo\\.yml|changelog/v[^/]+/.*|CHANGELOG\\.md"); // not-a-citation
 
     /** Lines that keep it: the rename's row in the issue index, which links to the issue's file by its name. */
     private static final Pattern KEPT_LINES = Pattern.compile(".*<a id=\"ij07\"></a>.*");
