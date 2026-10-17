@@ -11,12 +11,14 @@ runs:
   using: composite
   steps:
     # Gradle's distribution and the libraries, between runs. Never the IDEs: three of them, zipped and unpacked, are
-    # some 17 GB, and restoring them filled the runner's disk before the job could make room.
+    # some 17 GB, and restoring them filled the runner's disk before the job could make room. An exclusion only
+    # removes a path the patterns matched, never one inside a matched directory, so each group is matched alone.
     - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
-          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/modules-2/files-2.1/*
           !~/.gradle/caches/modules-2/files-2.1/idea
+          ~/.gradle/caches/modules-2/metadata-*
           ~/.gradle/wrapper
         key: gradle-libraries-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml', '*.gradle.kts', 'gradle.properties') }}
         restore-keys: gradle-libraries-${{ runner.os }}-
