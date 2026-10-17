@@ -1,0 +1,2 @@
+title: A daemon that takes a call and never answers no longer stops the list of what waits or the closing of a project, and a read that fails is said instead of ending the reading
+type: fixed

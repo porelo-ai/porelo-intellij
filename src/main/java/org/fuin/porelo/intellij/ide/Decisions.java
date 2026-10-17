@@ -72,7 +72,8 @@ final class Decisions {
                     } catch (MovedSinceReviewException ex) {
                         // What it holds now has to be read before it can go: the review is closed,
                         // the list reads it again.
-                        ApplicationManager.getApplication().invokeLater(done);
+                        ApplicationManager.getApplication()
+                                .invokeLater(done, project.getDisposed());
                         throw ex;
                     } catch (BranchExistsException ex) {
                         // The person chooses again, with the next name offered; an existing branch
@@ -85,7 +86,8 @@ final class Decisions {
                                                         entry,
                                                         done,
                                                         ex.getMessage() + "\n\n",
-                                                        ex.next()));
+                                                        ex.next()),
+                                        project.getDisposed());
                         return null;
                     }
                 },
@@ -141,21 +143,40 @@ final class Decisions {
                         new Task.Backgroundable(project, title, false) {
                             @Override
                             public void run(ProgressIndicator indicator) {
-                                try (Gate gate = PoreloWatch.get().gate(entry.machine())) {
-                                    final String said = call.on(gate);
-                                    if (said != null) {
-                                        tell(project, said, NotificationType.INFORMATION);
-                                        ApplicationManager.getApplication().invokeLater(done);
-                                    }
+                                final String said;
+                                Gate gate = null;
+                                try {
+                                    gate = PoreloWatch.get().gate(entry.machine());
+                                    said = call.on(gate);
                                 } catch (RuntimeException ex) {
                                     tell(
                                             project,
                                             title + " failed: " + ex.getMessage(),
                                             NotificationType.ERROR);
+                                    PoreloWatch.get().readNow();
+                                    return;
+                                } finally {
+                                    if (gate != null) {
+                                        closeQuietly(gate);
+                                    }
+                                }
+                                if (said != null) {
+                                    tell(project, said, NotificationType.INFORMATION);
+                                    ApplicationManager.getApplication()
+                                            .invokeLater(done, project.getDisposed());
                                 }
                                 PoreloWatch.get().readNow();
                             }
                         });
+    }
+
+    // What was decided stands, even if closing the connection then fails.
+    private static void closeQuietly(Gate gate) {
+        try {
+            gate.close();
+        } catch (RuntimeException ex) {
+            // See above.
+        }
     }
 
     private static void tell(Project project, String text, NotificationType type) {

@@ -128,20 +128,18 @@ class WslBridgeTest {
     @Test
     @DisplayName(
             "Closing the bridge ends every wsl.exe it started for a connection still open, within seconds")
-    void closingEndsTheRelaysOfOpenConnections() throws IOException {
+    void closingEndsTheRelaysOfOpenConnections() throws IOException, InterruptedException {
         final WslBridge bridge = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()));
-        try (Gate gate = new Gate(bridge.socket())) {
+        try (bridge;
+                Gate gate = new Gate(bridge.socket())) {
             gate.projects();
-            final List<ProcessHandle> relays =
-                    ProcessHandle.current()
-                            .descendants()
-                            .filter(
-                                    handle ->
-                                            handle.info()
-                                                    .commandLine()
-                                                    .orElse("")
-                                                    .contains("FakeWsl"))
-                            .toList();
+            // The list and the probe ran before as processes of their own, which may still be
+            // ending.
+            List<ProcessHandle> relays = fakeWsl();
+            for (int tries = 0; tries < 100 && relays.size() != 1; tries++) {
+                Thread.sleep(100);
+                relays = fakeWsl();
+            }
             assertThat(relays).as("the wsl.exe of the open connection").hasSize(1);
 
             final long started = System.nanoTime();
@@ -227,5 +225,57 @@ class WslBridgeTest {
                 .as("in UTF-8")
                 .singleElement()
                 .isEqualTo(new String[] {"Ubuntu-26.04", "Running", "2"});
+    }
+
+    @Test
+    @DisplayName(
+            "A second bridge to a machine whose bridge is open is refused, so it never cuts the first one off")
+    void aSecondBridgeLeavesTheFirstAlone() throws IOException {
+        try (WslBridge first = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()))) {
+            assertThatThrownBy(() -> WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath())))
+                    .as("a second bridge on the first one's socket")
+                    .isInstanceOf(MachinesException.class)
+                    .hasMessageContaining("already answers");
+            try (Gate gate = new Gate(first.socket())) {
+                assertThat(gate.projects())
+                        .extracting(Project::name)
+                        .as("the projects read through the first bridge")
+                        .containsExactly("default");
+            }
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A running distribution is reached on a Windows in another language, whose list names its state in that language")
+    void readsTheListInAnotherLanguage() throws IOException {
+        Files.writeString(
+                dir.resolve("distributions"),
+                "* Ubuntu    Wird ausgeführt    2\r\n  Debian    Beendet    2\r\n",
+                StandardCharsets.UTF_8);
+
+        try (WslBridge bridge = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()));
+                Gate gate = new Gate(bridge.socket())) {
+            assertThat(gate.projects())
+                    .extracting(Project::name)
+                    .as("the projects read through wsl.exe")
+                    .containsExactly("default");
+        }
+        assertThatThrownBy(
+                        () ->
+                                WslBridge.open(
+                                        Machine.wsl("Debian here", "Debian"),
+                                        dir,
+                                        wsl(daemon.socketPath())))
+                .as("a distribution that is not running, in that language")
+                .isInstanceOf(MachinesException.class)
+                .hasMessageContaining("the plugin never starts one");
+    }
+
+    private static List<ProcessHandle> fakeWsl() {
+        return ProcessHandle.current()
+                .descendants()
+                .filter(handle -> handle.info().commandLine().orElse("").contains("FakeWsl"))
+                .toList();
     }
 }

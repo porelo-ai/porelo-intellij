@@ -369,4 +369,33 @@ class WaitingTest {
                 .as("one's groups")
                 .containsExactly("site / site", "porelo / core");
     }
+
+    @Test
+    @DisplayName(
+            "A mirror path from the gate that would lead the fetch to another host, port or distribution is refused")
+    void aMirrorThatLeadsElsewhereIsRefused() {
+        final Machine tunnelled =
+                new Machine(
+                        "build1",
+                        dir.resolve("b.sock"),
+                        "i@192.0.2.10",
+                        "/run/user/1001/porelo/porelod.sock");
+        final Machine wsl = Machine.wsl("Ubuntu on Windows", "Ubuntu");
+        final PendingPush push = new PendingPush("app", COMMIT, "s", "w", "at", "f");
+
+        for (final String mirror : List.of("@evil.example/x", ":2222/x", "", "/a/../b")) {
+            assertThatThrownBy(
+                            () ->
+                                    new Waiting.Entry(tunnelled, "p", "r", mirror, push, 0)
+                                            .source(path -> false))
+                    .as("the mirror '" + mirror + "' over ssh")
+                    .isInstanceOf(GateException.class);
+        }
+        assertThatThrownBy(
+                        () ->
+                                new Waiting.Entry(wsl, "p", "r", "/../Other/x", push, 0)
+                                        .source(path -> false))
+                .as("a mirror that climbs out of its distribution")
+                .isInstanceOf(GateException.class);
+    }
 }

@@ -88,7 +88,7 @@ public final class Machines {
         final Path local = localSocket();
         if (machines.stream()
                 .noneMatch(machine -> !machine.needsATunnel() && local.equals(machine.socket()))) {
-            machines.add(new Machine(THIS_COMPUTER, local, null, null));
+            add(machines, unreachable, new Machine(THIS_COMPUTER, local, null, null));
         }
         return new Listed(machines, unreachable);
     }
@@ -209,7 +209,7 @@ public final class Machines {
                                     name,
                                     "is a WSL distribution entry that names no distribution"));
                 } else {
-                    machines.add(Machine.wsl(name, distribution));
+                    add(machines, unreachable, Machine.wsl(name, distribution));
                 }
                 continue;
             }
@@ -237,8 +237,22 @@ public final class Machines {
             }
             final Machine machine = machine(file, name, fields);
             if (machine != null) {
-                machines.add(machine);
+                add(machines, unreachable, machine);
             }
+        }
+    }
+
+    // Connections, caches and decisions are kept by a machine's name, so a second machine of one
+    // name would be read and decided through the first one's; the interface drops it too.
+    private static void add(
+            List<Machine> machines, List<Unreachable> unreachable, Machine machine) {
+        if (machines.stream().anyMatch(known -> known.name().equals(machine.name()))) {
+            unreachable.add(
+                    new Unreachable(
+                            machine.name(),
+                            "has the name of a machine before it, and the two cannot be told apart"));
+        } else {
+            machines.add(machine);
         }
     }
 

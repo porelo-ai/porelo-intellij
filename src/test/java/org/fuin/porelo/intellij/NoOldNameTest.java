@@ -75,8 +75,12 @@ class NoOldNameTest {
     }
 
     private static List<String> tracked() throws IOException, InterruptedException {
-        final Process git =
-                new ProcessBuilder("git", "ls-files", "-z").redirectErrorStream(true).start();
+        final ProcessBuilder builder =
+                new ProcessBuilder("git", "ls-files", "-z").redirectErrorStream(true);
+        // Nothing of this machine's git configuration decides what it lists.
+        builder.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
+        builder.environment().put("GIT_CONFIG_NOSYSTEM", "1");
+        final Process git = builder.start();
         final String out = new String(git.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         assertThat(git.waitFor()).as("exit code of git ls-files, which printed: %s", out).isZero();
         return List.of(out.split("\0"));

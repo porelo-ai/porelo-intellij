@@ -228,4 +228,47 @@ class MachinesTest {
                 .as("with a relative one")
                 .isEqualTo(home.resolve(".config/porelo/frontend.json"));
     }
+
+    @Test
+    @DisplayName(
+            "The second machine of a name is not reached, so it is never read or decided through the first one's connection")
+    void theSecondMachineOfANameIsNotReached() throws IOException {
+        write(
+                """
+                {"machines": [
+                   {"name": "x", "socket": "/run/user/1000/a.sock"},
+                   {"name": "x", "socket": "/run/user/1000/b.sock",
+                    "host": "dev@other", "remoteSocket": "/run/user/1001/porelo/porelod.sock"}
+                 ]}
+                """);
+
+        final Machines.Listed listed = machines().read();
+
+        assertThat(listed.machines())
+                .filteredOn(machine -> machine.name().equals("x"))
+                .as("the machines named x the plugin reaches")
+                .containsExactly(new Machine("x", Path.of("/run/user/1000/a.sock"), null, null));
+        assertThat(listed.unreachable())
+                .extracting(Machines.Unreachable::name)
+                .as("the entries it keeps but does not reach")
+                .containsExactly("x");
+    }
+
+    @Test
+    @DisplayName(
+            "A socket that is no absolute path is refused, so a tunnel never forwards to a port or opens a file where the IDE happens to run")
+    void refusesASocketThatIsNoPath() throws IOException {
+        write(
+                "{\"machines\": [{\"name\": \"port\", \"socket\": \"/a.sock\", \"host\": \"h\", \"remoteSocket\": \"localhost:22\"}]}");
+        assertThatThrownBy(() -> machines().all())
+                .as("a remote socket that is a port")
+                .isInstanceOf(MachinesException.class)
+                .hasMessageContaining("'port'");
+
+        write("{\"machines\": [{\"name\": \"here\", \"socket\": \"rel.sock\"}]}");
+        assertThatThrownBy(() -> machines().all())
+                .as("a relative socket")
+                .isInstanceOf(MachinesException.class)
+                .hasMessageContaining("'here'");
+    }
 }

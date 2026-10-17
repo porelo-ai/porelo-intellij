@@ -2,17 +2,26 @@ package org.fuin.porelo.intellij.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -36,6 +45,9 @@ class ReviewCacheTest {
                     "a",
                     "GIT_COMMITTER_EMAIL",
                     "a@x");
+
+    /** An ssh that never answers: git runs it with the host and its command appended. */
+    private static final String SILENT_SSH = "sleep 600; :";
 
     @TempDir Path dir;
 
@@ -187,6 +199,162 @@ class ReviewCacheTest {
         assertThat(cache.repository("walk 9", "../p", "r"))
                 .as("the repository of a gate")
                 .isEqualTo(dir.resolve("cache/walk-9/---p/r.git"));
+    }
+
+    @AfterEach
+    void endWhatAFailedTestLeft() {
+        silentSsh().forEach(ProcessHandle::destroyForcibly);
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    @DisplayName(
+            "A fetch from a machine that never answers ends within its limit, and leaves no git or ssh running, so a review cannot hang for good")
+    void aFetchThatHangsEndsWithinItsLimit() throws InterruptedException {
+        final ReviewCache slow =
+                new ReviewCache(dir.resolve("slow"), silent(), Duration.ofSeconds(2));
+
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(30),
+                () ->
+                        assertThatThrownBy(
+                                        () ->
+                                                slow.fetch(
+                                                        slow.repository("m", "p", "r"),
+                                                        "ssh://example.invalid/x",
+                                                        "app",
+                                                        pushed))
+                                .as("a fetch that never gets an answer")
+                                .isInstanceOf(CacheException.class)
+                                .hasMessageContaining("did not end within 2 s"));
+        assertThat(ended()).as("the git and ssh it started, ended").isTrue();
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    @DisplayName(
+            "An interrupted fetch ends at once and leaves no git or ssh running, so closing a project ends its review's work")
+    void anInterruptedFetchLeavesNothingRunning() throws InterruptedException {
+        final ReviewCache slow =
+                new ReviewCache(dir.resolve("slow"), silent(), Duration.ofSeconds(120));
+        final AtomicReference<Throwable> thrown = new AtomicReference<>();
+        final Thread review =
+                Thread.ofPlatform()
+                        .start(
+                                () -> {
+                                    try {
+                                        slow.fetch(
+                                                slow.repository("m", "p", "r"),
+                                                "ssh://example.invalid/x",
+                                                "app",
+                                                pushed);
+                                    } catch (RuntimeException ex) {
+                                        thrown.set(ex);
+                                    }
+                                });
+        while (silentSsh().isEmpty() && review.isAlive()) {
+            Thread.sleep(50);
+        }
+
+        review.interrupt();
+        review.join(10_000);
+
+        assertThat(review.isAlive()).as("whether the fetch still runs").isFalse();
+        assertThat(thrown.get())
+                .as("what the fetch threw")
+                .isInstanceOf(CacheException.class)
+                .hasMessageContaining("Interrupted");
+        assertThat(ended()).as("the git and ssh it started, ended").isTrue();
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    @DisplayName(
+            "ssh is told never to ask, so a fetch whose host or key would need an answer fails instead of waiting at a terminal")
+    void sshIsNeverLeftToAsk() throws IOException {
+        final Path bin = Files.createDirectories(dir.resolve("bin"));
+        final Path asked = dir.resolve("asked");
+        final Path ssh = bin.resolve("ssh");
+        Files.writeString(ssh, "#!/bin/sh\necho \"$@\" > '" + asked + "'\nexit 255\n");
+        Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwx------"));
+        final Map<String, String> environment = new HashMap<>(NO_CONFIG);
+        environment.put("PATH", bin + ":" + System.getenv("PATH"));
+        final ReviewCache viaSsh = new ReviewCache(dir.resolve("ssh"), environment);
+
+        assertThatThrownBy(
+                        () ->
+                                viaSsh.fetch(
+                                        viaSsh.repository("m", "p", "r"),
+                                        "ssh://example.invalid/x",
+                                        "app",
+                                        pushed))
+                .as("a fetch over an ssh that refuses")
+                .isInstanceOf(CacheException.class);
+        assertThat(Files.readString(asked)).as("what ssh was given").contains("BatchMode=yes");
+    }
+
+    @Test
+    @DisplayName(
+            "A file of a cache git cannot read is refused, not read as absent, so a review never shows a changed file as added or deleted")
+    void aFileOfABrokenCacheIsRefused() {
+        assertThatThrownBy(() -> cache.file(dir.resolve("nope.git"), pushed, "notes.txt"))
+                .as("a file read from a repository that is not there")
+                .isInstanceOf(CacheException.class);
+    }
+
+    @Test
+    @DisplayName(
+            "Two reviews of one push opened at once both read it, as their fetches into one cache never run together")
+    void twoReviewsAtOnceBothRead() throws InterruptedException {
+        for (int round = 0; round < 8; round++) {
+            final Path repository = cache.repository("m", "p", "r" + round);
+            final CountDownLatch start = new CountDownLatch(1);
+            final List<Throwable> failed = new java.util.concurrent.CopyOnWriteArrayList<>();
+            final List<Thread> reviews = new ArrayList<>();
+            for (int each = 0; each < 2; each++) {
+                reviews.add(
+                        Thread.ofPlatform()
+                                .start(
+                                        () -> {
+                                            try {
+                                                start.await();
+                                                cache.fetch(
+                                                        repository,
+                                                        mirror.toString(),
+                                                        "app",
+                                                        pushed);
+                                            } catch (InterruptedException | RuntimeException ex) {
+                                                failed.add(ex);
+                                            }
+                                        }));
+            }
+            start.countDown();
+            for (final Thread review : reviews) {
+                review.join(60_000);
+            }
+
+            assertThat(failed).as("the reviews that failed in round " + round).isEmpty();
+        }
+    }
+
+    private static Map<String, String> silent() {
+        final Map<String, String> environment = new HashMap<>(NO_CONFIG);
+        environment.put("GIT_SSH_COMMAND", SILENT_SSH);
+        return environment;
+    }
+
+    private static List<ProcessHandle> silentSsh() {
+        return ProcessHandle.current()
+                .descendants()
+                .filter(process -> process.info().commandLine().orElse("").contains("sleep 600"))
+                .toList();
+    }
+
+    private static boolean ended() throws InterruptedException {
+        for (int tries = 0; tries < 100 && !silentSsh().isEmpty(); tries++) {
+            Thread.sleep(100);
+        }
+        return silentSsh().isEmpty();
     }
 
     private void write(String path, String text) throws IOException {

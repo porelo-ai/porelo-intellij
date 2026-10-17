@@ -94,16 +94,32 @@ class TunnelTest {
     }
 
     @Test
-    @DisplayName("ssh that never forwards is ended after the wait, and the socket is not left")
-    void endsSshThatNeverForwards() {
+    @DisplayName(
+            "ssh that never forwards is ended after the wait, so no ssh is left running for a tunnel that never came up")
+    void endsSshThatNeverForwards() throws InterruptedException {
         assertThatThrownBy(() -> Tunnel.raise(BUILD1, dir, ssh("hang"), Duration.ofMillis(1500)))
                 .as("a tunnel that does not come up")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining(
                         "did not forward /run/user/1001/porelo/porelod.sock within 1500 ms");
-        assertThat(dir.resolve("porelo-intellij-build-1.sock"))
-                .as("the plugin's end")
-                .doesNotExist();
+        List<ProcessHandle> left = fakeSsh(dir);
+        for (int tries = 0; tries < 100 && !left.isEmpty(); tries++) {
+            Thread.sleep(100);
+            left = fakeSsh(dir);
+        }
+        assertThat(left).as("the ssh started for it, still running").isEmpty();
+    }
+
+    // This test's own: another test's stand-in may still be ending.
+    private static List<ProcessHandle> fakeSsh(Path dir) {
+        return ProcessHandle.current()
+                .descendants()
+                .filter(
+                        handle -> {
+                            final String line = handle.info().commandLine().orElse("");
+                            return line.contains("FakeSsh") && line.contains(dir.toString());
+                        })
+                .toList();
     }
 
     @Test

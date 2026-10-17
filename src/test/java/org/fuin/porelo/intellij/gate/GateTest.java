@@ -408,6 +408,105 @@ class GateTest {
                 .hasMessageContaining("Nothing answers at " + nowhere);
     }
 
+    @Test
+    @DisplayName(
+            "A daemon that takes the call and never answers is left within the read's deadline, so it holds up no other machine and no closing project")
+    void aDaemonThatNeverAnswersIsLeft() throws InterruptedException {
+        final java.util.concurrent.CountDownLatch released =
+                new java.util.concurrent.CountDownLatch(1);
+        daemon.method(
+                "Projects",
+                (parameters, replies) -> {
+                    try {
+                        released.await();
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+        try (Gate gate = new Gate(daemon.socketPath(), java.time.Duration.ofSeconds(2))) {
+            org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(
+                    java.time.Duration.ofSeconds(20),
+                    () ->
+                            assertThatThrownBy(gate::projects)
+                                    .as("a call that is never answered")
+                                    .isInstanceOf(GateException.class)
+                                    .hasMessageContaining("did not answer within 2 s"));
+        } finally {
+            released.countDown();
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A repository without 'own', or with a count no int holds, is refused, never read as not the project's or as nothing waiting")
+    void aRepositoryReadWrongIsRefused() {
+        daemon.method(
+                "Projects",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "projects",
+                                        List.of(
+                                                Map.of(
+                                                        "name",
+                                                        "porelo",
+                                                        "pending",
+                                                        1,
+                                                        "repositories",
+                                                        List.of(
+                                                                Map.of(
+                                                                        "name",
+                                                                        "core",
+                                                                        "upstream",
+                                                                        "u",
+                                                                        "pending",
+                                                                        1)))))));
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(gate::projects)
+                    .as("a repository without 'own'")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("'own'");
+        }
+        daemon.method(
+                "Projects",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "projects",
+                                        List.of(
+                                                Map.of(
+                                                        "name",
+                                                        "porelo",
+                                                        "pending",
+                                                        1,
+                                                        "repositories",
+                                                        List.of(
+                                                                Map.of(
+                                                                        "name",
+                                                                        "core",
+                                                                        "own",
+                                                                        true,
+                                                                        "upstream",
+                                                                        "u",
+                                                                        "pending",
+                                                                        4_294_967_296L)))))));
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(gate::projects)
+                    .as("a count of 2^32, which an int would read as 0")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("'pending'");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "The name offered for a taken branch counts on past what a long holds, so approving never crashes on it")
+    void theNameOfferedCountsOnPastALong() {
+        assertThat(new BranchExistsException("b-99999999999999999999", "a").next())
+                .as("the name offered after a long number")
+                .isEqualTo("b-100000000000000000000");
+    }
+
     private static Map<String, Object> push(String name, String at) {
         return Map.of(
                 "name",

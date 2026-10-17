@@ -168,7 +168,14 @@ public final class Tunnel implements AutoCloseable {
         }
     }
 
-    private static void clear(Machine machine, Path socket) {
+    /**
+     * Removes a stale socket at the plugin's end, and refuses one something still answers at.
+     *
+     * @param machine The machine whose end it is.
+     * @param socket The plugin's end.
+     * @throws MachinesException If something answers there, or the stale socket cannot be removed.
+     */
+    static void clear(Machine machine, Path socket) {
         if (!Files.exists(socket)) {
             return;
         }
@@ -176,7 +183,7 @@ public final class Tunnel implements AutoCloseable {
             throw new MachinesException(
                     "Something already answers at "
                             + socket
-                            + ", where the tunnel to '"
+                            + ", where the plugin's end for '"
                             + machine.name()
                             + "' goes; it is left alone. End it, then try again.");
         }

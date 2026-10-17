@@ -56,7 +56,9 @@ public final class BranchExistsException extends GateException {
     public String next() {
         final Matcher numbered = NUMBERED.matcher(branch);
         if (numbered.matches()) {
-            return numbered.group(1) + "-" + (Long.parseLong(numbered.group(2)) + 1);
+            return numbered.group(1)
+                    + "-"
+                    + new java.math.BigInteger(numbered.group(2)).add(java.math.BigInteger.ONE);
         }
         return branch + "-2";
     }

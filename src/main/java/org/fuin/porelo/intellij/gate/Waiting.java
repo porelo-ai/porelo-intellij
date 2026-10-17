@@ -44,6 +44,24 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
     }
 
     /**
+     * Returns what has been seen once this is read: what waits now, and what waited before on the
+     * machines that did not answer now, so a machine silent for one read has nothing new to say
+     * when it answers again.
+     *
+     * @param before What had been seen before.
+     * @return What has been seen.
+     */
+    public Waiting seenAfter(Waiting before) {
+        final java.util.Set<String> silentNow = new java.util.HashSet<>();
+        silent.forEach(machine -> silentNow.add(machine.machine()));
+        final List<Entry> seen = new ArrayList<>(pushes);
+        before.pushes().stream()
+                .filter(entry -> silentNow.contains(entry.machine().name()))
+                .forEach(seen::add);
+        return new Waiting(seen, silent);
+    }
+
+    /**
      * Returns what waits grouped by project and repository, the group with the newest push first.
      *
      * <p>A group's label is {@code project / repository}; where the same one waits on several
@@ -52,23 +70,44 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
      * @return The groups, each with its pushes newest first.
      */
     public List<Group> groups() {
+        // Keyed apart from the label, which two places can share, such as project 'a / b' with
+        // repository 'c' and project 'a' with repository 'b / c'.
         final java.util.Map<String, java.util.Set<String>> machines = new java.util.HashMap<>();
         for (final Entry entry : pushes) {
-            machines.computeIfAbsent(
-                            entry.project() + " / " + entry.repository(),
-                            key -> new java.util.HashSet<>())
+            machines.computeIfAbsent(place(entry), key -> new java.util.HashSet<>())
                     .add(entry.machine().name());
         }
         final java.util.Map<String, List<Entry>> groups = new java.util.LinkedHashMap<>();
         for (final Entry entry : pushes) {
-            final String place = entry.project() + " / " + entry.repository();
-            final boolean several = machines.getOrDefault(place, java.util.Set.of()).size() > 1;
-            final String label = several ? place + " on " + entry.machine().name() : place;
-            groups.computeIfAbsent(label, key -> new ArrayList<>()).add(entry);
+            groups.computeIfAbsent(
+                            place(entry)
+                                    + (several(machines, entry)
+                                            ? "\u0000" + entry.machine().name()
+                                            : ""),
+                            key -> new ArrayList<>())
+                    .add(entry);
         }
-        return groups.entrySet().stream()
-                .map(group -> new Group(group.getKey(), group.getValue()))
+        return groups.values().stream()
+                .map(
+                        group -> {
+                            final Entry first = group.getFirst();
+                            final String label = first.project() + " / " + first.repository();
+                            return new Group(
+                                    several(machines, first)
+                                            ? label + " on " + first.machine().name()
+                                            : label,
+                                    group);
+                        })
                 .toList();
+    }
+
+    private static boolean several(
+            java.util.Map<String, java.util.Set<String>> machines, Entry entry) {
+        return machines.getOrDefault(place(entry), java.util.Set.of()).size() > 1;
+    }
+
+    private static String place(Entry entry) {
+        return entry.project() + "\u0000" + entry.repository();
     }
 
     /**
@@ -160,6 +199,16 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
          * @throws GateException If the gate names no address that can be fetched from.
          */
         public String source(java.util.function.Predicate<String> here) {
+            // The path is appended to a host or a distribution; anything but an absolute path of
+            // its own would make it another host, port or distribution.
+            if (!mirror.startsWith("/") || List.of(mirror.split("/")).contains("..")) {
+                throw new GateException(
+                        "The gate of "
+                                + machine.name()
+                                + " names the mirror '"
+                                + mirror
+                                + "', which is no absolute path of its own");
+            }
             if (machine.distribution() != null) {
                 return "//wsl.localhost/" + machine.distribution() + mirror;
             }
@@ -213,7 +262,22 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
      * @return What waits, and who did not answer or is not reached.
      */
     public static Waiting read(Machines.Listed listed, Function<Machine, Gate> connect) {
-        final Waiting read = read(listed.machines(), connect);
+        return read(listed, connect, new Waiting(List.of(), List.of()));
+    }
+
+    /**
+     * Asks every machine the plugin reaches what waits, as {@link #read(Machines.Listed, Function)}
+     * does, taking how far a push reaches from what was read before where it is the same push at
+     * the same commit.
+     *
+     * @param listed The machines, as the interface's file names them.
+     * @param connect Opens a gate to a machine.
+     * @param before What was read last.
+     * @return What waits, and who did not answer or is not reached.
+     */
+    public static Waiting read(
+            Machines.Listed listed, Function<Machine, Gate> connect, Waiting before) {
+        final Waiting read = read(listed.machines(), connect, before);
         final List<Silent> silent = new ArrayList<>(read.silent());
         listed.unreachable().forEach(entry -> silent.add(new Silent(entry.name(), entry.why())));
         return new Waiting(read.pushes(), silent);
@@ -232,20 +296,50 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
      * @return What waits, and who did not answer.
      */
     public static Waiting read(List<Machine> machines, Function<Machine, Gate> connect) {
+        return read(machines, connect, new Waiting(List.of(), List.of()));
+    }
+
+    private static Waiting read(
+            List<Machine> machines, Function<Machine, Gate> connect, Waiting before) {
+        final java.util.Map<String, Integer> known = new java.util.HashMap<>();
+        before.pushes().forEach(entry -> known.put(entry.key(), entry.farReaching()));
         final List<Entry> pushes = new ArrayList<>();
         final List<Silent> silent = new ArrayList<>();
         for (final Machine machine : machines) {
-            try (Gate gate = connect.apply(machine)) {
-                pushes.addAll(at(machine, gate));
+            final List<Entry> read;
+            Gate gate = null;
+            try {
+                gate = connect.apply(machine);
+                read = at(machine, gate, known);
             } catch (RuntimeException ex) {
+                // An interrupted read is no machine that did not answer; it is given up whole.
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new GateException("Interrupted while reading what waits", ex);
+                }
                 silent.add(new Silent(machine.name(), "does not answer: " + ex.getMessage()));
+                continue;
+            } finally {
+                if (gate != null) {
+                    close(gate);
+                }
             }
+            pushes.addAll(read);
         }
         pushes.sort(Comparator.comparing((Entry entry) -> entry.push().at()).reversed());
         return new Waiting(pushes, silent);
     }
 
-    private static List<Entry> at(Machine machine, Gate gate) {
+    // A machine read in full stays read, even if closing its connection then fails.
+    private static void close(Gate gate) {
+        try {
+            gate.close();
+        } catch (RuntimeException ex) {
+            // See above.
+        }
+    }
+
+    private static List<Entry> at(
+            Machine machine, Gate gate, java.util.Map<String, Integer> known) {
         final List<Entry> pushes = new ArrayList<>();
         for (final Project project : gate.projects()) {
             for (final Project.Repository repository : project.repositories()) {
@@ -254,14 +348,30 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
                 }
                 final Gate.Pending pending = gate.pending(project.name(), repository.name());
                 for (final PendingPush push : pending.pushes()) {
+                    final Entry unranked =
+                            new Entry(
+                                    machine,
+                                    project.name(),
+                                    repository.name(),
+                                    pending.mirror(),
+                                    push,
+                                    0);
+                    // A push at the same commit changes the same files: its whole diff is read
+                    // once, not on every read.
+                    final Integer ranked = known.get(unranked.key());
                     final int farReaching =
-                            (int)
-                                    gate
-                                            .review(project.name(), repository.name(), push.name())
-                                            .files()
-                                            .stream()
-                                            .filter(Review.File::farReaching)
-                                            .count();
+                            ranked != null
+                                    ? ranked
+                                    : (int)
+                                            gate
+                                                    .review(
+                                                            project.name(),
+                                                            repository.name(),
+                                                            push.name())
+                                                    .files()
+                                                    .stream()
+                                                    .filter(Review.File::farReaching)
+                                                    .count();
                     pushes.add(
                             new Entry(
                                     machine,

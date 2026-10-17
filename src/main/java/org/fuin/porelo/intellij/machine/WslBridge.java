@@ -90,8 +90,9 @@ public final class WslBridge implements AutoCloseable {
         answers(machine, relay);
         final Path socket = Tunnel.socketFor(runtimeDirectory, machine);
         final ServerSocketChannel server;
+        // A bridge another IDE holds there is left alone; only a stale socket is removed.
+        Tunnel.clear(machine, socket);
         try {
-            Files.deleteIfExists(socket);
             server = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
             server.bind(UnixDomainSocketAddress.of(socket));
             ownerOnly(socket);
@@ -110,7 +111,8 @@ public final class WslBridge implements AutoCloseable {
 
     /**
      * Reads what {@code wsl.exe -l -v} prints: one row per distribution, its name, state and WSL
-     * version.
+     * version. The state is in the language Windows speaks, and may be more than one word; the name
+     * is the first and the version the last.
      *
      * @param printed What it printed, in UTF-16LE as {@code wsl.exe} prints by default, or in
      *     UTF-8.
@@ -119,21 +121,33 @@ public final class WslBridge implements AutoCloseable {
     static List<String[]> distributions(byte[] printed) {
         // UTF-8 text never holds a NUL byte; UTF-16LE text of ASCII names holds one in every
         // second.
-        boolean utf16 = false;
-        for (final byte b : printed) {
-            utf16 |= b == 0;
-        }
         final String text =
-                new String(printed, utf16 ? StandardCharsets.UTF_16LE : StandardCharsets.UTF_8)
+                new String(
+                                printed,
+                                utf16(printed) ? StandardCharsets.UTF_16LE : StandardCharsets.UTF_8)
                         .replace("﻿", "");
         final List<String[]> rows = new ArrayList<>();
         for (final String line : text.split("\\R")) {
             final String[] words = line.replace("*", " ").strip().split("\\s+");
-            if (words.length == 3 && !words[0].equals("NAME")) {
-                rows.add(words);
+            // The heading is in Windows' language too, and the only row whose version is no number.
+            if (words.length >= 3 && words[words.length - 1].matches("[0-9]+")) {
+                rows.add(
+                        new String[] {
+                            words[0],
+                            String.join(" ", List.of(words).subList(1, words.length - 1)),
+                            words[words.length - 1]
+                        });
             }
         }
         return rows;
+    }
+
+    private static boolean utf16(byte[] printed) {
+        boolean utf16 = false;
+        for (final byte b : printed) {
+            utf16 |= b == 0;
+        }
+        return utf16;
     }
 
     /**
@@ -159,9 +173,14 @@ public final class WslBridge implements AutoCloseable {
         closed = true;
         try {
             server.close();
-            for (final Process relay : relays) {
-                end(relay);
-            }
+        } catch (IOException ex) {
+            // Closed either way; the relays below are ended all the same.
+        }
+        // Every wsl.exe is ended even if what follows fails: none may outlive the bridge.
+        for (final Process relay : relays) {
+            end(relay);
+        }
+        try {
             acceptor.join(READY);
             Files.deleteIfExists(socket);
         } catch (InterruptedException ex) {
@@ -200,7 +219,12 @@ public final class WslBridge implements AutoCloseable {
                                 + distribution
                                 + " 2)");
             }
-            if (!row[1].equalsIgnoreCase("Running")) {
+            // English names the state itself; any other language is asked the running ones' names.
+            final boolean running =
+                    row[1].equalsIgnoreCase("Running")
+                            || !row[1].equalsIgnoreCase("Stopped")
+                                    && runningByName(distribution, wsl);
+            if (!running) {
                 throw new MachinesException(
                         "'"
                                 + machine.name()
@@ -219,6 +243,21 @@ public final class WslBridge implements AutoCloseable {
                         + "': this computer has no WSL distribution '"
                         + distribution
                         + "'");
+    }
+
+    // The state is named in Windows' language; the running ones by name alone are the same in all.
+    private static boolean runningByName(String distribution, List<String> wsl) {
+        final List<String> list = new ArrayList<>(wsl);
+        list.addAll(List.of("-l", "--running", "-q"));
+        final Ran ran = run(list, null);
+        final String printed =
+                new String(
+                        ran.out(),
+                        utf16(ran.out()) ? StandardCharsets.UTF_16LE : StandardCharsets.UTF_8);
+        return printed.replace("\uFEFF", "")
+                .lines()
+                .map(String::strip)
+                .anyMatch(distribution::equals);
     }
 
     private static void answers(Machine machine, List<String> relay) {
@@ -299,7 +338,11 @@ public final class WslBridge implements AutoCloseable {
     private static void ownerOnly(Path socket) throws IOException {
         // Windows has no POSIX permissions; there the socket lies under the person's own profile.
         if (Files.getFileAttributeView(socket, PosixFileAttributeView.class) != null) {
-            Files.setPosixFilePermissions(socket, PosixFilePermissions.fromString("rw-------"));
+            final var ownerOnly = PosixFilePermissions.fromString("rw-------");
+            Files.setPosixFilePermissions(socket, ownerOnly);
+            if (!Files.getPosixFilePermissions(socket).equals(ownerOnly)) {
+                throw new IOException(socket + " is not readable by its owner alone");
+            }
         }
     }
 

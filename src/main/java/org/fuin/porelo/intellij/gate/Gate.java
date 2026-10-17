@@ -2,10 +2,15 @@ package org.fuin.porelo.intellij.gate;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.fuin.porelo.wire.varlink.VarlinkClient;
 import org.fuin.porelo.wire.varlink.VarlinkException;
 import org.jspecify.annotations.Nullable;
@@ -22,7 +27,12 @@ public final class Gate implements AutoCloseable {
     /** The daemon's interface. */
     public static final String INTERFACE = "org.fuin.porelo.Tasks1";
 
+    /** How long a read waits for the daemon's answer. */
+    private static final Duration ANSWER = Duration.ofSeconds(30);
+
     private final VarlinkClient client;
+
+    private final Duration answer;
 
     /**
      * Connects to a daemon's socket.
@@ -31,6 +41,11 @@ public final class Gate implements AutoCloseable {
      * @throws GateException If nothing answers there.
      */
     public Gate(Path socket) {
+        this(socket, ANSWER);
+    }
+
+    Gate(Path socket, Duration answer) {
+        this.answer = answer;
         try {
             this.client = new VarlinkClient(socket);
         } catch (VarlinkException ex) {
@@ -44,7 +59,7 @@ public final class Gate implements AutoCloseable {
      * @return The projects.
      */
     public List<Project> projects() {
-        final Map<String, Object> reply = call("Projects", Map.of());
+        final Map<String, Object> reply = read("Projects", Map.of());
         final List<Project> projects = new ArrayList<>();
         for (final Map<String, Object> project : objects(reply, "projects")) {
             final List<Project.Repository> repositories = new ArrayList<>();
@@ -52,7 +67,7 @@ public final class Gate implements AutoCloseable {
                 repositories.add(
                         new Project.Repository(
                                 string(repository, "name"),
-                                Boolean.TRUE.equals(repository.get("own")),
+                                flag(repository, "own"),
                                 string(repository, "upstream"),
                                 number(repository, "pending")));
             }
@@ -70,7 +85,7 @@ public final class Gate implements AutoCloseable {
      * @return The gate's mirror and the pushes that wait.
      */
     public Pending pending(String project, String repository) {
-        final Map<String, Object> reply = call("Pending", parameters(project, repository));
+        final Map<String, Object> reply = read("Pending", parameters(project, repository));
         final List<PendingPush> pushes = new ArrayList<>();
         for (final Map<String, Object> push : objects(reply, "pending")) {
             pushes.add(
@@ -116,7 +131,7 @@ public final class Gate implements AutoCloseable {
     public Review review(String project, String repository, String name) {
         final Map<String, Object> call = parameters(project, repository);
         call.put("name", name);
-        final Map<String, Object> reply = call("Review", call);
+        final Map<String, Object> reply = read("Review", call);
         final List<Review.File> files = new ArrayList<>();
         for (final Map<String, Object> file : objects(reply, "files")) {
             files.add(
@@ -128,11 +143,12 @@ public final class Gate implements AutoCloseable {
                             string(file, "rank"),
                             string(file, "reason")));
         }
-        return new Review(
-                string(reply, "diff"),
-                string(reply, "log"),
-                files,
-                reply.get("asked") instanceof String asked ? asked : null);
+        // Absent when the task is gone; anything but text is no answer to what it asked.
+        final Object asked = reply.get("asked");
+        if (asked != null && !(asked instanceof String)) {
+            throw new GateException("The daemon answered 'asked' with no text: " + shown(reply));
+        }
+        return new Review(string(reply, "diff"), string(reply, "log"), files, (String) asked);
     }
 
     /**
@@ -174,7 +190,7 @@ public final class Gate implements AutoCloseable {
         call.put("reason", reason);
         final Map<String, Object> reply = call("Reject", call);
         if (!(reply.get("told") instanceof Boolean told)) {
-            throw new GateException("Reject answered without 'told': " + reply);
+            throw new GateException("Reject answered without 'told': " + shown(reply));
         }
         return told;
     }
@@ -186,6 +202,47 @@ public final class Gate implements AutoCloseable {
         } catch (IOException ex) {
             throw new GateException(
                     "Cannot close the connection to the daemon: " + ex.getMessage(), ex);
+        }
+    }
+
+    // A read is bounded: a daemon that takes the call and never answers would otherwise hold every
+    // machine read after it. Approving and rejecting are not: the daemon bounds its own push to the
+    // forge, which may rightly take longer than any read.
+    private Map<String, Object> read(String method, Map<String, Object> parameters) {
+        final CompletableFuture<Map<String, Object>> answered = new CompletableFuture<>();
+        Thread.ofVirtual()
+                .start(
+                        () -> {
+                            try {
+                                answered.complete(call(method, parameters));
+                            } catch (RuntimeException ex) {
+                                answered.completeExceptionally(ex);
+                            }
+                        });
+        try {
+            return answered.get(answer.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ex) {
+            // Closing the connection ends the read that waits on it.
+            closeQuietly();
+            throw new GateException(
+                    method + " did not answer within " + answer.toSeconds() + " s", ex);
+        } catch (InterruptedException ex) {
+            closeQuietly();
+            Thread.currentThread().interrupt();
+            throw new GateException(method + " was interrupted", ex);
+        } catch (ExecutionException ex) {
+            if (ex.getCause() instanceof RuntimeException failed) {
+                throw failed;
+            }
+            throw new GateException(method + " failed: " + ex.getCause(), ex);
+        }
+    }
+
+    private void closeQuietly() {
+        try {
+            client.close();
+        } catch (IOException ex) {
+            // The connection is given up either way.
         }
     }
 
@@ -204,9 +261,11 @@ public final class Gate implements AutoCloseable {
         }
         final @Nullable Map<String, Object> parameters = ex.getParameters();
         final Map<String, Object> answer = parameters == null ? Map.of() : parameters;
-        if (error.equals(INTERFACE + ".MovedSinceReview")) {
-            return new MovedSinceReviewException(
-                    string(answer, "name"), string(answer, "reviewed"), string(answer, "now"));
+        if (error.equals(INTERFACE + ".MovedSinceReview")
+                && answer.get("name") instanceof String name
+                && answer.get("reviewed") instanceof String reviewed
+                && answer.get("now") instanceof String now) {
+            return new MovedSinceReviewException(name, reviewed, now);
         }
         // Without its fields it cannot be said in words; then the daemon's own words below stand.
         if (error.equals(INTERFACE + ".BranchExists")
@@ -218,7 +277,7 @@ public final class Gate implements AutoCloseable {
                 method
                         + " was refused: "
                         + error.substring(error.lastIndexOf('.') + 1)
-                        + (answer.isEmpty() ? "" : " " + answer),
+                        + (answer.isEmpty() ? "" : " " + shown(answer)),
                 ex);
     }
 
@@ -232,7 +291,7 @@ public final class Gate implements AutoCloseable {
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> objects(Map<String, Object> reply, String field) {
         if (!(reply.get(field) instanceof List<?> list)) {
-            throw new GateException("The daemon answered without '" + field + "': " + reply);
+            throw new GateException("The daemon answered without '" + field + "': " + shown(reply));
         }
         final List<Map<String, Object>> objects = new ArrayList<>();
         for (final Object entry : list) {
@@ -241,7 +300,7 @@ public final class Gate implements AutoCloseable {
                         "The daemon's '"
                                 + field
                                 + "' holds something that is not an object: "
-                                + entry);
+                                + shown(entry));
             }
             objects.add((Map<String, Object>) map);
         }
@@ -250,16 +309,35 @@ public final class Gate implements AutoCloseable {
 
     private static String string(Map<String, Object> reply, String field) {
         if (!(reply.get(field) instanceof String value)) {
-            throw new GateException("The daemon answered without '" + field + "': " + reply);
+            throw new GateException("The daemon answered without '" + field + "': " + shown(reply));
         }
         return value;
     }
 
+    private static boolean flag(Map<String, Object> reply, String field) {
+        if (!(reply.get(field) instanceof Boolean value)) {
+            throw new GateException("The daemon answered without '" + field + "': " + shown(reply));
+        }
+        return value;
+    }
+
+    // A count is whole and not negative, and one an int cannot hold is refused, never cut to fit.
     private static int number(Map<String, Object> reply, String field) {
         if (!(reply.get(field) instanceof Number value)) {
-            throw new GateException("The daemon answered without '" + field + "': " + reply);
+            throw new GateException("The daemon answered without '" + field + "': " + shown(reply));
+        }
+        final double count = value.doubleValue();
+        if (count != Math.rint(count) || count < 0 || count > Integer.MAX_VALUE) {
+            throw new GateException(
+                    "The daemon answered '" + field + "' with " + value + ", which is no count");
         }
         return value.intValue();
+    }
+
+    // An answer can carry a whole diff; a message shows its start.
+    private static String shown(Object answer) {
+        final String text = String.valueOf(answer);
+        return text.length() <= 300 ? text : text.substring(0, 300) + "...";
     }
 
     private static String causeOf(Throwable ex) {

@@ -14,9 +14,10 @@ import java.util.List;
 
 /**
  * Stands in for {@code wsl.exe} in a separate process. {@code -l -v} prints the distributions of a
- * file, in UTF-16LE as {@code wsl.exe} does; {@code -d <distribution> --exec porelo daemon connect}
- * joins standard input and output to a daemon's socket as that command does, or says what {@code
- * wsl.exe} says of a distribution it does not have.
+ * file, in UTF-16LE as {@code wsl.exe} does, and {@code -l --running -q} the running ones by name;
+ * {@code -d <distribution> --exec porelo daemon connect} joins standard input and output to a
+ * daemon's socket as that command does, or says what {@code wsl.exe} says of a distribution it does
+ * not have.
  */
 public final class FakeWsl {
 
@@ -41,6 +42,20 @@ public final class FakeWsl {
             final String table =
                     "  NAME      STATE           VERSION\r\n" + Files.readString(Path.of(args[0]));
             System.out.write(table.getBytes(StandardCharsets.UTF_16LE));
+            System.out.flush();
+            return;
+        }
+        if (given.equals(List.of("-l", "--running", "-q"))) {
+            // The running ones by name alone, whatever language the list says their state in.
+            final StringBuilder names = new StringBuilder();
+            for (final String row : Files.readAllLines(Path.of(args[0]), StandardCharsets.UTF_8)) {
+                final String[] words = row.replace("*", " ").strip().split("\\s+");
+                final String state = String.join(" ", List.of(words).subList(1, words.length - 1));
+                if (state.equals("Running") || state.equals("Wird ausgeführt")) {
+                    names.append(words[0]).append("\r\n");
+                }
+            }
+            System.out.write(names.toString().getBytes(StandardCharsets.UTF_16LE));
             System.out.flush();
             return;
         }

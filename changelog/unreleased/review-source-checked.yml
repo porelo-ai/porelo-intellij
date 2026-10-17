@@ -1,0 +1,2 @@
+title: A mirror path from a daemon can no longer send a review's fetch to another host, port or WSL distribution, and a notice shows the agent's commit subject as text, never as markup
+type: security

@@ -7,12 +7,11 @@ import com.intellij.notification.NotificationType;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -21,11 +20,10 @@ import org.fuin.porelo.intellij.cache.Changes;
 import org.fuin.porelo.intellij.cache.ReviewCache;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Waiting;
+import org.fuin.porelo.intellij.machine.Connections;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Machines;
 import org.fuin.porelo.intellij.machine.MachinesException;
-import org.fuin.porelo.intellij.machine.Tunnel;
-import org.fuin.porelo.intellij.machine.WslBridge;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -43,13 +41,17 @@ public final class PoreloWatch implements Disposable {
 
     private static final long EVERY_SECONDS = 60;
 
-    private final Map<String, Tunnel> tunnels = new ConcurrentHashMap<>();
-
-    private final Map<String, WslBridge> bridges = new ConcurrentHashMap<>();
+    private final Connections connections =
+            new Connections(PoreloWatch::runtimeDirectory, List.of("ssh"), List.of("wsl.exe"));
 
     private final List<Consumer<Snapshot>> listeners = new CopyOnWriteArrayList<>();
 
+    private static final Logger LOG = Logger.getInstance(PoreloWatch.class);
+
     private volatile Snapshot last = Snapshot.NONE;
+
+    /** What has been announced, kept across a read in which its machine did not answer. */
+    private Waiting seen = new Waiting(List.of(), List.of());
 
     private @Nullable ScheduledFuture<?> schedule;
 
@@ -122,6 +124,19 @@ public final class PoreloWatch implements Disposable {
         return cache().file(repository(entry), commit, path);
     }
 
+    /**
+     * Returns files of a fetched push or of its base, all read at once.
+     *
+     * @param entry The push.
+     * @param commit The commit, as {@link #fetch} named it.
+     * @param paths The files' paths.
+     * @return Each path's bytes, or {@code null} where that side has no such file.
+     */
+    public Map<String, byte @Nullable []> files(
+            Waiting.Entry entry, String commit, List<String> paths) {
+        return cache().files(repository(entry), commit, paths);
+    }
+
     private Path repository(Waiting.Entry entry) {
         return cache().repository(entry.machine().name(), entry.project(), entry.repository());
     }
@@ -142,7 +157,7 @@ public final class PoreloWatch implements Disposable {
      * @return The gate; the caller closes it.
      */
     public Gate gate(Machine machine) {
-        return new Gate(socketOf(machine));
+        return new Gate(connections.socketOf(machine));
     }
 
     @Override
@@ -150,28 +165,33 @@ public final class PoreloWatch implements Disposable {
         if (schedule != null) {
             schedule.cancel(true);
         }
-        tunnels.values().forEach(Tunnel::close);
-        tunnels.clear();
-        bridges.values().forEach(WslBridge::close);
-        bridges.clear();
+        connections.close();
     }
 
     private synchronized void read() {
         final Snapshot before = last;
-        Snapshot now;
-        try {
-            now = new Snapshot(Waiting.read(machines().read(), this::gate), null, Instant.now());
-        } catch (MachinesException ex) {
-            now = new Snapshot(before.waiting(), ex.getMessage(), Instant.now());
-        }
+        final Snapshot now =
+                Snapshot.after(
+                        before,
+                        () -> Waiting.read(machines().read(), this::gate, before.waiting()));
         last = now;
-        tell(before, now);
+        // Nothing here may end the scheduled reads: a failed notice or listener is logged.
+        try {
+            tell(before, now, seen);
+        } catch (RuntimeException ex) {
+            LOG.warn("Cannot tell what is new", ex);
+        }
+        seen = now.waiting().seenAfter(seen);
         for (final Consumer<Snapshot> listener : listeners) {
-            listener.accept(now);
+            try {
+                listener.accept(now);
+            } catch (RuntimeException ex) {
+                LOG.warn("A listener of the watch failed", ex);
+            }
         }
     }
 
-    private static void tell(Snapshot before, Snapshot now) {
+    private static void tell(Snapshot before, Snapshot now, Waiting seen) {
         if (before.at() == null) {
             final int waiting = now.waiting().pushes().size();
             if (waiting > 0) {
@@ -184,20 +204,9 @@ public final class PoreloWatch implements Disposable {
             }
             return;
         }
-        for (final Waiting.Entry entry : now.waiting().newSince(before.waiting())) {
+        for (final Waiting.Entry entry : now.waiting().newSince(seen)) {
             final Notification notification =
-                    notification(
-                            "Waits for review: " + entry.push().subject(),
-                            entry.push().name()
-                                    + " in "
-                                    + entry.project()
-                                    + " / "
-                                    + entry.repository()
-                                    + " on "
-                                    + entry.machine().name()
-                                    + (entry.farReaching() > 0
-                                            ? " - " + entry.farReaching() + " far-reaching file(s)"
-                                            : ""));
+                    notification(Notices.title(entry), Notices.content(entry));
             notification.addAction(
                     NotificationAction.create(
                             "Review",
@@ -217,42 +226,6 @@ public final class PoreloWatch implements Disposable {
         return NotificationGroupManager.getInstance()
                 .getNotificationGroup(NOTIFICATIONS)
                 .createNotification(title, content, NotificationType.INFORMATION);
-    }
-
-    private Path socketOf(Machine machine) {
-        if (machine.inWsl()) {
-            return bridges.compute(
-                            machine.name(),
-                            (name, existing) -> {
-                                if (existing != null && existing.up()) {
-                                    return existing;
-                                }
-                                if (existing != null) {
-                                    existing.close();
-                                }
-                                return WslBridge.open(
-                                        machine, runtimeDirectory(), List.of("wsl.exe"));
-                            })
-                    .socket();
-        }
-        if (!machine.needsATunnel()) {
-            return java.util.Objects.requireNonNull(
-                    machine.socket(), "a machine reached directly has a socket");
-        }
-        final Tunnel tunnel =
-                tunnels.compute(
-                        machine.name(),
-                        (name, existing) -> {
-                            if (existing != null && existing.up()) {
-                                return existing;
-                            }
-                            if (existing != null) {
-                                existing.close();
-                            }
-                            return Tunnel.raise(
-                                    machine, machines().runtimeDirectory(), List.of("ssh"));
-                        });
-        return tunnel.socket();
     }
 
     private static Path runtimeDirectory() {

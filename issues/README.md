@@ -10,12 +10,7 @@ is `IJ`.
 | <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Built but for the publishing |
 | <a id="ij03"></a>[IJ03](IJ03-Porelo-Reached-From-IntelliJ-On-Windows.md) | M | | Seen on Windows: a Porelo in a WSL2 distribution reached through `wsl.exe` and `porelo daemon connect`; a machine over ssh from Windows. The WSL way is built, the ssh way is next; GitHub's Windows runner is the regular check; untested on a Windows machine |
 | <a id="ij08"></a>[IJ08](IJ08-Reformatted-To-The-Shared-Style.md) | S | `porelo-project` [PJ29](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj29) | Google Java Style in its AOSP variant checked by Spotless in `build`, the shared `.editorconfig`, and one commit that only reformats, which `git blame` skips |
-
-## Backlog
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij06"></a>[IJ06](IJ06-The-Code-Read-Against-Its-Skills.md) | L | [IJ08](README.md#ij08) | All of the plugin's code, its tests and its build read against the five skills `AGENTS.md` names, in the versions recorded; each finding fixed with a test seen to fail first, or declined with the reason. Read: 31 defects and five weak tests |
+| <a id="ij06"></a>[IJ06](IJ06-The-Code-Read-Against-Its-Skills.md) | L | `porelo-project` [PJ29](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj29) | All of the plugin's code, its tests and its build read against the five skills `AGENTS.md` names, in the versions recorded; each finding fixed with a test seen to fail first, or declined with the reason. 31 defects read and fixed, 17 of them with a test of their own seen red first |
 
 ## Analyzed
 

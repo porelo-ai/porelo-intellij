@@ -59,6 +59,24 @@ public record Machine(
                             + (host == null ? "a host" : "a remote socket")
                             + "; a tunnel needs both");
         }
+        // A relative socket would be opened where the IDE happens to run, and a remote one that is
+        // no path, such as localhost:22, would make the tunnel forward to a port.
+        if (socket != null && !socket.isAbsolute()) {
+            throw new IllegalArgumentException(
+                    "Machine '"
+                            + name
+                            + "' names the socket '"
+                            + socket
+                            + "', which is no absolute path");
+        }
+        if (remoteSocket != null && !remoteSocket.startsWith("/")) {
+            throw new IllegalArgumentException(
+                    "Machine '"
+                            + name
+                            + "' names the remote socket '"
+                            + remoteSocket
+                            + "', which is no absolute path");
+        }
         if (distribution != null && host != null) {
             throw new IllegalArgumentException(
                     "Machine '" + name + "' is a WSL distribution and names a host too");
