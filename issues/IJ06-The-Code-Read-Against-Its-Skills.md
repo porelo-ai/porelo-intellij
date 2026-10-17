@@ -25,10 +25,10 @@ code a later issue changes is then read against them before it is handed over.
   A newer version published before the reading starts replaces its row, in the same commit as the first finding.
 - **What is read against which skill:**
   - `java-code-review` and `clean-code`: all of `src/main` - `cache` (`ReviewCache`, `Changes`), `gate`
-    (`Gate`, `Waiting`, `Review`, `Project`, `PendingPush` and the exceptions), `ide` (`SokarWatch`,
+    (`Gate`, `Waiting`, `Review`, `Project`, `PendingPush` and the exceptions), `ide` (`PoreloWatch`,
     `WaitingTree`, `ReviewTab`, `ReviewEditor`, `Decisions`, `Snapshot` and the factories) and `machine`
     (`Machines`, `Machine`, `Tunnel`, `WslBridge`).
-  - `concurrency-review`: what runs off the event dispatch thread and what it shares with it - `SokarWatch`'s
+  - `concurrency-review`: what runs off the event dispatch thread and what it shares with it - `PoreloWatch`'s
     timed read, `WaitingTree` and `ReviewTab` handing results back, `Decisions`, and the processes `Tunnel`,
     `WslBridge` and `ReviewCache` start and wait for, with their timeouts and what an interrupt or a closed
     project leaves running.

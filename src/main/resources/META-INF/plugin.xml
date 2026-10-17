@@ -1,22 +1,22 @@
 <idea-plugin>
-    <id>org.fuin.sokar</id>
-    <name>Sokar</name>
-    <vendor url="https://sokar-ai.github.io">Sokar</vendor>
+    <id>org.fuin.porelo</id>
+    <name>Porelo</name>
+    <vendor url="https://porelo-ai.github.io">Porelo</vendor>
     <description><![CDATA[
-    Review an agent's waiting work in IntelliJ IDEA: see what waits at Sokar's gate, read its diff in the IDE,
+    Review an agent's waiting work in IntelliJ IDEA: see what waits at Porelo's gate, read its diff in the IDE,
     and approve or reject it - without checking anything out, building it or running it.
     ]]></description>
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.vcs</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="Sokar" anchor="left" icon="AllIcons.Toolwindows.ToolWindowChanges"
-                    factoryClass="org.fuin.sokar.intellij.ide.SokarToolWindowFactory"/>
-        <notificationGroup id="Sokar" displayType="BALLOON"/>
-        <fileEditorProvider implementation="org.fuin.sokar.intellij.ide.ReviewEditorProvider"/>
+        <toolWindow id="Porelo" anchor="left" icon="AllIcons.Toolwindows.ToolWindowChanges"
+                    factoryClass="org.fuin.porelo.intellij.ide.PoreloToolWindowFactory"/>
+        <notificationGroup id="Porelo" displayType="BALLOON"/>
+        <fileEditorProvider implementation="org.fuin.porelo.intellij.ide.ReviewEditorProvider"/>
     </extensions>
 
     <applicationListeners>
-        <listener class="org.fuin.sokar.intellij.ide.SokarStartup" topic="com.intellij.ide.AppLifecycleListener"/>
+        <listener class="org.fuin.porelo.intellij.ide.PoreloStartup" topic="com.intellij.ide.AppLifecycleListener"/>
     </applicationListeners>
 </idea-plugin>

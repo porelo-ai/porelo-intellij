@@ -25,7 +25,7 @@ jobs:
       - name: The pinned GraalVM
         uses: ./.github/actions/pinned-jdk
 
-      # check-actions, check-shared, check-citations and check-doc-site with sokar-release from Central, the
+      # check-actions, check-shared, check-citations and check-doc-site with porelo-release from Central, the
       # changelog's lint, and the tests tagged documents.
       - name: The documents
         run: ./gradlew --no-daemon documents

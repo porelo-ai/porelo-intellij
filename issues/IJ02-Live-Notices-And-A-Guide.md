@@ -28,9 +28,9 @@ how to install and use the plugin is written down where the other chapters are.
 ## Plan
 
 1. **`Gate.watch(Consumer<List<Project>>)`** over `VarlinkClient.callMore("WatchProjects", …)`, which
-   `sokar-wire` has; it returns when the stream ends or the gate is closed. Red first in `GateTest`: a stand-in
+   `porelo-wire` has; it returns when the stream ends or the gate is closed. Red first in `GateTest`: a stand-in
    daemon sends two replies with `continues`, and both arrive in order.
-2. **`SokarWatch`**: one virtual thread per reachable machine holds the stream; a reply whose `pending` differs
+2. **`PoreloWatch`**: one virtual thread per reachable machine holds the stream; a reply whose `pending` differs
    from the last asks `Pending` for that repository and updates the snapshot, so the notice follows. A stream
    that ends marks the machine not answering and is opened again after a pause; the minute's read stays. Red
    first in a test of the change detection between two replies (a pure function, outside the IDE).

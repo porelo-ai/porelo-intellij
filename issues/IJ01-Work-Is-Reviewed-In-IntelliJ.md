@@ -10,25 +10,25 @@ reject it - without typing a `git fetch`, knowing a mirror's path, or running an
 
 ## Why
 
-Today a review happens in the interface, at the command line (`sokar gate review`), or by hand in a
-clone with the fetch Sokar prints for a waiting push, opened in IntelliJ's safe mode. The last is the one a
+Today a review happens in the interface, at the command line (`porelo gate review`), or by hand in a
+clone with the fetch Porelo prints for a waiting push, opened in IntelliJ's safe mode. The last is the one a
 developer wants for real code - but it asks them to copy a command, keep a clone, and remember not to
 build. The plugin does those steps for them and keeps the safety the box gives.
 
 ## The shape
 
-### 1. A tool window "Sokar", one list of what waits
+### 1. A tool window "Porelo", one list of what waits
 
 - Every waiting push of every machine the person reaches, newest first: the task, the repository,
-  the agent, how long it has waited, and how far-reaching the change is (Sokar's ranking).
+  the agent, how long it has waited, and how far-reaching the change is (Porelo's ranking).
 - A notification when something new waits, like a pull request assigned.
 - It works whatever project is open in the IDE, or none: a waiting push is reviewed without one.
 
 ### 2. Review without a project and without a working tree
 
 - **The plugin keeps a cache of its own per repository**: a bare git repository, with no working
-  tree, under the IDE's cache directory (say `~/.cache/sokar-intellij/<repository>.git`). A waiting
-  push is fetched there (the fetch Sokar prints, run by the plugin over the person's ssh), never into a
+  tree, under the IDE's cache directory (say `~/.cache/porelo-intellij/<repository>.git`). A waiting
+  push is fetched there (the fetch Porelo prints, run by the plugin over the person's ssh), never into a
   repository of the person's.
 - **The diff is shown in IntelliJ's own diff windows**, which compare two versions of a file without a
   project: the commit list, the diff per file, side by side.
@@ -36,7 +36,7 @@ build. The plugin does those steps for them and keeps the safety the box gives.
   working tree there is nothing IntelliJ could load as a project, sync, build or run - no Gradle or
   Maven import, no run configuration, no `.idea/` file of the agent's. The review writes nothing into a
   repository of the person's.
-- The files Sokar ranks as far-reaching (build files, workflows, `.idea/`, hooks) come first and
+- The files Porelo ranks as far-reaching (build files, workflows, `.idea/`, hooks) come first and
   marked, as in the interface.
 
 ### 3. Approve or reject from the window
@@ -49,7 +49,7 @@ build. The plugin does those steps for them and keeps the safety the box gives.
 
 - **Through the daemon's own contract**, not the CLI: the same Varlink interface the interface uses
   (`Pending`, `Approve`, `Reject`), over the ssh forward to the machine's socket. The client is
-  `sokar-wire`, which `sokar` already publishes for Java - so the plugin speaks the contract with the
+  `porelo-wire`, which `porelo` already publishes for Java - so the plugin speaks the contract with the
   code that defines it, not a copy.
 - **Machines come from what the person already set up**: the interface's list of machines and their
   ssh hosts, read only. No second configuration to keep.
@@ -58,7 +58,7 @@ build. The plugin does those steps for them and keeps the safety the box gives.
 
 ### 5. Later, not first
 
-- *Run its tests* on the waiting work, in a fresh container on the machine ([B95](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b95) `gate try`, [F74](https://github.com/sokar-ai/sokar-frontend/blob/main/issues/README.md#f74)), its
+- *Run its tests* on the waiting work, in a fresh container on the machine ([B95](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b95) `gate try`, [F74](https://github.com/porelo-ai/porelo-frontend/blob/main/issues/README.md#f74)), its
   output in IntelliJ's run window - never on the developer's computer.
 - Starting work from IntelliJ ("let an agent work on this branch") - a separate requirement.
 
@@ -70,7 +70,7 @@ build. The plugin does those steps for them and keeps the safety the box gives.
   (`intellij/`) is, which also shows the publishing: the plugin zip and an `updatePlugins.xml`
   uploaded to an Artifactory generic repository under `<version>/` and `latest/`, so a person adds
   one URL as a custom plugin repository and installs it from the Marketplace tab.
-- **For Sokar:** the generic repository `sokar-dist-intellij` beside `sokar-dist-deb`/`-rpm`, set up with
+- **For Porelo:** the generic repository `porelo-dist-intellij` beside `porelo-dist-deb`/`-rpm`, set up with
   deploy for the Build's account, with the same two channels as the packages: `snapshots` from `main`,
   `releases` from a `v<version>` tag after every check passed (as for the packages). The version line
   follows the others (0.4.0).
@@ -83,14 +83,14 @@ build. The plugin does those steps for them and keeps the safety the box gives.
 
 ## Plan
 
-- **Built:** the tool window and its notice (`SokarWatch`, `WaitingTree`), the bare cache (`ReviewCache`), the
+- **Built:** the tool window and its notice (`PoreloWatch`, `WaitingTree`), the bare cache (`ReviewCache`), the
   review tab in IntelliJ's diff windows (`ReviewEditor`, `ReviewTab`), approve with the commit shown and reject
   with a reason (`Decisions`, `Gate`), and the machines from the interface's list (`Machines`, `Tunnel`).
 - **Publishing:**
   1. A Gradle task beside `buildPlugin` writes `updatePlugins.xml` for the zip, as `ddd-cqrs-dsl`'s `intellij/`
      does; `pluginVersion` moves to the other repositories' line.
   2. A job "Publish" in `build.yml`, on `main` and on `v<version>` tags only, after `build` and `verifyPlugin`:
-     the zip and `updatePlugins.xml` uploaded with `jf rt upload` into `sokar-dist-intellij` under
+     the zip and `updatePlugins.xml` uploaded with `jf rt upload` into `porelo-dist-intellij` under
      `<channel>/<version>/` and `latest/`, each read back with no token; `permissions` as `check-actions` wants
      them, the token a repository secret.
   3. Seen red first: a test of the Gradle task's `updatePlugins.xml` (id, version, URL, since-build), against

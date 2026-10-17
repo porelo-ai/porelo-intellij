@@ -1,12 +1,12 @@
 # The GraalVM the CI snapshots pin, installed on a GitHub runner and checked against its digest - so a
 # job compiles with the same JDK a leg builds with, and never with whatever release a moving name ('25')
-# resolved to that day. The pin lives in sokar-buildtools, in the published sokar-machines, and is moved
+# resolved to that day. The pin lives in porelo-buildtools, in the published porelo-machines, and is moved
 # by that repository's Machines workflow once a release is three days old.
 #
-# Bootstrapped from the runner's own Java 25 (JAVA_HOME_25_X64), which runs sokar-machines once through
+# Bootstrapped from the runner's own Java 25 (JAVA_HOME_25_X64), which runs porelo-machines once through
 # Gradle to install the pinned one; nothing that JDK compiles is published. Needs the repository checked out.
 name: Pinned GraalVM
-description: Installs the GraalVM sokar-machines pins, checked against its digest, as JAVA_HOME for the rest of the job.
+description: Installs the GraalVM porelo-machines pins, checked against its digest, as JAVA_HOME for the rest of the job.
 runs:
   using: composite
   steps:
@@ -31,6 +31,6 @@ runs:
             exit 1
         fi
         export JAVA_HOME="$JAVA_HOME_25_X64"
-        # sokar-machines from Central at gradle/libs.versions.toml's sokar-buildtools, run by that Java. The
+        # porelo-machines from Central at gradle/libs.versions.toml's porelo-buildtools, run by that Java. The
         # daemon is not kept: the next step's Gradle runs on the GraalVM this installs.
         ./gradlew -q --no-daemon machines -Pmachines.args="jdk --github"

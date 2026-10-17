@@ -1,9 +1,9 @@
 # IJ04 — Code comments in the review
 
-**Status:** Estimated; blocked by `sokar` [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166) (the comment model and the local review) and, for its second
-part, by `sokar` [B171](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b171) (comments to and from a forge).
+**Status:** Estimated; blocked by `porelo` [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166) (the comment model and the local review) and, for its second
+part, by `porelo` [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171) (comments to and from a forge).
 **Size:** XL - writing and showing threads inside IntelliJ's diff windows is several days alone; it splits into
-part 1 (L, with [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166)) and part 2 (M, its own issue once [B171](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b171)'s contract is written).
+part 1 (L, with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)) and part 2 (M, its own issue once [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171)'s contract is written).
 
 **What must be true.** A developer who reviews waiting work in IntelliJ comments on its lines there, as on a
 colleague's change, and reads in the same place what agents and people on the forge said about it, each marked with
@@ -23,7 +23,7 @@ list, one comment at a time.
   A thread is marked open or resolved.
 - A suggestion is shown as a small diff inside its comment. The plugin never applies one: the agent does, in its
   task, and the result comes back through the gate as new work.
-- A reject sends the open comments to the task with the reason, as [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166) says.
+- A reject sends the open comments to the task with the reason, as [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166) says.
 
 ### 2. What crosses to and from a forge
 
@@ -32,13 +32,13 @@ list, one comment at a time.
 - Comments from forge accounts not on the project's list are shown as held, apart from the delivered ones; each can be
   released to the task singly.
 - Every release is the daemon's, through its contract; the plugin holds no forge token.
-- The interface does the same in `sokar-frontend` [F107](https://github.com/sokar-ai/sokar-frontend/blob/main/issues/README.md#f107); both read the comments from the same contract and show the same
+- The interface does the same in `porelo-frontend` [F107](https://github.com/porelo-ai/porelo-frontend/blob/main/issues/README.md#f107); both read the comments from the same contract and show the same
   origins.
 
 ## Plan
 
-- **Part 1, with [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166)'s contract:**
-  1. **`Gate`** speaks [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166)'s `Comment`, `Comments` and `ResolveThread`, with its `Anchor` (repository,
+- **Part 1, with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)'s contract:**
+  1. **`Gate`** speaks [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)'s `Comment`, `Comments` and `ResolveThread`, with its `Anchor` (repository,
      commit, path, side `old` or `new`, first and last line, at most 100 lines), a suggestion of at most the anchor's
      lines plus 10, and each comment's `CommentOrigin`. `AnchorNotInCommit`, `SuggestionOutsideAnchor` and
      `CommentTooLarge` become exceptions in words, as `BranchExistsException` does. Red first in `GateTest` against
@@ -51,8 +51,8 @@ list, one comment at a time.
      a thread.
   4. **`Decisions`**: a reject needs nothing new, as the daemon delivers the open threads with the reason; the
      notice says what its `told` says.
-  5. The acceptance on the VM against a daemon with [B166](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b166), as a live test.
-- **Part 2, with [B171](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b171)'s contract:** a list per push of what waits to go out and what is held, each with Release
+  5. The acceptance on the VM against a daemon with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), as a live test.
+- **Part 2, with [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171)'s contract:** a list per push of what waits to go out and what is held, each with Release
   and Drop, through the gate; no forge token in the plugin.
 
 ## Acceptance
@@ -61,7 +61,7 @@ list, one comment at a time.
   commit does not have is refused in words; the agent's reply appears in the thread with its origin. Each seen to fail
   first against today's plugin.
 - A suggestion is shown as a diff and the working tree of the project open in the IDE is unchanged afterwards.
-- With [B171](https://github.com/sokar-ai/sokar/blob/main/issues/base/README.md#b171): a held forge comment released in the IDE reaches the task, and an outgoing one released there reaches the
+- With [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171): a held forge comment released in the IDE reaches the task, and an outgoing one released there reaches the
   pull request; one dropped goes nowhere.
 
 ## To be checked

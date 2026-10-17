@@ -14,22 +14,22 @@ version = providers.gradleProperty("pluginVersion").get()
 
 repositories {
     mavenCentral()
-    // Sokar's own artifacts are built against while they are developed; this serves those snapshots and nothing else.
+    // Porelo's own artifacts are built against while they are developed; this serves those snapshots and nothing else.
     exclusiveContent {
         forRepository {
             maven("https://central.sonatype.com/repository/maven-snapshots/") {
                 mavenContent { snapshotsOnly() }
             }
         }
-        filter { includeVersionByRegex("org\\.fuin\\.sokar", ".*", ".*-SNAPSHOT") }
+        filter { includeVersionByRegex("org\\.fuin\\.porelo", ".*", ".*-SNAPSHOT") }
     }
     intellijPlatform {
         defaultRepositories()
     }
 }
 
-// sokar-release and sokar-machines from Central, run as Java programs: the checks every Sokar repository runs.
-val sokarTools: Configuration = configurations.create("sokarTools")
+// porelo-release and porelo-machines from Central, run as Java programs: the checks every Porelo repository runs.
+val poreloTools: Configuration = configurations.create("poreloTools")
 
 dependencies {
     intellijPlatform {
@@ -40,12 +40,12 @@ dependencies {
         pluginVerifier(libs.versions.plugin.verifier)
     }
     // The daemon's contract is spoken with the client that defines it, bundled with the plugin.
-    implementation(libs.sokar.wire)
+    implementation(libs.porelo.wire)
     compileOnly(libs.jspecify)
     errorprone(libs.errorprone)
     errorprone(libs.nullaway)
-    sokarTools(libs.sokar.release)
-    sokarTools(libs.sokar.machines)
+    poreloTools(libs.porelo.release)
+    poreloTools(libs.porelo.machines)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj)
@@ -95,7 +95,7 @@ tasks.test {
 
 // Against a real daemon on a machine somebody keeps, named in the environment; never part of the build.
 tasks.register<Test>("liveTest") {
-    description = "Runs the tests tagged live against the machine SOKAR_LIVE_HOST names."
+    description = "Runs the tests tagged live against the machine PORELO_LIVE_HOST names."
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     testClassesDirs = sourceSets.test.get().output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath
@@ -116,24 +116,24 @@ val documentsTest = tasks.register<Test>("documentsTest") {
     }
 }
 
-fun sokarRelease(name: String, what: String, vararg arguments: String) = tasks.register<JavaExec>(name) {
+fun poreloRelease(name: String, what: String, vararg arguments: String) = tasks.register<JavaExec>(name) {
     description = what
     group = LifecycleBasePlugin.VERIFICATION_GROUP
-    classpath = sokarTools
-    mainClass = "org.fuin.sokar.release.Main"
+    classpath = poreloTools
+    mainClass = "org.fuin.porelo.release.Main"
     args = arguments.toList()
     workingDir = layout.projectDirectory.asFile
 }
 
-val checkActions = sokarRelease("checkActions", "Every workflow step pinned by commit.",
+val checkActions = poreloRelease("checkActions", "Every workflow step pinned by commit.",
     "check-actions", ".github")
-val checkShared = sokarRelease("checkShared",
+val checkShared = poreloRelease("checkShared",
     "The shared block of AGENTS.md carries the hash of its text, so a copy edited on its own fails.",
     "check-shared", "AGENTS.md")
-val checkCitations = sokarRelease("checkCitations",
+val checkCitations = poreloRelease("checkCitations",
     "No file cites an issue in a way that goes stale once the issue is finished and deleted.",
     "check-citations", ".")
-val checkDocSite = sokarRelease("checkDocSite",
+val checkDocSite = poreloRelease("checkDocSite",
     "Every page of doc/ is in mkdocs.yml's navigation once, and every link on it can be followed.",
     "check-doc-site", "doc", "mkdocs.yml")
 
@@ -148,10 +148,10 @@ tasks.check {
     dependsOn(checkActions, checkShared, checkCitations, checkDocSite, "logchangeLint")
 }
 
-// Any sokar-machines command, such as 'jdk --github', which installs the pinned GraalVM in a CI job.
+// Any porelo-machines command, such as 'jdk --github', which installs the pinned GraalVM in a CI job.
 tasks.register<JavaExec>("machines") {
-    description = "Runs sokar-machines with the arguments given as -Pmachines.args."
-    classpath = sokarTools
-    mainClass = "org.fuin.sokar.machines.Main"
+    description = "Runs porelo-machines with the arguments given as -Pmachines.args."
+    classpath = poreloTools
+    mainClass = "org.fuin.porelo.machines.Main"
     args = providers.gradleProperty("machines.args").orElse("").get().split(' ').filter { it.isNotBlank() }
 }
