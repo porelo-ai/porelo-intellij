@@ -1,6 +1,6 @@
 # IJ07 — Sokar is renamed Porelo
 
-**Status:** Implementing.
+**Status:** Review.
 **Size:** S - one module, 483 occurrences in 64 of 80 tracked files and 44 paths before this issue, all of them made by the script; no
 image draws the name, and every contract the plugin reads is renamed by another repository first, so the work is the
 script, its exceptions, the build and a live run against a Porelo daemon.

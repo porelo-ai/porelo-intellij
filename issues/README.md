@@ -3,13 +3,18 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
+## Review
+
+| # | size | blocked by | what it covers |
+|---|---|---|---|
+| <a id="ij07"></a>[IJ07](IJ07-Sokar-Is-Renamed-Porelo.md) | S | | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo by a script with a short list of exceptions, speaking to a Porelo daemon; a test of the documents refuses the old name |
+
 ## Implementing
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
 | <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Built but for the publishing |
 | <a id="ij03"></a>[IJ03](IJ03-Porelo-Reached-From-IntelliJ-On-Windows.md) | M | | Seen on Windows: a Porelo in a WSL2 distribution reached through `wsl.exe` and `porelo daemon connect`; a machine over ssh from Windows. The WSL way is built, the ssh way is next; GitHub's Windows runner is the regular check; untested on a Windows machine |
-| <a id="ij07"></a>[IJ07](IJ07-Sokar-Is-Renamed-Porelo.md) | S | | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo by a script with a short list of exceptions, speaking to a Porelo daemon; a test of the documents refuses the old name |
 
 ## Analyzed
 
