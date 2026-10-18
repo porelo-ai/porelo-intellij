@@ -1,7 +1,6 @@
 # IJ06 — The code read against its skills
 
-**Status:** Implementing, on [IJ08](README.md#ij08)'s reformatting; blocked by `porelo-project` [PJ29](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj29)'s shared part until
-it is published.
+**Status:** Review; pushed in `0fb6b91`, its Build green (run 39080719988).
 **Size:** L - the reading found 31 defects to reproduce and fix, and five tests that are weak or cannot
 fail; several fixes in `ide` first move logic out of the IntelliJ services into plain classes so that a unit test
 reaches it, and one needs a deadline the plugin cannot set without `porelo-wire`. It was M before the reading.
@@ -116,8 +115,7 @@ or a token or markup from the agent reaching the person.
     accepts and never answers stops `Waiting.read` for every machine after it, holds `PoreloWatch`'s lock, and so
     hangs closing the project. Test: a stand-in that never replies beside a healthy one; the read ends with the
     first silent and the second listed. Fixed in the plugin with a deadline per machine; a deadline in
-    `porelo-wire` itself is `porelo`'s issue *A Varlink Call Has A Read Deadline*, linked here once it is pushed,
-    and no contract changes.
+    `porelo-wire` itself is `porelo` [B200](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b200), and no contract changes.
     **Fixed**, `GateTest.aDaemonThatNeverAnswersIsLeft`: a read answers within 30 s or is given up. Approving and rejecting are not bounded here: the daemon bounds its own push to the forge.
 13. *concurrency* - an interrupted `Waiting.read` records every machine left as "does not answer" and returns
     that snapshot. Test: an interrupted read throws, or names no machine silent.

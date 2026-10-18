@@ -1,7 +1,6 @@
 # IJ08 — Reformatted to the shared style
 
-**Status:** Implementing, against `porelo-project` [PJ29](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj29)'s shared part as installed locally; blocked by it until
-it is published.
+**Status:** Review; pushed in `8475ca8`, its Build green (run 39080719988).
 **Size:** S - one build script, the versions file and the shared `.editorconfig`, then one mechanical reformatting
 of 44 Java files (4,718 lines, 439 of them over 100 columns), checked to change whitespace and line breaks only.
 
