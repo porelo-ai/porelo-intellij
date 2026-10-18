@@ -25,6 +25,10 @@ checkout's token at hand.
   dependencies are releases and are checked now.
 - **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
   does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
+- **Shown on the first move:** Gradle 9.8.1, logchange 1.20.0 and JSpecify 1.0.1, taken by hand from what
+  Dependabot's last Gradle pull request offered, without its JUnit 6, which `porelo-parent` does not pin. The renewed
+  file changes the logchange, slf4j and Jackson entries they pull in, in the same commit, and it was written from an
+  empty Gradle home.
 - **A version is moved by hand, never by Dependabot** (the operator's decision of 2026-10-18). Dependabot keeps only
   the `github-actions` ecosystem, as in every other Porelo repository. A version in `gradle/libs.versions.toml` or
   the Gradle Wrapper is moved like `porelo-parent`'s Maven pins, and the same commit renews the file, with a

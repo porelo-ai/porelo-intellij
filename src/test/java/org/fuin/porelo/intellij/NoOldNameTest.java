@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -91,6 +92,10 @@ class NoOldNameTest {
             return Files.readAllLines(path, StandardCharsets.UTF_8);
         } catch (final MalformedInputException ex) {
             // Not text, such as the Gradle Wrapper's jar: nothing in it is read as a word.
+            return List.of();
+        } catch (final NoSuchFileException ex) {
+            // Tracked but deleted in the working tree, as the verification metadata is while it is
+            // renewed: there is no text to read.
             return List.of();
         } catch (final IOException ex) {
             throw new UncheckedIOException("Cannot read " + path, ex);

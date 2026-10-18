@@ -9,7 +9,7 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
 - **It is built with Gradle and the IntelliJ Platform Gradle Plugin, not Maven** - the exception the shared
   build-tool rule names: JetBrains supports building, testing, verifying and publishing a plugin only with Gradle,
   and Gradle does nothing here but build, check and publish the plugin.
-  So the files that are not Java are Gradle's: `gradlew`, `gradlew.bat` and `gradle/wrapper/` as Gradle 9.8.0
+  So the files that are not Java are Gradle's: `gradlew`, `gradlew.bat` and `gradle/wrapper/` as Gradle 9.8.1
   generated them (the jar matching Gradle's published checksum), and the build scripts `settings.gradle.kts` and
   `build.gradle.kts`, which Gradle reads only in Kotlin or Groovy.
 - **`porelo-release` and `porelo-machines` run from Gradle as the Java programs they are**, from Central at
