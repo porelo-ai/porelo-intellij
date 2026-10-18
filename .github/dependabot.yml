@@ -1,6 +1,7 @@
-# What keeps the pins current: a pin nobody moves rots, and trades a live risk for a stale one. Dependabot opens
-# one reviewed pull request a week per entry, with the release notes; nothing merges it automatically. A release
-# becomes old enough to take after three days, as every other pin here.
+# What keeps the pinned actions current: a pin nobody moves rots, and trades a live risk for a stale one. Dependabot
+# opens one reviewed pull request a week, with the release notes; nothing merges it automatically. A release becomes
+# old enough to take after three days, as every other pin here. The Gradle Wrapper and gradle/libs.versions.toml are
+# moved by hand, with gradle/verification-metadata.xml renewed in the same commit, as AGENTS.md says.
 version: 2
 updates:
     # Every action is pinned to a commit with its version beside it, in the workflows and the composite actions.
@@ -17,15 +18,3 @@ updates:
               patterns: ["*"]
       commit-message:
           prefix: "Move the pinned workflow steps"
-    # The Gradle Wrapper with its distribution's digest, and the versions in gradle/libs.versions.toml.
-    - package-ecosystem: gradle
-      directory: "/"
-      schedule:
-          interval: weekly
-      cooldown:
-          default-days: 3
-      groups:
-          gradle:
-              patterns: ["*"]
-      commit-message:
-          prefix: "Move the pinned build"

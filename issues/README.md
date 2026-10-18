@@ -16,12 +16,12 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Built but for the publishing |
 | <a id="ij03"></a>[IJ03](IJ03-Porelo-Reached-From-IntelliJ-On-Windows.md) | M | | Seen on Windows: a Porelo in a WSL2 distribution reached through `wsl.exe` and `porelo daemon connect`; a machine over ssh from Windows. The WSL way is built, the ssh way is next; GitHub's Windows runner is the regular check; untested on a Windows machine |
+| <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
 ## Analyzed
 
 | # | size | blocked by | what it covers | open questions |
 |---|---|---|---|---|
-| <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and tool the Gradle build resolves checked against its digest, Porelo's own snapshots by their signature | 1 |
 | <a id="ij05"></a>[IJ05](IJ05-A-Waiting-Push-Opened-In-Its-Project.md) | M | | *Open in <project>*: a waiting push fetched as `refs/remotes/porelo/<push>` into the open project that holds its upstream, working tree untouched; that remote fetched there after approving | — |
 
 ## Estimated

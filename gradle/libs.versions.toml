@@ -1,5 +1,6 @@
-# Every version the build names, in one place Dependabot reads. The test libraries, Error Prone and NullAway are
-# the ones porelo-parent pins for the Maven repositories.
+# Every version the build names, in one place, moved by hand: each move renews gradle/verification-metadata.xml in the
+# same commit, as AGENTS.md says. The test libraries, Error Prone and NullAway are the ones porelo-parent pins for the
+# Maven repositories.
 [versions]
 intellij-platform = "2.19.0"
 logchange = "1.19.16"

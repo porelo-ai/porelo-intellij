@@ -14,6 +14,13 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   `build.gradle.kts`, which Gradle reads only in Kotlin or Groovy.
 - **`porelo-release` and `porelo-machines` run from Gradle as the Java programs they are**, from Central at
   `porelo-buildtools` in `gradle/libs.versions.toml`, where every version the build names is kept.
+- **Gradle checks every plugin, library and IDE the build resolves against its SHA-256 in
+  `gradle/verification-metadata.xml` before using it**, and fails naming the artifact that differs. Gradle never checks
+  a snapshot, so Porelo's snapshots run unchecked until a release replaces them. Dependabot moves only the actions:
+  a version in `gradle/libs.versions.toml` or the Gradle Wrapper is moved by hand, and the same commit renews the file
+  from an empty Gradle home, with `rm gradle/verification-metadata.xml && ./gradlew -g <empty directory>
+  --no-configuration-cache --no-build-cache --write-verification-metadata sha256 clean build verifyPlugin documents`.
+  A Gradle home that already holds the downloads leaves out what it did not fetch again.
 - **Two shared rules are written for Maven alone and hold nothing here:**
   - *Every Porelo Maven repository takes `porelo-parent` as its parent*: Gradle has no parent pom. The versions
     `porelo-parent` pins that this build uses (JUnit, AssertJ, `porelo-buildtools`) are named again in

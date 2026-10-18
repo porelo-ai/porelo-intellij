@@ -1,48 +1,56 @@
 # IJ09 — The build verifies every dependency
 
-**Status:** Analyzed.
-**Size:** M - one generated file and the build's switch to it, a rule for Porelo's own snapshots, the way a
-dependency update renews the file, and a check that a tampered entry fails; no code of the plugin changes.
+**Status:** Implementing.
+**Size:** M - one generated file, Dependabot reduced to the actions, the way a version is moved and the file renewed,
+and a check that a tampered entry fails; no code of the plugin changes.
 
 **What must be true.** Every plugin, library and tool the Gradle build resolves is checked against the digest its
-source names before it is used, as `AGENTS.md` asks of every download; a dependency whose bytes differ from the ones
+source names before it is used, as `AGENTS.md` asks of every download. A dependency whose bytes differ from the ones
 recorded fails the build, naming it. Today only the Gradle Wrapper is checked, by its `distributionSha256Sum` and the
 wrapper's validation, while `porelo-release` and `porelo-machines` run as programs in the Build with the
 checkout's token at hand.
 
 ## Plan
 
-- **Measured on `0fb6b91`:** `./gradlew --write-verification-metadata sha256 build verifyPlugin` writes
-  `gradle/verification-metadata.xml` of 287 KB, 552 components and 1,116 artifacts, the three IntelliJ IDEAs the
-  plugin compiles and is verified against among them, as group `idea`. Gradle then checks each one before use and
-  fails naming the artifact whose digest differs; nothing in the IntelliJ Platform's plugin escapes it.
-- **Porelo's own snapshots** (`porelo-wire` while it is one, `porelo-release`, `porelo-machines`) change their bytes
-  with every publish, so a SHA-256 would break on each. Central's snapshots carry a signature (`.asc`, measured for
-  `porelo-release` `0.5.1-SNAPSHOT`), so the file checks `org.fuin.porelo` by signature against Porelo's own
-  signing key, trusted for that group alone, and everything else by SHA-256.
-- **The file is committed and kept by its own task:** a dependency update renews it with the same command, in the
-  same change, or the build fails on the new artifact. How Dependabot's pull requests get it is the open question
-  below.
-- **Red first:** one entry's digest changed by hand fails `build`, naming the artifact; a signature from another
-  key fails it for a Porelo artifact. Neither change is committed.
-- **What else changes:** `AGENTS.md`'s repository part names the command that renews the file; the changelog
-  says the build verifies its dependencies.
+- **Measured on `1169e03`:** the command `AGENTS.md` names, run from an empty Gradle home, writes
+  `gradle/verification-metadata.xml` of 295 KB, 569 components and 1,145 artifacts. The three IntelliJ IDEAs the
+  plugin compiles and is verified against are among them, as group `idea`. Gradle then checks each one before use and
+  fails naming the artifact whose digest differs. Nothing the IntelliJ Platform's plugin downloads escapes it. Seen
+  red: one digest of `jspecify-1.0.0.jar` changed fails the build in its configuration, "One artifact failed
+  verification: jspecify-1.0.0.jar (org.jspecify:jspecify:1.0.0)".
+- **Every release by SHA-256, `porelo-wire` among them.** Gradle does not verify a snapshot at all, by digest or by
+  signature ("Gradle does *not* verify changing dependencies", its user guide; measured: a wrong digest written for
+  `porelo-release` 0.5.1-SNAPSHOT passes). So `porelo-release` and `porelo-machines` stay unchecked while the build
+  takes `porelo-buildtools` as a snapshot, and are checked like everything else once a release is pinned. Their own
+  dependencies are releases and are checked now.
+- **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
+  does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
+- **A version is moved by hand, never by Dependabot** (the operator's decision of 2026-10-18). Dependabot keeps only
+  the `github-actions` ecosystem, as in every other Porelo repository. A version in `gradle/libs.versions.toml` or
+  the Gradle Wrapper is moved like `porelo-parent`'s Maven pins, and the same commit renews the file, with a
+  changelog entry and the VM run before the push. Renewing a digest for a new version records what the publisher
+  serves that day, after the download was compared with the repository's own checksum. Who runs the command
+  changes little, so the path that matches the rest of the project is taken. No workflow writes, and no token
+  that writes is added.
+- **Red first:** one entry's digest changed by hand fails `build`, naming the artifact. The change is not committed.
+- **What else changes:** `AGENTS.md`'s repository part names the command that renews the file. There is no changelog
+  entry: the plugin the build produces stays the same.
 
 ## Acceptance
 
-- `build`, `verifyPlugin` and `documents` green with the file, locally, on the VM and in the Build.
-- A changed digest and a foreign signature each seen to fail the build, naming the artifact.
-- A dependency update shown renewing the file in the way the operator chooses.
+- `build`, `verifyPlugin` and `documents` green with the file, from an empty Gradle home, locally, on the VM and in
+  the Build.
+- A changed digest seen to fail the build, naming the artifact.
+- A version move shown renewing the file in the same commit.
 
 ## Open questions
 
-- **How a Dependabot pull request gets the renewed file.** (a) A workflow renews it on Dependabot's branch and
-  pushes: that needs a token that writes to that branch, which the new rule on `persist-credentials` and the list
-  of jobs that may write must then name. (b) A person, or the repository's agent, renews it on the branch by hand
-  before merging; nothing writes from a workflow. (c) Dependabot is left to open its pull requests red until
-  someone renews the file. I propose (b): it adds no token that writes.
+- **Porelo's snapshots until a release.** (a) Accept them unchecked until `porelo-buildtools` 0.5.1 is released and
+  pinned. (b) A task checks the two snapshot jars' signatures against a key the operator names before they run. I
+  propose (a): the shared rules let a repository build against a Porelo snapshot while it is developed, and (b) is
+  code that (a) removes again.
 
 ## To be checked
 
 - Whether the Maven repositories carry the same risk without a check of their own, so that one answer holds for
-  all of them; that is a question for `porelo-project`, not built here.
+  all of them. That is a question for `porelo-project`, not built here.
