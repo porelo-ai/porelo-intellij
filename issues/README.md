@@ -3,13 +3,6 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
-## Review
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij08"></a>[IJ08](IJ08-Reformatted-To-The-Shared-Style.md) | S | | Google Java Style in its AOSP variant checked by Spotless in `build`, the shared `.editorconfig`, and one commit that only reformats, which `git blame` skips |
-| <a id="ij06"></a>[IJ06](IJ06-The-Code-Read-Against-Its-Skills.md) | L | | All of the plugin's code, its tests and its build read against the five skills `AGENTS.md` names, in the versions recorded; each finding fixed with a test seen to fail first, or declined with the reason. 31 defects read and fixed, 17 of them with a test of their own seen red first |
-
 ## Implementing
 
 | # | size | blocked by | what it covers |
@@ -36,3 +29,5 @@ is `IJ`.
 | # | Title | What was built |
 |---|---|---|
 | <a id="ij07"></a>[IJ07](README.md#ij07) | Sokar is renamed Porelo | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo, speaking to a Porelo daemon and installed afresh; a test of the documents refuses the old name. |
+| <a id="ij08"></a>[IJ08](README.md#ij08) | Reformatted to the shared style | Google Java Style in its AOSP variant checked by Spotless in `build`, the shared `.editorconfig` checked by `checkShared`, and one commit that only reformats, which `git blame` skips. |
+| <a id="ij06"></a>[IJ06](README.md#ij06) | The code read against its skills | All of the plugin's code, tests and build read against the five skills `AGENTS.md` names; 31 defects fixed, 17 of them with a test of their own seen red first. |
