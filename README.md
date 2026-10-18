@@ -18,3 +18,6 @@ Java 25 (the pinned GraalVM); `gradlew` brings the pinned Gradle, and Gradle the
     ./gradlew build          # compiled, tested, and the shared checks on the documents
     ./gradlew verifyPlugin   # the plugin verifier against every supported IntelliJ IDEA
     ./gradlew documents      # a change to documents only: the checks and the tests that read a document
+
+How to contribute is in [CONTRIBUTING.md](CONTRIBUTING.md), and how to report a vulnerability in
+[SECURITY.md](SECURITY.md).
