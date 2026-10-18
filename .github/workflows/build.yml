@@ -7,7 +7,8 @@ on:
     push:
         branches: [main]
         # A change to documents alone is checked on the host before its hand-over, and by the Shared rules check once a day.
-        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml']
+        # A change to the workflows alone builds with the next push that has content; its pull request still builds.
+        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', '.github/**']
     pull_request:
     workflow_dispatch:
 
