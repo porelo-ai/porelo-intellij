@@ -1,7 +1,6 @@
 # Builds the plugin on every change to it: compiled, its tests run, the shared checks, and the plugin verifier
 # against every IntelliJ IDEA it supports, which gradle.properties names.
 name: Build
-run-name: "${{ github.workflow }} · ${{ github.ref_name }}: ${{ github.event.head_commit.message || github.event.pull_request.title || github.workflow }}"
 
 on:
     push:
