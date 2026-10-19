@@ -1,6 +1,6 @@
 # IJ05 — A waiting push opened in its project
 
-**Status:** Analyzed.
+**Status:** Implementing.
 **Size:** M - a pure match of open projects to a gate's upstream, a fetch into the person's repository that
 touches no working tree, two actions and a notice, and a live acceptance on a VM; no contract change.
 
