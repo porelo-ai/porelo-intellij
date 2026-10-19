@@ -1,6 +1,6 @@
 # IJ02 — Live notices and a guide
 
-**Status:** Estimated.
+**Status:** Implementing.
 **Size:** M - a stream per machine in the gate and the watch, a `doc/` chapter, and a measured acceptance on a
 VM.
 
@@ -19,10 +19,9 @@ how to install and use the plugin is written down where the other chapters are.
 
 ### 2. A chapter for people
 
-- `doc/` says how to install the plugin from the custom repository URL, what the tool window and the review tab
-  show, what is far-reaching and why it comes first, how approving and rejecting work, where the cache lives and
-  what it never does (no checkout, no build, no credential stored), and which machines it reaches (the
-  interface's list, read only).
+- `doc/` says what the tool window and the review tab show, what is far-reaching and why it comes first, how
+  approving and rejecting work, where the cache lives and what it never does (no checkout, no build, no credential
+  stored), and which machines it reaches (the interface's list, read only).
 - Every page is in `mkdocs.yml`'s navigation once, as `check-doc-site` holds.
 
 ## Plan
@@ -39,8 +38,8 @@ how to install and use the plugin is written down where the other chapters are.
    first in a test of the change detection between two replies (a pure function, outside the IDE).
 3. **`doc/index.md`**, the chapter that is already in `mkdocs.yml`'s navigation, grows by what a person does:
    the tool window, the review tab, far-reaching files, approve and reject, opening a push in its project, the
-   cache, the machines; and how to install the plugin from the custom repository URL, which waits for
-   [IJ01](README.md#ij01)'s published URL.
+   cache, the machines. How to install the plugin from the custom repository URL is
+   [IJ01](README.md#ij01)'s, where that URL is made (the operator's decision of 2026-10-19).
 4. **Acceptance on a VM**, with a live test tagged `live` that times a push to its notice.
 
 ## To be checked

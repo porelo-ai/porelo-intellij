@@ -95,6 +95,9 @@ build. The plugin does those steps for them and keeps the safety the box gives.
      them, the token a repository secret.
   3. Seen red first: a test of the Gradle task's `updatePlugins.xml` (id, version, URL, since-build), against
      a missing task.
+  4. `doc/index.md` says how to install the plugin from the custom repository URL, once it exists: in IntelliJ
+     IDEA's *Settings* - *Plugins* - *Manage Plugin Repositories*, the URL added, then the plugin installed from
+     the Marketplace tab; each step done once as written.
 
 ## Acceptance
 
