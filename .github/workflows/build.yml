@@ -7,8 +7,10 @@ on:
         branches: [main]
         # A change to documents alone is checked on the host before its hand-over, and by the Shared rules check once a day.
         # A change to the workflows alone builds with the next push that has content; its pull request still builds.
-        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', '.github/**']
+        # porelo.yml, the image a Porelo task builds this repository in, is no part of the Build either.
+        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', 'porelo.yml', '.github/**']
     pull_request:
+        paths-ignore: ['porelo.yml']
     workflow_dispatch:
 
 permissions:
