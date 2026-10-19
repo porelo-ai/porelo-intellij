@@ -21,8 +21,9 @@ checkout's token at hand.
 - **Every release by SHA-256, `porelo-wire` among them.** Gradle does not verify a snapshot at all, by digest or by
   signature ("Gradle does *not* verify changing dependencies", its user guide; measured: a wrong digest written for
   `porelo-release` 0.5.1-SNAPSHOT passes). So `porelo-release` and `porelo-machines` stay unchecked while the build
-  takes `porelo-buildtools` as a snapshot, and are checked like everything else once a release is pinned. Their own
-  dependencies are releases and are checked now.
+  takes `porelo-buildtools` as a snapshot, as the operator decided on 2026-10-18, and are checked like everything else
+  once a release is pinned: `porelo-buildtools` 0.5.1 follows this round, and this issue then pins it and renews the
+  file. Their own dependencies are releases and are checked now.
 - **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
   does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
 - **Shown on the first move:** Gradle 9.8.1, logchange 1.20.0 and JSpecify 1.0.1, taken by hand from what
@@ -46,13 +47,8 @@ checkout's token at hand.
   the Build.
 - A changed digest seen to fail the build, naming the artifact.
 - A version move shown renewing the file in the same commit.
-
-## Open questions
-
-- **Porelo's snapshots until a release.** (a) Accept them unchecked until `porelo-buildtools` 0.5.1 is released and
-  pinned. (b) A task checks the two snapshot jars' signatures against a key the operator names before they run. I
-  propose (a): the shared rules let a repository build against a Porelo snapshot while it is developed, and (b) is
-  code that (a) removes again.
+- `porelo-buildtools` 0.5.1 pinned once it is released, and `porelo-release` and `porelo-machines` then checked by
+  digest like every other dependency.
 
 ## To be checked
 
