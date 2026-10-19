@@ -39,6 +39,9 @@ dependencies {
         // The change tree a review shows, as IntelliJ's own comparison with a branch shows one.
         bundledModule("intellij.platform.vcs.impl")
         bundledModule("intellij.platform.vcs.impl.shared")
+        // The Git log a push fetched into a project is shown in.
+        bundledModule("intellij.platform.vcs.log")
+        bundledModule("intellij.platform.vcs.log.impl")
         pluginVerifier(libs.versions.plugin.verifier)
     }
     // The daemon's contract is spoken with the client that defines it, bundled with the plugin.

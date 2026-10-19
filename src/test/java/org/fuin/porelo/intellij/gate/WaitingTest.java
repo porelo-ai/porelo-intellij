@@ -66,7 +66,7 @@ class WaitingTest {
                                                                         "own",
                                                                         false,
                                                                         "upstream",
-                                                                        "u",
+                                                                        "git@example.org:porelo/core.git",
                                                                         "pending",
                                                                         1)))))));
         daemon.method(
@@ -162,6 +162,10 @@ class WaitingTest {
                                         + entry.farReaching())
                 .as("what waits, newest first")
                 .containsExactly("two/core/task-two/1", "one/core/task-one/1");
+        assertThat(waiting.pushes())
+                .extracting(Waiting.Entry::upstream)
+                .as("where each repository's approved work goes, as its gate says")
+                .containsOnly("git@example.org:porelo/core.git");
         assertThat(waiting.silent()).as("machines that did not answer").isEmpty();
         assertThat(pendingAsked)
                 .as("the repositories asked what waits: only those where something does")
@@ -245,6 +249,7 @@ class WaitingTest {
                 machine,
                 "porelo",
                 "core",
+                "u",
                 "/m",
                 new PendingPush(name, commit, "s", "w", "at", "f"),
                 0);
@@ -279,6 +284,7 @@ class WaitingTest {
                 machine,
                 project,
                 repository,
+                "u",
                 "/m",
                 new PendingPush(name, COMMIT, "s", "w", "at", "f"),
                 0);
@@ -304,15 +310,17 @@ class WaitingTest {
         final Machine plain = new Machine("p", dir.resolve("p.sock"), null, null);
 
         assertThat(
-                        new Waiting.Entry(tunnelled, "default", "app", mirror, push, 0)
+                        new Waiting.Entry(tunnelled, "default", "app", "u", mirror, push, 0)
                                 .source(path -> false))
                 .as("through the tunnel's host")
                 .isEqualTo("ssh://i@192.0.2.10" + mirror);
-        assertThat(new Waiting.Entry(plain, "default", "app", mirror, push, 0).source(path -> true))
+        assertThat(
+                        new Waiting.Entry(plain, "default", "app", "u", mirror, push, 0)
+                                .source(path -> true))
                 .as("this computer's mirror")
                 .isEqualTo(mirror);
         assertThat(
-                        new Waiting.Entry(plain, "default", "app", mirror, push, 0)
+                        new Waiting.Entry(plain, "default", "app", "u", mirror, push, 0)
                                 .source(path -> false))
                 .as("a forward somebody else keeps")
                 .isEqualTo("ssh://i@test-vm" + mirror);
@@ -321,6 +329,7 @@ class WaitingTest {
                                         Machine.wsl("w", "Ubuntu-26.04"),
                                         "default",
                                         "app",
+                                        "u",
                                         mirror,
                                         push,
                                         0)
@@ -332,7 +341,7 @@ class WaitingTest {
                         "app", COMMIT, "s", "w", "at", "git fetch --upload-pack=x " + mirror);
         assertThatThrownBy(
                         () ->
-                                new Waiting.Entry(plain, "default", "app", mirror, odd, 0)
+                                new Waiting.Entry(plain, "default", "app", "u", mirror, odd, 0)
                                         .source(path -> false))
                 .as("an address that is not ssh")
                 .isInstanceOf(GateException.class)
@@ -386,14 +395,14 @@ class WaitingTest {
         for (final String mirror : List.of("@evil.example/x", ":2222/x", "", "/a/../b")) {
             assertThatThrownBy(
                             () ->
-                                    new Waiting.Entry(tunnelled, "p", "r", mirror, push, 0)
+                                    new Waiting.Entry(tunnelled, "p", "r", "u", mirror, push, 0)
                                             .source(path -> false))
                     .as("the mirror '" + mirror + "' over ssh")
                     .isInstanceOf(GateException.class);
         }
         assertThatThrownBy(
                         () ->
-                                new Waiting.Entry(wsl, "p", "r", "/../Other/x", push, 0)
+                                new Waiting.Entry(wsl, "p", "r", "u", "/../Other/x", push, 0)
                                         .source(path -> false))
                 .as("a mirror that climbs out of its distribution")
                 .isInstanceOf(GateException.class);

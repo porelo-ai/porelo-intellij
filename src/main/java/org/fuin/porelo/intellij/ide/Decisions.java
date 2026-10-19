@@ -68,6 +68,7 @@ final class Decisions {
                                         entry.push().name(),
                                         branch.strip(),
                                         entry.push().commit());
+                        IntoProjects.decided(project, entry, true);
                         return "Forwarded " + forwarded;
                     } catch (MovedSinceReviewException ex) {
                         // What it holds now has to be read before it can go: the review is closed,
@@ -117,14 +118,18 @@ final class Decisions {
         run(
                 project,
                 "Rejecting " + entry.push().name(),
-                gate ->
-                        gate.reject(
-                                        entry.project(),
-                                        entry.repository(),
-                                        entry.push().name(),
-                                        reason.strip())
-                                ? "Rejected; its task was told"
-                                : "Rejected; its task is gone from the machine and was not told",
+                gate -> {
+                    final boolean told =
+                            gate.reject(
+                                    entry.project(),
+                                    entry.repository(),
+                                    entry.push().name(),
+                                    reason.strip());
+                    IntoProjects.decided(project, entry, false);
+                    return told
+                            ? "Rejected; its task was told"
+                            : "Rejected; its task is gone from the machine and was not told";
+                },
                 entry,
                 done);
     }

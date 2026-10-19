@@ -116,6 +116,18 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
                         "Drop this push and tell its task why",
                         AllIcons.Actions.Cancel,
                         () -> Decisions.reject(project, entry, this::close)));
+        for (final IntoProjects.Target target : read.into()) {
+            actions.add(
+                    new Act(
+                            target.label(),
+                            "Fetch this push into "
+                                    + target.project().getName()
+                                    + " as porelo/"
+                                    + entry.push().name()
+                                    + ", leaving what is checked out as it is",
+                            AllIcons.Actions.Download,
+                            () -> IntoProjects.open(target, entry)));
+        }
         actions.add(
                 new Act(
                         "Read Again",

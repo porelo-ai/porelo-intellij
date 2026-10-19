@@ -1,0 +1,2 @@
+title: A waiting push can be opened in the IntelliJ window that holds its repository, fetched there as porelo/<push> with nothing checked out changed, and that ref is deleted once the push is decided, after an approval with the forwarded commit fetched
+type: added

@@ -40,7 +40,10 @@ commit in that project without a fetch of their own; the review itself never nee
    notice where the push is now, with an action that shows it in the Git log.
 5. **`Decisions`**: after `approve` returns, a background `git fetch --quiet <remote>` in each matching open
    project; after approve or reject, `git update-ref -d refs/remotes/porelo/<push>` where it exists. A failed fetch
-   is a warning that says git's words; the decision stands.
+   is a warning that says git's words; the decision stands. A remote fetched by its name says nothing of ssh, so
+   every fetch tells ssh never to ask, unless the person named an ssh of their own, as a review's fetch does.
+   Showing the push in the Git log takes the platform's bundled modules `intellij.platform.vcs.log` and
+   `intellij.platform.vcs.log.impl`, so `gradle/verification-metadata.xml` is renewed with them.
 6. **The acceptance on the VM** as a live test, tagged `live`, against a real daemon: a push fetched into a
    repository with a dirty working tree leaves its files and index as they were.
 

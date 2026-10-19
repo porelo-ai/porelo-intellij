@@ -21,6 +21,7 @@ class NoticesTest {
                         new Machine("m<i>", Path.of("/m.sock"), null, null),
                         "p",
                         "r",
+                        "u",
                         "/m",
                         new PendingPush(
                                 "app",

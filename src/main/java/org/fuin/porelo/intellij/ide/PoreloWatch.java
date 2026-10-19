@@ -137,6 +137,48 @@ public final class PoreloWatch implements Disposable {
         return cache().files(repository(entry), commit, paths);
     }
 
+    /**
+     * Fetches a waiting push into a repository of the person's as {@code
+     * refs/remotes/porelo/<push>}, from where {@link Waiting.Entry#source} says, and nothing else.
+     *
+     * @param entry The push.
+     * @param root The git root of the person's repository.
+     */
+    public void fetchInto(Waiting.Entry entry, Path root) {
+        final String url = entry.source(mirror -> java.nio.file.Files.isDirectory(Path.of(mirror)));
+        cache().fetchInto(root, url, entry.push().name(), entry.push().commit());
+    }
+
+    /**
+     * Returns a repository's remotes.
+     *
+     * @param root The git root of the person's repository.
+     * @return Each remote's name and address.
+     */
+    Map<String, String> remotes(Path root) {
+        return OpenProjects.remotes(cache().remoteUrls(root));
+    }
+
+    /**
+     * Fetches one remote of a repository of the person's.
+     *
+     * @param root The git root.
+     * @param remote The remote's name.
+     */
+    void fetchRemote(Path root, String remote) {
+        cache().fetchRemote(root, remote);
+    }
+
+    /**
+     * Deletes a decided push's ref from a repository of the person's, where it was fetched.
+     *
+     * @param root The git root.
+     * @param name The push's name.
+     */
+    void forget(Path root, String name) {
+        cache().forget(root, name);
+    }
+
     private Path repository(Waiting.Entry entry) {
         return cache().repository(entry.machine().name(), entry.project(), entry.repository());
     }
@@ -218,6 +260,12 @@ public final class PoreloWatch implements Disposable {
                                     shown.expire();
                                 }
                             }));
+            for (final IntoProjects.Target target : IntoProjects.holding(entry)) {
+                notification.addAction(
+                        NotificationAction.create(
+                                target.label(),
+                                (event, shown) -> IntoProjects.open(target, entry)));
+            }
             notification.notify(null);
         }
     }

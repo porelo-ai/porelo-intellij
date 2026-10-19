@@ -201,6 +201,96 @@ class ReviewCacheTest {
                 .isEqualTo(dir.resolve("cache/walk-9/---p/r.git"));
     }
 
+    @Test
+    @DisplayName(
+            "A push fetched into a person's repository is reachable as porelo/<push>, and HEAD, the index, the working tree and every other ref are as they were, uncommitted changes included")
+    void aPushFetchedIntoAProjectTouchesNothingElse() throws IOException {
+        final Path person = personsRepository();
+        final String head = git(person, "rev-parse", "HEAD");
+        final String status = git(person, "status", "--porcelain=v1", "--untracked-files=all");
+        final String staged = git(person, "diff", "--cached");
+        final String unstaged = git(person, "diff");
+        final String refs = git(person, "for-each-ref", "--format=%(refname) %(objectname)");
+
+        cache.fetchInto(person, mirror.toString(), "app", pushed);
+
+        assertThat(git(person, "rev-parse", "refs/remotes/porelo/app"))
+                .as("the push's ref in the person's repository")
+                .isEqualTo(pushed);
+        assertThat(git(person, "rev-parse", "HEAD")).as("HEAD").isEqualTo(head);
+        assertThat(git(person, "status", "--porcelain=v1", "--untracked-files=all"))
+                .as("the working tree's state")
+                .isEqualTo(status);
+        assertThat(git(person, "diff", "--cached")).as("the index").isEqualTo(staged);
+        assertThat(git(person, "diff")).as("the uncommitted changes").isEqualTo(unstaged);
+        assertThat(git(person, "for-each-ref", "--format=%(refname) %(objectname)"))
+                .as("every ref but the push's")
+                .isEqualTo(refs + "\nrefs/remotes/porelo/app " + pushed);
+    }
+
+    @Test
+    @DisplayName(
+            "A push that no longer holds the commit shown is refused when fetched into a person's repository, and leaves no ref there")
+    void aMovedPushLeavesNoRefInAProject() throws IOException {
+        final Path person = personsRepository();
+        git(work, "checkout", "-q", "task");
+        write("notes.txt", "and again\n");
+        git(work, "commit", "-q", "-am", "More");
+        final String now = git(work, "rev-parse", "HEAD");
+        git(work, "push", "-q", "-f", mirror.toString(), "HEAD:refs/porelo/incoming/app");
+
+        assertThatThrownBy(() -> cache.fetchInto(person, mirror.toString(), "app", pushed))
+                .as("a push that moved")
+                .isInstanceOf(CacheException.class)
+                .hasMessageContaining("app now holds " + now + ", not " + pushed);
+        assertThat(git(person, "for-each-ref", "refs/remotes/porelo/"))
+                .as("refs under porelo/")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName(
+            "A decided push's ref is deleted from a person's repository, and nothing else under porelo/ is")
+    void aDecidedPushsRefGoes() throws IOException {
+        final Path person = personsRepository();
+        git(person, "update-ref", "refs/remotes/porelo/app", pushed);
+        git(person, "update-ref", "refs/remotes/porelo/other", pushed);
+
+        cache.forget(person, "app");
+        cache.forget(person, "app");
+
+        assertThat(git(person, "for-each-ref", "--format=%(refname)", "refs/remotes/porelo/"))
+                .as("refs under porelo/ after forgetting app twice")
+                .isEqualTo("refs/remotes/porelo/other");
+    }
+
+    @Test
+    @DisplayName(
+            "A person's repository's remotes are read as git config prints them, and a repository with none has none")
+    void readsTheRemotesOfAPersonsRepository() throws IOException {
+        final Path person = personsRepository();
+        git(person, "remote", "add", "far", "git@example.org:x.git");
+        final Path bare = dir.resolve("lonely");
+        git(dir, "init", "-q", bare.toString());
+
+        assertThat(cache.remoteUrls(person))
+                .as("the remotes of a clone with one added")
+                .isEqualTo(
+                        "remote.origin.url " + mirror + "\nremote.far.url git@example.org:x.git\n");
+        assertThat(cache.remoteUrls(bare)).as("the remotes of a repository with none").isEmpty();
+    }
+
+    /** A clone of the mirror's source with work of the person's: staged, unstaged and new. */
+    private Path personsRepository() throws IOException {
+        final Path person = dir.resolve("person");
+        git(dir, "clone", "-q", mirror.toString(), person.toString());
+        Files.writeString(person.resolve("notes.txt"), "mine\n", StandardCharsets.UTF_8);
+        Files.writeString(person.resolve("build.gradle"), "plugins { id 'x' }\n");
+        git(person, "add", "build.gradle");
+        Files.writeString(person.resolve("scratch.txt"), "not added\n");
+        return person;
+    }
+
     @AfterEach
     void endWhatAFailedTestLeft() {
         silentSsh().forEach(ProcessHandle::destroyForcibly);
@@ -290,6 +380,29 @@ class ReviewCacheTest {
                                         pushed))
                 .as("a fetch over an ssh that refuses")
                 .isInstanceOf(CacheException.class);
+        assertThat(Files.readString(asked)).as("what ssh was given").contains("BatchMode=yes");
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    @DisplayName(
+            "ssh is told never to ask when a remote of the person's is fetched by its name, which says nothing of ssh")
+    void sshIsNeverLeftToAskForARemoteByName() throws IOException {
+        final Path person = personsRepository();
+        git(person, "remote", "add", "far", "git@example.invalid:x.git");
+        final Path bin = Files.createDirectories(dir.resolve("bin"));
+        final Path asked = dir.resolve("asked");
+        final Path ssh = bin.resolve("ssh");
+        Files.writeString(ssh, "#!/bin/sh\necho \"$@\" > '" + asked + "'\nexit 255\n");
+        Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwx------"));
+        final Map<String, String> environment = new HashMap<>(NO_CONFIG);
+        environment.put("PATH", bin + ":" + System.getenv("PATH"));
+        final ReviewCache viaSsh = new ReviewCache(dir.resolve("ssh"), environment);
+
+        assertThatThrownBy(() -> viaSsh.fetchRemote(person, "far"))
+                .as("a remote fetched over an ssh that refuses")
+                .isInstanceOf(CacheException.class)
+                .hasMessageContaining("git fetch");
         assertThat(Files.readString(asked)).as("what ssh was given").contains("BatchMode=yes");
     }
 

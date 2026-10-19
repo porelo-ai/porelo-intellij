@@ -39,6 +39,9 @@ public final class ReviewCache {
     private static final Pattern BRANCH =
             Pattern.compile("refs/heads/([A-Za-z0-9][A-Za-z0-9._/-]*)");
 
+    /** Where a push fetched into a repository of the person's is kept, one ref each. */
+    private static final String PERSONS = "refs/remotes/porelo/";
+
     private static final Duration TIMEOUT = Duration.ofSeconds(120);
 
     /** What ssh runs as when the person named no ssh of their own: never asking at a terminal. */
@@ -99,12 +102,7 @@ public final class ReviewCache {
      * @throws CacheException If git fails, or the push no longer holds the commit that was shown.
      */
     public Changes fetch(Path repository, String url, String name, String commit) {
-        if (!NAME.matcher(name).matches()) {
-            throw new CacheException("The push's name '" + name + "' is not a name the gate gives");
-        }
-        if (!COMMIT.matcher(commit).matches()) {
-            throw new CacheException("'" + commit + "' is not a full commit id");
-        }
+        checked(name, commit);
         synchronized (
                 TURNS.computeIfAbsent(
                         repository.toAbsolutePath().normalize(), key -> new Object())) {
@@ -156,6 +154,104 @@ public final class ReviewCache {
             throw failed(new String[] {"merge-base", base, commit}, met);
         }
         return new Changes(branch, from, commit, changes(repository, from, commit));
+    }
+
+    /**
+     * Fetches a waiting push into a repository of the person's as {@code
+     * refs/remotes/porelo/<name>}, and nothing else: no tag, no branch, no change to {@code HEAD},
+     * the index or the working tree.
+     *
+     * @param root The git root of the person's repository.
+     * @param url Where the gate's mirror is, as {@link #fetch} takes it.
+     * @param name The push's name.
+     * @param commit The commit that was shown.
+     * @throws CacheException If git fails, or the push no longer holds the commit that was shown;
+     *     then the ref is not left behind.
+     */
+    public void fetchInto(Path root, String url, String name, String commit) {
+        checked(name, commit);
+        final String ref = PERSONS + name;
+        textIn(
+                root,
+                "fetch",
+                "--quiet",
+                "--no-tags",
+                "--",
+                url,
+                "+refs/porelo/incoming/" + name + ":" + ref);
+        final String fetched = textIn(root, "rev-parse", "--verify", ref + "^{commit}").strip();
+        if (!fetched.equals(commit)) {
+            textIn(root, "update-ref", "-d", ref);
+            throw new CacheException(
+                    name
+                            + " now holds "
+                            + fetched
+                            + ", not "
+                            + commit
+                            + ", which was shown; read what waits again");
+        }
+    }
+
+    /**
+     * Deletes a decided push's ref from a repository of the person's, where {@link #fetchInto}
+     * wrote it; a ref that is not there is no failure.
+     *
+     * @param root The git root of the person's repository.
+     * @param name The push's name.
+     * @throws CacheException If git cannot delete it.
+     */
+    public void forget(Path root, String name) {
+        if (!NAME.matcher(name).matches()) {
+            throw new CacheException("The push's name '" + name + "' is not a name the gate gives");
+        }
+        final String ref = PERSONS + name;
+        if (runIn(root, "rev-parse", "--quiet", "--verify", ref).exit() == 0) {
+            textIn(root, "update-ref", "-d", ref);
+        }
+    }
+
+    /**
+     * Fetches one remote of a repository of the person's, as they would themselves.
+     *
+     * @param root The git root of the person's repository.
+     * @param remote The remote's name, as its configuration says it.
+     * @throws CacheException If git fails, in git's own words.
+     */
+    public void fetchRemote(Path root, String remote) {
+        if (remote.startsWith("-") || remote.isBlank()) {
+            throw new CacheException("'" + remote + "' is not a remote's name");
+        }
+        textIn(root, "fetch", "--quiet", "--", remote);
+    }
+
+    /**
+     * Returns what {@code git config} says of a repository's remotes' addresses: one {@code
+     * remote.<name>.url <address>} a line, in git's order.
+     *
+     * @param root The git root of the person's repository.
+     * @return The lines, or {@code ""} when it has no remote.
+     * @throws CacheException If git cannot read the repository.
+     */
+    public String remoteUrls(Path root) {
+        final String[] arguments = {"config", "--get-regexp", "^remote\\..*\\.url$"};
+        final Result result = runIn(root, arguments);
+        // config ends with 1 when nothing matches, which is a repository with no remote.
+        if (result.exit() == 1 && result.error().isBlank()) {
+            return "";
+        }
+        if (result.exit() != 0) {
+            throw failed(arguments, result);
+        }
+        return result.text();
+    }
+
+    private static void checked(String name, String commit) {
+        if (!NAME.matcher(name).matches()) {
+            throw new CacheException("The push's name '" + name + "' is not a name the gate gives");
+        }
+        if (!COMMIT.matcher(commit).matches()) {
+            throw new CacheException("'" + commit + "' is not a full commit id");
+        }
     }
 
     /**
@@ -272,6 +368,18 @@ public final class ReviewCache {
         return result.text();
     }
 
+    private String textIn(Path root, String... arguments) {
+        final Result result = runIn(root, arguments);
+        if (result.exit() != 0) {
+            throw failed(arguments, result);
+        }
+        return result.text();
+    }
+
+    private Result runIn(Path root, String... arguments) {
+        return run(List.of("-C", root.toString()), null, arguments);
+    }
+
     private static CacheException failed(String[] arguments, Result result) {
         return new CacheException(
                 "git "
@@ -283,10 +391,15 @@ public final class ReviewCache {
     }
 
     private Result run(@Nullable Path repository, byte @Nullable [] input, String... arguments) {
+        return run(
+                repository == null ? List.of() : List.of("--git-dir", repository.toString()),
+                input,
+                arguments);
+    }
+
+    private Result run(List<String> place, byte @Nullable [] input, String... arguments) {
         final List<String> command = new ArrayList<>(List.of("git"));
-        if (repository != null) {
-            command.addAll(List.of("--git-dir", repository.toString()));
-        }
+        command.addAll(place);
         command.addAll(List.of(arguments));
         final ProcessBuilder builder = new ProcessBuilder(command);
         // No prompt can be answered from here: a fetch that would ask fails and says so.
@@ -301,10 +414,13 @@ public final class ReviewCache {
             builder.environment().put("GIT_CONFIG_VALUE_0", "*");
         }
         builder.environment().putAll(environment);
-        if (List.of(arguments).stream().anyMatch(argument -> argument.startsWith("ssh://"))
+        // A remote fetched by its name may be reached over ssh too, which its name does not say.
+        if ((List.of(arguments).contains("fetch")
+                        || List.of(arguments).stream()
+                                .anyMatch(argument -> argument.startsWith("ssh://")))
                 && !builder.environment().containsKey("GIT_SSH_COMMAND")
                 && !builder.environment().containsKey("GIT_SSH")
-                && run(null, null, "config", "--get", "core.sshCommand").exit() != 0) {
+                && run(place, null, "config", "--get", "core.sshCommand").exit() != 0) {
             // A host key to accept or a passphrase to type would wait at the IDE's terminal for
             // good; the person's own ssh, if they named one, is theirs to set up.
             builder.environment().put("GIT_SSH_COMMAND", SSH_WITHOUT_PROMPT);

@@ -39,7 +39,13 @@ final class Notices {
                         : "");
     }
 
-    private static String escaped(String text) {
+    /**
+     * Returns text that IntelliJ's markup shows as it is.
+     *
+     * @param text The text.
+     * @return It, with every character markup reads escaped.
+     */
+    static String escaped(String text) {
         return text.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")

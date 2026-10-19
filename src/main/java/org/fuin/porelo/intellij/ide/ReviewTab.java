@@ -95,8 +95,9 @@ final class ReviewTab {
      * @param review The daemon's ranking and what the task was asked.
      * @param changes What the push changes, from the cache.
      * @param files Each file as both sides have it, in the daemon's order.
+     * @param into The open projects that hold the push's repository, where it can be opened.
      */
-    record Read(Review review, Changes changes, List<Side> files) {}
+    record Read(Review review, Changes changes, List<Side> files, List<IntoProjects.Target> into) {}
 
     /**
      * One file as both sides have it.
@@ -184,7 +185,7 @@ final class ReviewTab {
                             base.get(one.change().path()),
                             pushed.get(one.change().path())));
         }
-        return new Read(review, changes, files);
+        return new Read(review, changes, files, IntoProjects.holding(entry));
     }
 
     /**

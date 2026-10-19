@@ -175,6 +175,8 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
      * @param machine The machine whose gate it waits at.
      * @param project The project's name.
      * @param repository The repository's name.
+     * @param upstream Where the repository's approved work goes, as its gate says, or {@code ""}
+     *     when it stays on the machine.
      * @param mirror The path of the repository's gate mirror on the machine.
      * @param push The push.
      * @param farReaching How many of the files it changes reach far, as the daemon ranks them.
@@ -183,6 +185,7 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
             Machine machine,
             String project,
             String repository,
+            String upstream,
             String mirror,
             PendingPush push,
             int farReaching) {
@@ -353,6 +356,7 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
                                     machine,
                                     project.name(),
                                     repository.name(),
+                                    repository.upstream(),
                                     pending.mirror(),
                                     push,
                                     0);
@@ -377,6 +381,7 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
                                     machine,
                                     project.name(),
                                     repository.name(),
+                                    repository.upstream(),
                                     pending.mirror(),
                                     push,
                                     farReaching));
