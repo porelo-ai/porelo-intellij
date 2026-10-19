@@ -257,6 +257,98 @@ class WaitingTest {
 
     @Test
     @DisplayName(
+            "The projects' stream says something new waits only when a repository's count of waiting pushes moved, not when anything else did")
+    void pendingMovedOnlyWhenACountDid() {
+        final List<Project> before = List.of(project("p", repository("a", 1), repository("b", 0)));
+
+        assertThat(
+                        Waiting.pendingMoved(
+                                before,
+                                List.of(project("p", repository("a", 1), repository("b", 0)))))
+                .as("the same counts, another answer")
+                .isFalse();
+        assertThat(
+                        Waiting.pendingMoved(
+                                before,
+                                List.of(project("p", repository("a", 1), repository("b", 1)))))
+                .as("one more push in b")
+                .isTrue();
+        assertThat(Waiting.pendingMoved(before, List.of(project("p", repository("a", 0)))))
+                .as("a decided and b gone")
+                .isTrue();
+        assertThat(
+                        Waiting.pendingMoved(
+                                before,
+                                List.of(
+                                        project("p", repository("a", 1), repository("b", 0)),
+                                        project("q", repository("c", 1)))))
+                .as("a new project with one push")
+                .isTrue();
+        assertThat(
+                        Waiting.pendingMoved(
+                                before,
+                                List.of(
+                                        project("p", repository("a", 1), repository("b", 0)),
+                                        project("q", repository("c", 0)))))
+                .as("a new project with nothing waiting")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName(
+            "What one machine says now replaces what it said before, and nothing of the other machines changes")
+    void oneMachineReadAgainReplacesOnlyItsOwn() {
+        final Machine one = new Machine("one", dir.resolve("1.sock"), null, null);
+        final Machine two = new Machine("two", dir.resolve("2.sock"), null, null);
+        final Waiting.Entry old = at(one, "old", "2026-10-07T15:00:00Z");
+        final Waiting.Entry other = at(two, "other", "2026-10-07T16:00:00Z");
+        final Waiting before =
+                new Waiting(List.of(old, other), List.of(new Waiting.Silent("three", "why")));
+        final Waiting.Entry arrived = at(one, "arrived", "2026-10-07T17:00:00Z");
+
+        final Waiting after = before.withMachine("one", new Waiting(List.of(arrived), List.of()));
+        final Waiting silent =
+                before.withMachine(
+                        "one", new Waiting(List.of(), List.of(new Waiting.Silent("one", "gone"))));
+
+        assertThat(after.pushes())
+                .as("what waits after one is read again, newest first")
+                .containsExactly(arrived, other);
+        assertThat(after.silent())
+                .extracting(Waiting.Silent::machine)
+                .as("who is silent")
+                .containsExactly("three");
+        assertThat(silent.pushes()).as("what waits once one is silent").containsExactly(other);
+        assertThat(silent.silent())
+                .extracting(Waiting.Silent::machine)
+                .as("who is silent then")
+                .containsExactly("three", "one");
+    }
+
+    private static Waiting.Entry at(Machine machine, String name, String at) {
+        return new Waiting.Entry(
+                machine,
+                "porelo",
+                "core",
+                "u",
+                "/m",
+                new PendingPush(name, COMMIT, "s", "w", at, "f"),
+                0);
+    }
+
+    private static Project project(String name, Project.Repository... repositories) {
+        return new Project(
+                name,
+                List.of(repositories),
+                List.of(repositories).stream().mapToInt(Project.Repository::pending).sum());
+    }
+
+    private static Project.Repository repository(String name, int pending) {
+        return new Project.Repository(name, false, "u", pending);
+    }
+
+    @Test
+    @DisplayName(
             "Pushes are grouped by project and repository, newest group first, naming a machine only where needed")
     void groupsByProjectAndRepository() {
         final Machine one = new Machine("one", dir.resolve("1.sock"), null, null);

@@ -33,8 +33,8 @@ how to install and use the plugin is written down where the other chapters are.
    the plugin at most 3 s after it arrives; asked `Pending` and `Review` for that one repository, the notice fits
    in the 5 s the acceptance names on a machine that answers in a second.
 2. **`PoreloWatch`**: one virtual thread per reachable machine holds the stream; a reply whose `pending` differs
-   from the last asks `Pending` for that repository and updates the snapshot, so the notice follows. A stream
-   that ends marks the machine not answering and is opened again after a pause; the minute's read stays. Red
+   from the last reads that machine again (`Waiting.withMachine`) and updates the snapshot, so the notice follows. A
+   stream that ends marks the machine not answering and is opened again after a pause; the minute's read stays. Red
    first in a test of the change detection between two replies (a pure function, outside the IDE).
 3. **`doc/index.md`**, the chapter that is already in `mkdocs.yml`'s navigation, grows by what a person does:
    the tool window, the review tab, far-reaching files, approve and reject, opening a push in its project, the
@@ -45,7 +45,11 @@ how to install and use the plugin is written down where the other chapters are.
 ## To be checked
 
 - That a stream held for hours through the plugin's ssh tunnel and through `porelo daemon connect` on Windows stays
-  open, or is opened again within the minute's read when it drops: measured on the VM with the live test.
+  open, or is opened again within the minute's read when it drops. Measured only for minutes so far: the live test
+  `LiveNoticeTest` on `fedora` through the tunnel, a task's first push known within the test's 3.96 s in all.
+- The daemon's list of projects carries counts only, so a task that pushes again, moving its waiting push to
+  another commit, changes no count and is announced at the minute's read, not within seconds. Whether that wants a
+  field of the daemon's (porelo) is asked once this is built.
 
 ## Acceptance
 

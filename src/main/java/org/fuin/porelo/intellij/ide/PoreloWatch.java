@@ -41,6 +41,18 @@ public final class PoreloWatch implements Disposable {
 
     private static final long EVERY_SECONDS = 60;
 
+    /** How long a machine's stream that ended waits before it is opened again. */
+    private static final long REOPEN_SECONDS = 10;
+
+    /** The machines whose stream of projects is followed, by name, each on a thread of its own. */
+    private final Map<String, Thread> streams = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** The gates the streams hold open, closed with the IDE, which ends their streams. */
+    private final java.util.Set<Gate> streaming =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private volatile boolean disposed;
+
     private final Connections connections =
             new Connections(PoreloWatch::runtimeDirectory, List.of("ssh"), List.of("wsl.exe"));
 
@@ -204,18 +216,123 @@ public final class PoreloWatch implements Disposable {
 
     @Override
     public synchronized void dispose() {
+        disposed = true;
         if (schedule != null) {
             schedule.cancel(true);
         }
+        streaming.forEach(PoreloWatch::closeQuietly);
         connections.close();
     }
 
-    private synchronized void read() {
+    private void read() {
+        synchronized (this) {
+            final Snapshot before = last;
+            publish(
+                    before,
+                    Snapshot.after(
+                            before,
+                            () -> Waiting.read(machines().read(), this::gate, before.waiting())));
+        }
+        follow();
+    }
+
+    /** Reads one machine again, keeping what the others said. */
+    private synchronized void read(Machine machine) {
         final Snapshot before = last;
-        final Snapshot now =
+        publish(
+                before,
                 Snapshot.after(
                         before,
-                        () -> Waiting.read(machines().read(), this::gate, before.waiting()));
+                        () ->
+                                before.waiting()
+                                        .withMachine(
+                                                machine.name(),
+                                                Waiting.read(
+                                                        List.of(machine),
+                                                        this::gate,
+                                                        before.waiting()))));
+    }
+
+    /**
+     * Follows the stream of projects of every machine listed, so a push is announced within seconds
+     * of its arrival; the minute's read stays for a machine whose stream is not open.
+     */
+    private void follow() {
+        final List<Machine> listed;
+        try {
+            listed = machines().read().machines();
+        } catch (RuntimeException ex) {
+            // Already said by the read.
+            return;
+        }
+        for (final Machine machine : listed) {
+            streams.computeIfAbsent(
+                    machine.name(),
+                    name ->
+                            Thread.ofVirtual()
+                                    .name("Porelo watch of " + name)
+                                    .start(() -> stream(machine)));
+        }
+    }
+
+    private void stream(Machine machine) {
+        try {
+            while (!disposed && listed(machine)) {
+                Gate gate = null;
+                try {
+                    gate = gate(machine);
+                    streaming.add(gate);
+                    final java.util.concurrent.atomic.AtomicReference<
+                                    @Nullable List<org.fuin.porelo.intellij.gate.Project>>
+                            seen = new java.util.concurrent.atomic.AtomicReference<>();
+                    gate.watch(
+                            projects -> {
+                                final List<org.fuin.porelo.intellij.gate.Project> before =
+                                        seen.getAndSet(projects);
+                                if (before != null && Waiting.pendingMoved(before, projects)) {
+                                    read(machine);
+                                }
+                            });
+                } catch (RuntimeException ex) {
+                    LOG.info("The stream of projects of " + machine.name() + " ended", ex);
+                } finally {
+                    if (gate != null) {
+                        streaming.remove(gate);
+                        closeQuietly(gate);
+                    }
+                }
+                if (disposed) {
+                    return;
+                }
+                // A stream that ended may be a daemon that went; reading it again says so.
+                read(machine);
+                Thread.sleep(TimeUnit.SECONDS.toMillis(REOPEN_SECONDS));
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        } finally {
+            streams.remove(machine.name());
+        }
+    }
+
+    private static boolean listed(Machine machine) {
+        try {
+            return machines().read().machines().contains(machine);
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    // A stream's gate is closed to end it; closing what already ended is no news.
+    private static void closeQuietly(Gate gate) {
+        try {
+            gate.close();
+        } catch (RuntimeException ex) {
+            // See above.
+        }
+    }
+
+    private void publish(Snapshot before, Snapshot now) {
         last = now;
         // Nothing here may end the scheduled reads: a failed notice or listener is logged.
         try {

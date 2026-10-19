@@ -59,7 +59,10 @@ public final class Gate implements AutoCloseable {
      * @return The projects.
      */
     public List<Project> projects() {
-        final Map<String, Object> reply = read("Projects", Map.of());
+        return projectsOf(read("Projects", Map.of()));
+    }
+
+    private static List<Project> projectsOf(Map<String, Object> reply) {
         final List<Project> projects = new ArrayList<>();
         for (final Map<String, Object> project : objects(reply, "projects")) {
             final List<Project.Repository> repositories = new ArrayList<>();
@@ -75,6 +78,28 @@ public final class Gate implements AutoCloseable {
                     new Project(string(project, "name"), repositories, number(project, "pending")));
         }
         return projects;
+    }
+
+    /**
+     * Follows the daemon's stream of projects, handing over every answer as {@link #projects()}
+     * reads one: the whole list again each time it changed. Returns when the daemon ends the
+     * stream; it has no time limit of its own, and {@link #close()} from another thread ends it.
+     *
+     * @param each Gets every answer, on this thread.
+     * @throws GateException If the daemon refuses the call, or the stream is cut off.
+     */
+    public void watch(java.util.function.Consumer<List<Project>> each) {
+        try {
+            client.callMore(
+                    INTERFACE + ".WatchProjects",
+                    Map.of(),
+                    reply -> {
+                        each.accept(projectsOf(reply));
+                        return true;
+                    });
+        } catch (VarlinkException ex) {
+            throw refusal("WatchProjects", ex);
+        }
     }
 
     /**

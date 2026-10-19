@@ -62,6 +62,52 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
     }
 
     /**
+     * Tells whether a machine's projects say something else waits now than before: a repository
+     * whose count of waiting pushes moved, one that appeared with pushes, or one that went while
+     * pushes waited in it. Any other change, such as a task started, says nothing of the gate.
+     *
+     * @param before The projects the machine answered last.
+     * @param now The projects it answers now.
+     * @return Whether its gates are to be read again.
+     */
+    public static boolean pendingMoved(List<Project> before, List<Project> now) {
+        return !counts(before).equals(counts(now));
+    }
+
+    private static java.util.Map<String, Integer> counts(List<Project> projects) {
+        final java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+        for (final Project project : projects) {
+            for (final Project.Repository repository : project.repositories()) {
+                if (repository.pending() > 0) {
+                    counts.put(project.name() + "\u0000" + repository.name(), repository.pending());
+                }
+            }
+        }
+        return counts;
+    }
+
+    /**
+     * Returns what waits once one machine was read again: its pushes and its silence replaced by
+     * what that read says, everything of the other machines as it was.
+     *
+     * @param machine The machine's name.
+     * @param read What reading that machine alone said.
+     * @return What waits now, newest first.
+     */
+    public Waiting withMachine(String machine, Waiting read) {
+        final List<Entry> merged = new ArrayList<>();
+        pushes.stream()
+                .filter(entry -> !entry.machine().name().equals(machine))
+                .forEach(merged::add);
+        merged.addAll(read.pushes());
+        merged.sort(Comparator.comparing((Entry entry) -> entry.push().at()).reversed());
+        final List<Silent> quiet = new ArrayList<>();
+        silent.stream().filter(one -> !one.machine().equals(machine)).forEach(quiet::add);
+        quiet.addAll(read.silent());
+        return new Waiting(merged, quiet);
+    }
+
+    /**
      * Returns what waits grouped by project and repository, the group with the newest push first.
      *
      * <p>A group's label is {@code project / repository}; where the same one waits on several
@@ -302,7 +348,16 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
         return read(machines, connect, new Waiting(List.of(), List.of()));
     }
 
-    private static Waiting read(
+    /**
+     * Asks machines what waits at their gates, as {@link #read(List, Function)} does, taking how
+     * far a push reaches from what was read before where it is the same push at the same commit.
+     *
+     * @param machines The machines.
+     * @param connect Opens a gate to a machine.
+     * @param before What was read last.
+     * @return What waits, and who did not answer.
+     */
+    public static Waiting read(
             List<Machine> machines, Function<Machine, Gate> connect, Waiting before) {
         final java.util.Map<String, Integer> known = new java.util.HashMap<>();
         before.pushes().forEach(entry -> known.put(entry.key(), entry.farReaching()));

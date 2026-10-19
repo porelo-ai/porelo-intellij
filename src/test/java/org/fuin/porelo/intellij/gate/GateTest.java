@@ -112,6 +112,65 @@ class GateTest {
 
     @Test
     @DisplayName(
+            "Watching the projects hands over every answer of the daemon's stream, in its order, until the stream ends")
+    void watchesTheProjects() {
+        daemon.method(
+                "WatchProjects",
+                (parameters, replies) -> {
+                    assertThat(replies.streaming()).as("whether the stream was asked for").isTrue();
+                    replies.more(Map.of("projects", List.of(project("one", 0))));
+                    replies.more(Map.of("projects", List.of(project("one", 1))));
+                    replies.last(Map.of("projects", List.of(project("one", 2))));
+                });
+        final List<Integer> seen = new java.util.ArrayList<>();
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            gate.watch(
+                    projects -> seen.add(projects.getFirst().repositories().getFirst().pending()));
+        }
+
+        assertThat(seen).as("how much waited, answer by answer").containsExactly(0, 1, 2);
+    }
+
+    @Test
+    @DisplayName("A stream of projects that the daemon cuts off is a failure, never an end")
+    void aCutStreamIsAFailure() {
+        daemon.method(
+                "WatchProjects",
+                (parameters, replies) -> {
+                    replies.more(Map.of("projects", List.of(project("one", 0))));
+                    throw new IllegalStateException("gone");
+                });
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.watch(projects -> {}))
+                    .as("a stream cut off")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("WatchProjects");
+        }
+    }
+
+    private static Map<String, Object> project(String name, int pending) {
+        return Map.of(
+                "name",
+                name,
+                "pending",
+                pending,
+                "repositories",
+                List.of(
+                        Map.of(
+                                "name",
+                                name,
+                                "own",
+                                true,
+                                "upstream",
+                                "git@example.org:" + name + ".git",
+                                "pending",
+                                pending)));
+    }
+
+    @Test
+    @DisplayName(
             "What waits at a repository's gate is asked of that repository, and listed newest first")
     void readsWhatWaitsNewestFirst() {
         daemon.method(
