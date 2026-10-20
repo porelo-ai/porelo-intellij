@@ -160,6 +160,15 @@ tasks.check {
     dependsOn(checkActions, checkShared, checkCitations, checkDocSite, "logchangeLint")
 }
 
+// Any porelo-release command, such as 'check-commits', which a pull request's commit messages are held to.
+tasks.register<JavaExec>("release") {
+    description = "Runs porelo-release with the arguments given as -Prelease.args."
+    classpath = poreloTools
+    mainClass = "org.fuin.porelo.release.Main"
+    args = providers.gradleProperty("release.args").orElse("").get().split(' ').filter { it.isNotBlank() }
+    workingDir = layout.projectDirectory.asFile
+}
+
 // Any porelo-machines command, such as 'jdk --github', which installs the pinned GraalVM in a CI job.
 tasks.register<JavaExec>("machines") {
     description = "Runs porelo-machines with the arguments given as -Pmachines.args."
