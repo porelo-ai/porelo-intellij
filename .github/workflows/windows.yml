@@ -1,6 +1,6 @@
 # Runs the plugin's tests on Windows, and reads a stand-in daemon through the relay over Windows' own ssh.exe to an
 # OpenSSH server on the same runner. By hand only, before a release or after a change to how the plugin reaches a
-# machine: Windows minutes cost more, and the Build checks everything else on every push.
+# machine: it takes about 21 minutes, and the Build checks everything else on every push.
 name: Windows
 
 on:

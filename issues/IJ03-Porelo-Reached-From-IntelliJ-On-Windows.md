@@ -50,8 +50,9 @@ opened for the daemon; one whose Porelo runs on another machine reaches it over 
 4. **Built:** `ReviewCache` fetches over the same ssh: `GIT_SSH_COMMAND` names Windows' `ssh.exe`
    (`%SystemRoot%\System32\OpenSSH\ssh.exe`, `Machines.ssh()`), so git for Windows does not use its own ssh, which
    knows neither the agent nor the person's hosts.
-5. **Built:** a Windows job, `windows.yml`, started by hand (the operator's decision of 2026-10-22: Windows minutes cost
-   more), on GitHub's Windows runner: the plugin's tests, and `WindowsSshRelayTest` (`./gradlew windowsSshTest`)
+5. **Built:** a Windows job, `windows.yml`, started by hand (the operator's decision of 2026-10-22, taken while the
+   repository was private and Windows minutes were billed; a public repository's runners cost no minutes, so whether
+   it runs on every Build is open again), on GitHub's Windows runner: the plugin's tests, and `WindowsSshRelayTest` (`./gradlew windowsSshTest`)
    through Windows' own `ssh.exe` to an OpenSSH server on the runner itself. Its remote shell is Git for Windows'
    bash, as a Linux machine's would be, and its `porelo` is `FakePorelo`, which joins `daemon connect` to a stand-in
    daemon's socket; red first with `PORELO_FAKE_DROP_NUL=1`, which drops the daemon's NUL bytes. The job runs on
