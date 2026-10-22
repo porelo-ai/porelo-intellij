@@ -15,7 +15,7 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij02"></a>[IJ02](IJ02-Live-Notices-And-A-Guide.md) | M | | Notices within seconds through `WatchProjects`; `doc/index.md` grown by what a person does, its install section left to [IJ01](README.md#ij01) |
 | <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Built but for the install section, written after the first Publish |
-| <a id="ij03"></a>[IJ03](IJ03-Porelo-Reached-From-IntelliJ-On-Windows.md) | M | | Seen on Windows: a Porelo in a WSL2 distribution reached through `wsl.exe` and `porelo daemon connect`; a machine over ssh from Windows. Both ways are built; the ssh way is checked in the Windows job on GitHub's runner, by hand only; untested on a Windows machine |
+| <a id="ij03"></a>[IJ03](IJ03-Porelo-Reached-From-IntelliJ-On-Windows.md) | M | | Seen on Windows: a Porelo in a WSL2 distribution reached through `wsl.exe` and `porelo daemon connect`; a machine over ssh from Windows. Both ways are built; the ssh way is checked in the Windows job on GitHub's runner on every change; untested on a Windows machine |
 | <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
 ## Idea

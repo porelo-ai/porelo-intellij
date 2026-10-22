@@ -1,9 +1,17 @@
 # Runs the plugin's tests on Windows, and reads a stand-in daemon through the relay over Windows' own ssh.exe to an
-# OpenSSH server on the same runner. By hand only, before a release or after a change to how the plugin reaches a
-# machine: it takes about 21 minutes, and the Build checks everything else on every push.
+# OpenSSH server on the same runner. On every change to the plugin, beside the Build: it is the only check of the
+# plugin on Windows, and Publish does not wait for it (the operator's decision of 2026-10-22). It takes about 21
+# minutes.
 name: Windows
 
 on:
+    push:
+        branches: [main]
+        # Documents alone change nothing it checks, unlike the Build, which also checks them. A change to this workflow runs
+        # it.
+        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', 'porelo.yml']
+    pull_request:
+        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', 'porelo.yml']
     workflow_dispatch:
 
 permissions:
@@ -23,7 +31,7 @@ jobs:
             # gradlew runs gradle-wrapper.jar; it is checked against the checksums Gradle publishes before it first runs.
             - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
-            # porelo-machines pins a GraalVM for Linux only. This job publishes nothing and runs by hand, so it runs on
+            # porelo-machines pins a GraalVM for Linux only. This job publishes nothing, so it runs on
             # the runner's own Java 25, as AGENTS.md names it.
             - name: The runner's Java 25
               shell: pwsh

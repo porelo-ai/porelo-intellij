@@ -1,8 +1,8 @@
 # IJ03 — Porelo reached from IntelliJ on Windows
 
 **Status:** Implementing; both parts are built, and the Windows job ran green on GitHub's runner. That job
-runs by hand only (`workflow_dispatch`), before a release or after a change to the ssh part, not on every Build; it
-checks the ssh way, never the WSL way. The index row says "untested on a Windows machine" until someone runs
+runs on every push to main and every pull request, beside the Build, and by hand; it checks the ssh way, never the
+WSL way. The index row says "untested on a Windows machine" until someone runs
 the test on a Windows machine below, then "tested on Windows on <version>", also once this issue is finished; that
 test is welcome, not required.
 **Size:** M - part 1 is built; part 2 is a relay over ssh in the shape of the WSL bridge, its tests, and a Windows
@@ -50,9 +50,9 @@ opened for the daemon; one whose Porelo runs on another machine reaches it over 
 4. **Built:** `ReviewCache` fetches over the same ssh: `GIT_SSH_COMMAND` names Windows' `ssh.exe`
    (`%SystemRoot%\System32\OpenSSH\ssh.exe`, `Machines.ssh()`), so git for Windows does not use its own ssh, which
    knows neither the agent nor the person's hosts.
-5. **Built:** a Windows job, `windows.yml`, started by hand (the operator's decision of 2026-10-22, taken while the
-   repository was private and Windows minutes were billed; a public repository's runners cost no minutes, so whether
-   it runs on every Build is open again), on GitHub's Windows runner: the plugin's tests, and `WindowsSshRelayTest` (`./gradlew windowsSshTest`)
+5. **Built:** a Windows job, `windows.yml`, on every push to main and every pull request, beside the Build, and by
+   hand. Publish does not wait for it. That is the operator's decision of 2026-10-22, taken once the repository was
+   public and its runners cost no minutes; before, it ran by hand only. It runs on GitHub's Windows runner: the plugin's tests, and `WindowsSshRelayTest` (`./gradlew windowsSshTest`)
    through Windows' own `ssh.exe` to an OpenSSH server on the runner itself. Its remote shell is Git for Windows'
    bash, as a Linux machine's would be, and its `porelo` is `FakePorelo`, which joins `daemon connect` to a stand-in
    daemon's socket; red first with `PORELO_FAKE_DROP_NUL=1`, which drops the daemon's NUL bytes. The job runs on
@@ -64,12 +64,12 @@ opened for the daemon; one whose Porelo runs on another machine reaches it over 
    (an owner-only socket, which Windows cannot give), a tunnel (Linux only) or a Linux socket path are skipped
    there, each with its reason. The runner's OpenSSH server answers 6 s after it is set up. Through `ssh.exe` the
    daemon's NUL bytes arrive unchanged, seen red with the stand-in dropping them.
-6. **Built:** `doc/` says that the ssh way is checked on GitHub's Windows runner, by hand before a release, and that
+6. **Built:** `doc/` says that the ssh way is checked on GitHub's Windows runner on every change, and that
    the WSL way is untested on a Windows machine.
 
 ## Acceptance
 
-- On GitHub's Windows runner, in the job started by hand: a machine over ssh reached through `ssh.exe` answers the
+- On GitHub's Windows runner, in the Windows job: a machine over ssh reached through `ssh.exe` answers the
   plugin's gate, and the daemon's NUL bytes arrive unchanged; for an account the server does not know, so that no
   key in the agent is taken, with `BatchMode`, it is not reached, in ssh's words, and nothing waits. Each seen to
   fail first.

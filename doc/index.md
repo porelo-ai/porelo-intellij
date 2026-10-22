@@ -8,7 +8,7 @@ It supports IntelliJ IDEA 2026.1 and newer. On Windows it reaches Porelo in a ru
 interface lists, through `wsl.exe` and `porelo daemon connect`, with no ssh and no port opened; it never starts a
 distribution that is stopped. A machine over ssh it reaches through Windows' own `ssh.exe`, with the key in Windows'
 OpenSSH Authentication Agent, which runs `porelo daemon connect` there for each connection. The ssh way is checked on
-GitHub's Windows runner, by hand before a release; the WSL way is untested on a Windows machine, built and tested on
+GitHub's Windows runner on every change; the WSL way is untested on a Windows machine, built and tested on
 Linux against stand-ins only.
 
 ## What waits
