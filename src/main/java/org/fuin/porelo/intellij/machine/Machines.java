@@ -17,10 +17,12 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The interface keeps them in {@code $XDG_CONFIG_HOME/porelo/frontend.json}, under {@code
  * machines}, each with {@code name}, {@code socket}, and {@code host} with {@code remoteSocket} or
- * neither. An entry with a {@code kind} (a WSL distribution, with its {@code distribution}) is one
- * the plugin does not reach yet: it is kept and shown as such, never opened as a path. Only those
- * fields are read; the file holds the interface's other settings too. This computer's own daemon is
- * reached as well, with no tunnel, whether or not the file names it.
+ * neither. An entry with a {@code kind} (a WSL distribution, with its {@code distribution}) is
+ * reached on Windows only; elsewhere, and of any other kind, it is kept and shown as one the plugin
+ * does not reach, never opened as a path. On Windows a machine over ssh is relayed to, and a socket
+ * of a Linux machine is not reached. Only those fields are read; the file holds the interface's
+ * other settings too. This computer's own daemon is reached as well, with no tunnel, whether or not
+ * the file names it, except on Windows, which has none.
  */
 public final class Machines {
 
@@ -151,6 +153,24 @@ public final class Machines {
     }
 
     /**
+     * Returns the ssh the plugin runs, for a relay and for git's fetch.
+     *
+     * @return On Windows its own OpenSSH, {@code %SystemRoot%\System32\OpenSSH\ssh.exe}, which uses
+     *     Windows' OpenSSH Authentication Agent where Git for Windows' own ssh knows neither the
+     *     agent nor the person's hosts; elsewhere {@code ssh} as the path finds it.
+     */
+    public String ssh() {
+        if (!windows) {
+            return "ssh";
+        }
+        final String root = environment.getOrDefault("SystemRoot", "");
+        // Only a drive's directory is taken; anything else would name another program to run.
+        return (root.matches("[A-Za-z]:\\\\[A-Za-z0-9 ._()\\\\-]*") ? root : "C:\\Windows")
+                        .replaceAll("\\\\+$", "")
+                + "\\System32\\OpenSSH\\ssh.exe";
+    }
+
+    /**
      * Returns where this person's sockets go.
      *
      * @return {@code $XDG_RUNTIME_DIR}, or {@code /run/user/<uid>} when that is not set.
@@ -226,13 +246,16 @@ public final class Machines {
                                                 + "')"));
                 continue;
             }
+            if (windows && !text(fields.get("host")).isEmpty()) {
+                // The interface's socket is its own end of a tunnel; Windows relays over ssh
+                // instead.
+                add(machines, unreachable, overSsh(file, name, fields));
+                continue;
+            }
             if (windows && !text(fields.get("socket")).isEmpty()) {
                 unreachable.add(
                         new Unreachable(
-                                name,
-                                text(fields.get("host")).isEmpty()
-                                        ? "is a socket of a Linux machine, which Windows cannot open"
-                                        : "is reached over ssh, which this plugin does not do from Windows yet"));
+                                name, "is a socket of a Linux machine, which Windows cannot open"));
                 continue;
             }
             final Machine machine = machine(file, name, fields);
@@ -271,6 +294,20 @@ public final class Machines {
                     Path.of(socket),
                     host.isEmpty() ? null : host,
                     remoteSocket.isEmpty() ? null : remoteSocket);
+        } catch (IllegalArgumentException ex) {
+            throw new MachinesException(file + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    private static Machine overSsh(Path file, String name, Map<?, ?> fields) {
+        final String remoteSocket = text(fields.get("remoteSocket"));
+        try {
+            return new Machine(
+                    name,
+                    null,
+                    text(fields.get("host")),
+                    remoteSocket.isEmpty() ? null : remoteSocket,
+                    null);
         } catch (IllegalArgumentException ex) {
             throw new MachinesException(file + ": " + ex.getMessage(), ex);
         }

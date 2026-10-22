@@ -1,7 +1,8 @@
 # IJ03 — Porelo reached from IntelliJ on Windows
 
-**Status:** Implementing; part 1 is built, part 2 is built next. GitHub's Windows runner is the regular check, the
-ssh way; the WSL way is not checked there. The index row says "untested on a Windows machine" until someone runs
+**Status:** Implementing; both parts are built, and the Windows job ran green on GitHub's runner. That job
+runs by hand only (`workflow_dispatch`), before a release or after a change to the ssh part, not on every Build; it
+checks the ssh way, never the WSL way. The index row says "untested on a Windows machine" until someone runs
 the test on a Windows machine below, then "tested on Windows on <version>", also once this issue is finished; that
 test is welcome, not required.
 **Size:** M - part 1 is built; part 2 is a relay over ssh in the shape of the WSL bridge, its tests, and a Windows
@@ -37,27 +38,40 @@ opened for the daemon; one whose Porelo runs on another machine reaches it over 
 
 ## Plan
 
-1. **`WslBridge` becomes a relay of any command** (`Relay`): the probe, the socket, the pumps and ending the
+1. **Built:** `WslBridge` becomes a relay of any command (`Relay`): the probe, the socket, the pumps and ending the
    children on close stay; the WSL list check stays WSL's. `WslBridgeTest` keeps passing unchanged.
-2. **`Relay.overSsh(machine, …)`**: the command above, the probe's failure in ssh's words. Red first in a test with
+2. **Built:** `Relay.overSsh(machine, …)`: the command above, the remote socket quoted for the remote shell, the
+   probe's failure in ssh's words. `LiveRelayOverSshTest` reads a real daemon through it, with a real machine's shell and
+   `porelo daemon connect --socket` at the far end. Red first in a test with
    a stand-in `ssh` in the shape of `FakeWsl`, which records its arguments and relays to a real socket.
-3. **`Machines`** on Windows turns an ssh entry into a reachable machine instead of an unreachable one;
+3. **Built:** `Machines` on Windows turns an ssh entry into a reachable machine instead of an unreachable one;
    `PoreloWatch.socketOf` opens the relay for it. Red first in `MachinesTest`'s Windows case, which expects it
    unreachable today.
-4. **`ReviewCache`** fetches over the same ssh: `GIT_SSH_COMMAND` names Windows' `ssh.exe`, so git for
-   Windows does not use its own ssh, which knows neither the agent nor the person's hosts.
-5. **A Windows job** in `build.yml` on GitHub's Windows runner: the plugin's tests, and a live test of `Relay.overSsh`
-   through Windows' own `ssh.exe` to the runner itself, where a stand-in `porelo` answers `daemon connect` with
-   replies that hold NUL bytes; red first with a stand-in that drops them. `permissions` as `check-actions` wants
-   them.
-6. **`doc/`** says that the plugin is checked on Windows on GitHub's runner only, the ssh way, and that the WSL way
-   is untested on a Windows machine.
+4. **Built:** `ReviewCache` fetches over the same ssh: `GIT_SSH_COMMAND` names Windows' `ssh.exe`
+   (`%SystemRoot%\System32\OpenSSH\ssh.exe`, `Machines.ssh()`), so git for Windows does not use its own ssh, which
+   knows neither the agent nor the person's hosts.
+5. **Built:** a Windows job, `windows.yml`, started by hand (the operator's decision of 2026-10-22: Windows minutes cost
+   more), on GitHub's Windows runner: the plugin's tests, and `WindowsSshRelayTest` (`./gradlew windowsSshTest`)
+   through Windows' own `ssh.exe` to an OpenSSH server on the runner itself. Its remote shell is Git for Windows'
+   bash, as a Linux machine's would be, and its `porelo` is `FakePorelo`, which joins `daemon connect` to a stand-in
+   daemon's socket; red first with `PORELO_FAKE_DROP_NUL=1`, which drops the daemon's NUL bytes. The job runs on
+   the runner's own Java 25, since `porelo-machines` pins a GraalVM for Linux only (the operator's decision of
+   2026-10-22), and `verification-metadata.xml` holds the Windows IntelliJ IDEA (`idea-2026.1-win.zip`), checked
+   against JetBrains' published SHA-256. It is made to work on the branch `ij03-windows`, pushed by the
+   coordinator round by round, and reaches `main` as one commit once green. **Measured there:** the tests pass on
+   Windows in about 19 minutes, most of it the IDE's download; those that need porelo-wire's `VarlinkServer`
+   (an owner-only socket, which Windows cannot give), a tunnel (Linux only) or a Linux socket path are skipped
+   there, each with its reason. The runner's OpenSSH server answers 6 s after it is set up. Through `ssh.exe` the
+   daemon's NUL bytes arrive unchanged, seen red with the stand-in dropping them.
+6. **Built:** `doc/` says that the ssh way is checked on GitHub's Windows runner, by hand before a release, and that
+   the WSL way is untested on a Windows machine.
 
 ## Acceptance
 
-- On GitHub's Windows runner: a machine over ssh reached through `ssh.exe` answers the plugin's gate with its
-  waiting pushes, the daemon's NUL bytes arrive unchanged, and approve reaches the stand-in; with a key that is not
-  in the agent and `BatchMode`, it is shown as not reached, and nothing waits. Each seen to fail first.
+- On GitHub's Windows runner, in the job started by hand: a machine over ssh reached through `ssh.exe` answers the
+  plugin's gate, and the daemon's NUL bytes arrive unchanged; for an account the server does not know, so that no
+  key in the agent is taken, with `BatchMode`, it is not reached, in ssh's words, and nothing waits. Each seen to
+  fail first.
 - On Linux, with a stand-in for `wsl.exe` and one for `ssh`: the relay, the refusal of a stopped, missing or WSL 1
   distribution, and closing the children with the relay, as today.
 - **Untested on a Windows machine** until the test below is done, and said so in the index row and in `doc/`: the
@@ -90,10 +104,3 @@ What to try, each for the WSL entry and the ssh entry:
 
 What failed, with the plugin's version, goes to the channel; when nothing failed, the index row reads "tested on
 Windows on <version>".
-
-## To be checked
-
-- Whether Windows' `ssh.exe` passes the daemon's NUL bytes unchanged, as `wsl.exe` does: measured in step 5 on
-  GitHub's Windows runner ([F108](https://github.com/porelo-ai/porelo-frontend/blob/main/issues/README.md#f108) in `porelo-frontend` asks the same).
-- Whether the runner's OpenSSH server can be started for a connection to the runner itself, and how long that takes:
-  measured first in step 5; if it cannot, `ssh.exe` reaches a service of the job's own instead.

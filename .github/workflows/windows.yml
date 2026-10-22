@@ -1,0 +1,90 @@
+# Runs the plugin's tests on Windows, and reads a stand-in daemon through the relay over Windows' own ssh.exe to an
+# OpenSSH server on the same runner. By hand only, before a release or after a change to how the plugin reaches a
+# machine: Windows minutes cost more, and the Build checks everything else on every push.
+name: Windows
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    windows:
+        name: Tests and ssh on Windows
+        runs-on: windows-2025
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              # No step pushes with git, so the job's token is not kept in .git/config for the build's code to read.
+              with:
+                  persist-credentials: false
+
+            # gradlew runs gradle-wrapper.jar; it is checked against the checksums Gradle publishes before it first runs.
+            - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+            # porelo-machines pins a GraalVM for Linux only. This job publishes nothing and runs by hand, so it runs on
+            # the runner's own Java 25, as AGENTS.md names it.
+            - name: The runner's Java 25
+              shell: pwsh
+              run: |
+                  if (-not $env:JAVA_HOME_25_X64) {
+                      Write-Output "::error::this runner has no Java 25 to run the build with (JAVA_HOME_25_X64)"
+                      exit 1
+                  }
+                  "JAVA_HOME=$env:JAVA_HOME_25_X64" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+                  & "$env:JAVA_HOME_25_X64\bin\java.exe" -version
+
+            - name: The plugin's tests
+              shell: pwsh
+              run: ./gradlew.bat --no-daemon test
+
+            # The far end runs a command as a Linux machine's shell would, in Git for Windows' bash, and its porelo is
+            # the stand-in; the key is in Windows' own agent, as a person's would be.
+            - name: An OpenSSH server on this runner, its key in Windows' agent
+              shell: pwsh
+              run: |
+                  $ErrorActionPreference = 'Stop'
+                  $PSNativeCommandUseErrorActionPreference = $true
+                  $started = Get-Date
+                  $openssh = "$env:SystemRoot\System32\OpenSSH"
+                  if (-not (Get-Service sshd -ErrorAction SilentlyContinue)) {
+                      Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 | Out-Null
+                  }
+                  New-Item -Path HKLM:\SOFTWARE\OpenSSH -Force | Out-Null
+                  New-ItemProperty -Path HKLM:\SOFTWARE\OpenSSH -Name DefaultShell -PropertyType String -Force `
+                      -Value 'C:\Program Files\Git\bin\bash.exe' | Out-Null
+
+                  $bin = 'C:\porelo-stand-in'
+                  New-Item -ItemType Directory -Force -Path $bin | Out-Null
+                  $java = "$env:JAVA_HOME_25_X64\bin\java.exe" -replace '\\', '/'
+                  $source = "$env:GITHUB_WORKSPACE\src\test\java\org\fuin\porelo\intellij\machine\FakePorelo.java" -replace '\\', '/'
+                  # A flag file beside it makes the stand-in drop the daemon's NUL bytes, as the red run of the test needs:
+                  # the server's session does not take the test's environment.
+                  [IO.File]::WriteAllText("$bin\porelo", "#!/bin/bash`n[ -e /c/porelo-stand-in/drop-nul ] && export PORELO_FAKE_DROP_NUL=1`nexec '$java' '$source' `"`$@`"`n")
+                  [Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'Machine') + ";$bin", 'Machine')
+
+                  Set-Service sshd -StartupType Manual
+                  Restart-Service sshd -Force
+
+                  New-Item -ItemType Directory -Force -Path "$HOME\.ssh" | Out-Null
+                  & "$openssh\ssh-keygen.exe" -q -t ed25519 -N '' -f "$HOME\.ssh\porelo_test"
+                  Set-Service ssh-agent -StartupType Manual
+                  Start-Service ssh-agent
+                  & "$openssh\ssh-add.exe" "$HOME\.ssh\porelo_test"
+                  # The runner's account is an administrator, whose keys OpenSSH reads from here alone.
+                  $authorized = "$env:ProgramData\ssh\administrators_authorized_keys"
+                  Get-Content "$HOME\.ssh\porelo_test.pub" | Out-File -FilePath $authorized -Encoding ascii
+                  icacls.exe $authorized /inheritance:r /grant 'Administrators:F' /grant 'SYSTEM:F' | Out-Null
+                  & "$openssh\ssh-keyscan.exe" -t ed25519 localhost 2> $null | Out-File -FilePath "$HOME\.ssh\known_hosts" -Encoding ascii
+
+                  & "$openssh\ssh.exe" -o BatchMode=yes "$env:USERNAME@localhost" 'command -v porelo'
+                  Write-Output "The server answered $([int]((Get-Date) - $started).TotalSeconds) s after this step started."
+
+            - name: A machine over ssh, through Windows' own ssh.exe
+              shell: pwsh
+              run: |
+                  $env:PORELO_WINDOWS_SSH_HOST = "$env:USERNAME@localhost"
+                  # An account the server does not know, so no key in the agent is taken for it.
+                  $env:PORELO_WINDOWS_SSH_STRANGER = 'nobody@localhost'
+                  ./gradlew.bat --no-daemon windowsSshTest

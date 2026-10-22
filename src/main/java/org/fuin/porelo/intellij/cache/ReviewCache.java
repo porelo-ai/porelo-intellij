@@ -44,9 +44,6 @@ public final class ReviewCache {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(120);
 
-    /** What ssh runs as when the person named no ssh of their own: never asking at a terminal. */
-    private static final String SSH_WITHOUT_PROMPT = "ssh -o BatchMode=yes";
-
     /**
      * Two reviews of one gate at once, from two clicks or two projects, take turns in its cache.
      */
@@ -58,21 +55,46 @@ public final class ReviewCache {
 
     private final Duration timeout;
 
+    /** What ssh runs as when the person named no ssh of their own: never asking at a terminal. */
+    private final String sshWithoutPrompt;
+
     /**
-     * Keeps the repositories under a directory.
+     * Keeps the repositories under a directory, fetching over {@code ssh} as the path finds it.
      *
      * @param root The cache directory, such as {@code ~/.cache/porelo-intellij}.
      * @param environment Variables git runs with beyond the IDE's own, such as {@code
      *     GIT_CONFIG_GLOBAL} in a test.
      */
     public ReviewCache(Path root, Map<String, String> environment) {
-        this(root, environment, TIMEOUT);
+        this(root, environment, "ssh");
+    }
+
+    /**
+     * Keeps the repositories under a directory, fetching over the given ssh.
+     *
+     * @param root The cache directory, such as {@code ~/.cache/porelo-intellij}.
+     * @param environment Variables git runs with beyond the IDE's own, such as {@code
+     *     GIT_CONFIG_GLOBAL} in a test.
+     * @param ssh The ssh git runs when the person named none of their own: on Windows its own
+     *     {@code ssh.exe}, since Git for Windows' ssh knows neither its agent nor the person's
+     *     hosts.
+     */
+    public ReviewCache(Path root, Map<String, String> environment, String ssh) {
+        this(root, environment, ssh, TIMEOUT);
     }
 
     ReviewCache(Path root, Map<String, String> environment, Duration timeout) {
+        this(root, environment, "ssh", timeout);
+    }
+
+    private ReviewCache(Path root, Map<String, String> environment, String ssh, Duration timeout) {
         this.root = root;
         this.environment = Map.copyOf(environment);
         this.timeout = timeout;
+        // git hands the command to a shell, which reads a path with a space or Windows'
+        // backslashes as something else.
+        this.sshWithoutPrompt =
+                "'" + ssh.replace('\\', '/').replace("'", "'\\''") + "' -o BatchMode=yes";
     }
 
     /**
@@ -423,7 +445,7 @@ public final class ReviewCache {
                 && run(place, null, "config", "--get", "core.sshCommand").exit() != 0) {
             // A host key to accept or a passphrase to type would wait at the IDE's terminal for
             // good; the person's own ssh, if they named one, is theirs to set up.
-            builder.environment().put("GIT_SSH_COMMAND", SSH_WITHOUT_PROMPT);
+            builder.environment().put("GIT_SSH_COMMAND", sshWithoutPrompt);
         }
         final Process git;
         try {

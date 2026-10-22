@@ -54,7 +54,8 @@ public final class PoreloWatch implements Disposable {
     private volatile boolean disposed;
 
     private final Connections connections =
-            new Connections(PoreloWatch::runtimeDirectory, List.of("ssh"), List.of("wsl.exe"));
+            new Connections(
+                    PoreloWatch::runtimeDirectory, List.of(machines().ssh()), List.of("wsl.exe"));
 
     private final List<Consumer<Snapshot>> listeners = new CopyOnWriteArrayList<>();
 
@@ -201,7 +202,7 @@ public final class PoreloWatch implements Disposable {
                 set == null || set.isEmpty() || !Path.of(set).isAbsolute()
                         ? Path.of(System.getProperty("user.home"), ".cache")
                         : Path.of(set);
-        return new ReviewCache(root.resolve("porelo-intellij"), Map.of());
+        return new ReviewCache(root.resolve("porelo-intellij"), Map.of(), machines().ssh());
     }
 
     /**

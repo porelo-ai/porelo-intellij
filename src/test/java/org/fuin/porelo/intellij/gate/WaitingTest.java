@@ -13,9 +13,15 @@ import org.fuin.porelo.wire.varlink.VarlinkServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Gathers what waits from stand-in daemons on real unix sockets, one per machine. */
+@DisabledOnOs(
+        value = OS.WINDOWS,
+        disabledReason =
+                "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
 class WaitingTest {
 
     private static final String COMMIT = "9119cf0a6a99d1e2b3c4d5e6f708192a3b4c5d6e";

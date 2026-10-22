@@ -117,7 +117,7 @@ val readDocuments = fileTree(layout.projectDirectory) {
 
 tasks.test {
     useJUnitPlatform {
-        excludeTags("live")
+        excludeTags("live", "windows-ssh")
     }
     inputs.files(readDocuments).withPropertyName("documents").withPathSensitivity(PathSensitivity.RELATIVE)
 }
@@ -130,6 +130,18 @@ tasks.register<Test>("liveTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform {
         includeTags("live")
+    }
+    outputs.upToDateWhen { false }
+}
+
+// Through Windows' own ssh.exe to an OpenSSH server on the same Windows, in the Windows job only; never in the build.
+tasks.register<Test>("windowsSshTest") {
+    description = "Runs the tests tagged windows-ssh against the OpenSSH server PORELO_WINDOWS_SSH_HOST names."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("windows-ssh")
     }
     outputs.upToDateWhen { false }
 }

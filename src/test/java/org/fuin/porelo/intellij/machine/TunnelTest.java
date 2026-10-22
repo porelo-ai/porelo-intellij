@@ -15,12 +15,18 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Raises tunnels with a stand-in for ssh in a process of its own, so what is asked of ssh and what
  * the plugin does with its answer are both seen.
  */
+@DisabledOnOs(
+        value = OS.WINDOWS,
+        disabledReason =
+                "a tunnel forwards to a unix socket with ssh -L, which the plugin raises on Linux only; Windows relays over ssh instead")
 class TunnelTest {
 
     private static final Machine BUILD1 =

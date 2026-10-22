@@ -20,7 +20,9 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   a version in `gradle/libs.versions.toml` or the Gradle Wrapper is moved by hand, and the same commit renews the file
   from an empty Gradle home, with `rm gradle/verification-metadata.xml && ./gradlew -g <empty directory>
   --no-configuration-cache --no-build-cache --write-verification-metadata sha256 clean build verifyPlugin documents`.
-  A Gradle home that already holds the downloads leaves out what it did not fetch again.
+  A Gradle home that already holds the downloads leaves out what it did not fetch again. Linux never fetches the
+  IntelliJ IDEA the *Windows* job compiles against, `idea-<platformVersion>-win.zip`: its entry is added again by
+  hand, with the SHA-256 JetBrains publishes beside the download, compared with the download itself.
 - **Two shared rules are written for Maven alone and hold nothing here:**
   - *Every Porelo Maven repository takes `porelo-parent` as its parent*: Gradle has no parent pom. The versions
     `porelo-parent` pins that this build uses (JUnit, AssertJ, `porelo-buildtools`) are named again in
@@ -36,6 +38,11 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   `PORELO_LIVE_WSL_DISTRIBUTION` and `PORELO_LIVE_PROJECT` for the WSL bridge, as each test's comment says. The
   taken-branch test forwards the push, so it runs after the others. A change to how the plugin speaks to a daemon is
   handed over only after they ran.
+- **The tests tagged `windows-ssh` run only in the *Windows* workflow, as `./gradlew windowsSshTest`**, started by
+  hand before a release or after a change to how the plugin reaches a machine: they reach a stand-in daemon through
+  Windows' own `ssh.exe` and an OpenSSH server on the same runner. That job runs on the runner's own Java 25
+  (`JAVA_HOME_25_X64`), the one exception to the pinned GraalVM: `porelo-machines` pins one for Linux only, and the
+  job publishes nothing.
 - **A changelog entry is one YAML file under `changelog/unreleased/`** with a one-sentence `title` and a `type`.
 - **Issue prefix: `IJ`**, in `issues/`.
 - **Skills used:** `java-code-review`, `concurrency-review`, `test-quality`, `security-audit`, `clean-code`.

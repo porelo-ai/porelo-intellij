@@ -16,6 +16,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -23,6 +25,10 @@ import org.junit.jupiter.api.io.TempDir;
  * which relays to a stand-in daemon on a real unix socket, so what is asked of {@code wsl.exe} and
  * what the plugin reads through it are both seen.
  */
+@DisabledOnOs(
+        value = OS.WINDOWS,
+        disabledReason =
+                "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
 class WslBridgeTest {
 
     private static final Machine UBUNTU = Machine.wsl("Ubuntu on Windows", "Ubuntu");

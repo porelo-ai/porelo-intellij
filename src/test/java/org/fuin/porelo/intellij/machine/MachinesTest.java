@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Reads the machines from a file shaped as the interface writes it. */
@@ -35,6 +37,10 @@ class MachinesTest {
     }
 
     @Test
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
     @DisplayName(
             "A machine with a host and a remote socket is reached through a tunnel, one without is opened as it is")
     void readsBothKindsOfMachine() throws IOException {
@@ -75,7 +81,7 @@ class MachinesTest {
     void doesNotListThisComputerTwice() throws IOException {
         write(
                 "{\"machines\": [{\"name\": \"here\", \"socket\": \""
-                        + dir.resolve("run/porelo/porelod.sock")
+                        + dir.resolve("run/porelo/porelod.sock").toString().replace("\\", "\\\\")
                         + "\"}]}");
 
         assertThat(machines().all())
@@ -110,6 +116,10 @@ class MachinesTest {
     }
 
     @Test
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
     @DisplayName(
             "A WSL entry and one of an unknown kind are kept as not reachable, never opened as a path")
     void keepsEntriesOfAKindItDoesNotSpeak() throws IOException {
@@ -140,8 +150,8 @@ class MachinesTest {
 
     @Test
     @DisplayName(
-            "On Windows the file is under APPDATA, a WSL entry is reached, and no Linux socket or ssh entry is")
-    void onWindowsAWslEntryIsReached() throws IOException {
+            "On Windows the file is under APPDATA, a WSL entry and an ssh entry are reached, and no Linux socket is")
+    void onWindowsAWslEntryAndAnSshEntryAreReached() throws IOException {
         final Path file = dir.resolve("roaming/porelo/frontend.json");
         Files.createDirectories(file.getParent());
         Files.writeString(
@@ -172,15 +182,16 @@ class MachinesTest {
                 .as("where the interface keeps the file on Windows")
                 .isEqualTo(file);
         assertThat(listed.machines())
-                .as("what the plugin reaches on Windows: no daemon of this computer's own")
-                .containsExactly(Machine.wsl("Ubuntu on Windows", "Ubuntu"));
+                .as(
+                        "what the plugin reaches on Windows: no daemon of this computer's own,"
+                                + " and the machine over ssh without the interface's own end")
+                .containsExactly(
+                        Machine.wsl("Ubuntu on Windows", "Ubuntu"),
+                        Machine.overSsh(
+                                "build1", "a@build1", "/run/user/1001/porelo/porelod.sock"));
         assertThat(listed.unreachable())
                 .as("what it keeps but does not reach there")
                 .containsExactly(
-                        new Machines.Unreachable(
-                                "build1",
-                                "is reached over ssh, which this plugin does not do from Windows"
-                                        + " yet"),
                         new Machines.Unreachable(
                                 "carried over",
                                 "is a socket of a Linux machine, which Windows cannot open"),
@@ -190,6 +201,26 @@ class MachinesTest {
         assertThat(windows.runtimeDirectory())
                 .as("where the plugin's own sockets go on Windows")
                 .isEqualTo(dir.resolve("local/porelo-intellij"));
+    }
+
+    @Test
+    @DisplayName(
+            "On Windows the plugin runs Windows' own ssh.exe, and a SystemRoot that is no drive's directory names no other program")
+    void onWindowsItRunsWindowsOwnSsh() {
+        final Path home = dir.resolve("home");
+
+        assertThat(new Machines(Map.of("SystemRoot", "D:\\Windows"), home, true).ssh())
+                .as("the ssh under SystemRoot")
+                .isEqualTo("D:\\Windows\\System32\\OpenSSH\\ssh.exe");
+        assertThat(
+                        new Machines(
+                                        Map.of("SystemRoot", "\\\\evil\\share\\x\" & calc & \""),
+                                        home,
+                                        true)
+                                .ssh())
+                .as("the ssh when SystemRoot names a share and a command")
+                .isEqualTo("C:\\Windows\\System32\\OpenSSH\\ssh.exe");
+        assertThat(new Machines(Map.of(), home).ssh()).as("the ssh on Linux").isEqualTo("ssh");
     }
 
     @Test
@@ -232,6 +263,10 @@ class MachinesTest {
     @Test
     @DisplayName(
             "The second machine of a name is not reached, so it is never read or decided through the first one's connection")
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
     void theSecondMachineOfANameIsNotReached() throws IOException {
         write(
                 """

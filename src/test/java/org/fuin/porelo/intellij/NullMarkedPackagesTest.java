@@ -28,7 +28,7 @@ class NullMarkedPackagesTest {
         // A guard over no packages passes forever: assert that it reaches them, then what it
         // checks.
         assertThat(packages)
-                .extracting(path -> MAIN.relativize(path).toString())
+                .extracting(path -> MAIN.relativize(path).toString().replace('\\', '/'))
                 .as("the main packages the guard reads")
                 .contains("org/fuin/porelo/intellij/machine");
         assertThat(packages)

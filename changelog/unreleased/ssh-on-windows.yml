@@ -1,0 +1,2 @@
+title: On Windows a machine over ssh is reached through Windows' own ssh.exe, which runs porelo daemon connect there for each connection, and a review fetches its push through the same ssh
+type: added

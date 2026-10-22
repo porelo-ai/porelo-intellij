@@ -8,14 +8,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * The tunnels and WSL bridges the plugin holds to reach its machines' daemons, each kept while it
- * forwards and raised again when it dropped.
+ * The tunnels, relays and WSL bridges the plugin holds to reach its machines' daemons, each kept
+ * while it forwards and raised again when it dropped.
  */
 public final class Connections implements AutoCloseable {
 
     private final Map<String, Tunnel> tunnels = new ConcurrentHashMap<>();
 
     private final Map<String, WslBridge> bridges = new ConcurrentHashMap<>();
+
+    private final Map<String, Relay> relays = new ConcurrentHashMap<>();
 
     private final Supplier<Path> runtimeDirectory;
 
@@ -29,7 +31,8 @@ public final class Connections implements AutoCloseable {
      * Holds no connection yet.
      *
      * @param runtimeDirectory Where the plugin's ends go, made when asked.
-     * @param ssh The ssh command, {@code ssh} unless a test stands in for it.
+     * @param ssh The ssh command, {@code ssh}, or Windows' own {@code ssh.exe} there, unless a test
+     *     stands in for it.
      * @param wsl The {@code wsl.exe} command, {@code wsl.exe} unless a test stands in for it.
      */
     public Connections(Supplier<Path> runtimeDirectory, List<String> ssh, List<String> wsl) {
@@ -39,12 +42,12 @@ public final class Connections implements AutoCloseable {
     }
 
     /**
-     * Returns the socket a gate to a machine connects to, raising its tunnel or bridge first when
-     * it needs one that is not up.
+     * Returns the socket a gate to a machine connects to, raising its tunnel, relay or bridge first
+     * when it needs one that is not up.
      *
      * @param machine The machine.
-     * @return Its daemon's socket, or the plugin's end of a tunnel or bridge to it.
-     * @throws MachinesException If the tunnel or bridge cannot be raised.
+     * @return Its daemon's socket, or the plugin's end of a tunnel, relay or bridge to it.
+     * @throws MachinesException If the tunnel, relay or bridge cannot be raised.
      */
     public Path socketOf(Machine machine) {
         // A read or a decision that ends after the IDE closed would leave a new ssh behind.
@@ -63,6 +66,20 @@ public final class Connections implements AutoCloseable {
                                     existing.close();
                                 }
                                 return WslBridge.open(machine, runtimeDirectory.get(), wsl);
+                            })
+                    .socket();
+        }
+        if (machine.relayedOverSsh()) {
+            return relays.compute(
+                            machine.name(),
+                            (name, existing) -> {
+                                if (existing != null && existing.up()) {
+                                    return existing;
+                                }
+                                if (existing != null) {
+                                    existing.close();
+                                }
+                                return Relay.overSsh(machine, runtimeDirectory.get(), ssh);
                             })
                     .socket();
         }
@@ -90,8 +107,10 @@ public final class Connections implements AutoCloseable {
         // Each is closed even if another fails, so no ssh or wsl.exe outlives the IDE for that.
         final List<AutoCloseable> all = new java.util.ArrayList<>(tunnels.values());
         all.addAll(bridges.values());
+        all.addAll(relays.values());
         tunnels.clear();
         bridges.clear();
+        relays.clear();
         MachinesException failed = null;
         for (final AutoCloseable connection : all) {
             try {

@@ -1,24 +1,10 @@
 package org.fuin.porelo.intellij.machine;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.StandardProtocolFamily;
-import java.net.UnixDomainSocketAddress;
-import java.nio.channels.Channels;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFileAttributeView;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A socket of the plugin's own that reaches the daemon in a WSL distribution: each connection to it
@@ -32,34 +18,10 @@ import java.util.concurrent.TimeUnit;
  */
 public final class WslBridge implements AutoCloseable {
 
-    private static final Duration READY = Duration.ofSeconds(10);
+    private final Relay relay;
 
-    private static final byte[] GET_INFO =
-            "{\"method\":\"org.varlink.service.GetInfo\"}\0".getBytes(StandardCharsets.UTF_8);
-
-    private final Machine machine;
-
-    private final Path socket;
-
-    private final List<String> relay;
-
-    private final ServerSocketChannel server;
-
-    private final Thread acceptor;
-
-    private volatile boolean closed;
-
-    // On Windows a child does not end with its parent: each wsl.exe is ended here, with the bridge.
-    private final java.util.Set<Process> relays =
-            java.util.concurrent.ConcurrentHashMap.newKeySet();
-
-    private WslBridge(
-            Machine machine, Path socket, List<String> relay, ServerSocketChannel server) {
-        this.machine = machine;
-        this.socket = socket;
-        this.relay = List.copyOf(relay);
-        this.server = server;
-        this.acceptor = Thread.ofVirtual().name("porelo-wsl-" + machine.name()).start(this::accept);
+    private WslBridge(Relay relay) {
+        this.relay = relay;
     }
 
     /**
@@ -85,28 +47,12 @@ public final class WslBridge implements AutoCloseable {
                             + "', which wsl.exe would read as an option");
         }
         running(machine, distribution, wsl);
-        final List<String> relay = new ArrayList<>(wsl);
-        relay.addAll(List.of("-d", distribution, "--exec", "porelo", "daemon", "connect"));
-        answers(machine, relay);
-        final Path socket = Tunnel.socketFor(runtimeDirectory, machine);
-        final ServerSocketChannel server;
-        // A bridge another IDE holds there is left alone; only a stale socket is removed.
-        Tunnel.clear(machine, socket);
-        try {
-            server = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
-            server.bind(UnixDomainSocketAddress.of(socket));
-            ownerOnly(socket);
-        } catch (IOException ex) {
-            throw new MachinesException(
-                    "Cannot open the plugin's end for '"
-                            + machine.name()
-                            + "' at "
-                            + socket
-                            + ": "
-                            + ex.getMessage(),
-                    ex);
-        }
-        return new WslBridge(machine, socket, relay, server);
+        final List<String> connect =
+                List.of("-d", distribution, "--exec", "porelo", "daemon", "connect");
+        final List<String> command = new ArrayList<>(wsl);
+        command.addAll(connect);
+        return new WslBridge(
+                Relay.open(machine, runtimeDirectory, command, String.join(" ", connect)));
     }
 
     /**
@@ -156,7 +102,7 @@ public final class WslBridge implements AutoCloseable {
      * @return The socket.
      */
     public Path socket() {
-        return socket;
+        return relay.socket();
     }
 
     /**
@@ -165,35 +111,18 @@ public final class WslBridge implements AutoCloseable {
      * @return {@code true} until it is closed.
      */
     public boolean up() {
-        return !closed && server.isOpen();
+        return relay.up();
     }
 
     @Override
     public void close() {
-        closed = true;
-        try {
-            server.close();
-        } catch (IOException ex) {
-            // Closed either way; the relays below are ended all the same.
-        }
-        // Every wsl.exe is ended even if what follows fails: none may outlive the bridge.
-        for (final Process relay : relays) {
-            end(relay);
-        }
-        try {
-            acceptor.join(READY);
-            Files.deleteIfExists(socket);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-        } catch (IOException ex) {
-            throw new MachinesException("Cannot remove " + socket + ": " + ex.getMessage(), ex);
-        }
+        relay.close();
     }
 
     private static void running(Machine machine, String distribution, List<String> wsl) {
         final List<String> list = new ArrayList<>(wsl);
         list.addAll(List.of("-l", "-v"));
-        final Ran ran = run(list, null);
+        final Relay.Ran ran = Relay.run(list, null);
         if (ran.exit() != 0) {
             throw new MachinesException(
                     "wsl.exe -l -v ended with exit code "
@@ -249,7 +178,7 @@ public final class WslBridge implements AutoCloseable {
     private static boolean runningByName(String distribution, List<String> wsl) {
         final List<String> list = new ArrayList<>(wsl);
         list.addAll(List.of("-l", "--running", "-q"));
-        final Ran ran = run(list, null);
+        final Relay.Ran ran = Relay.run(list, null);
         final String printed =
                 new String(
                         ran.out(),
@@ -258,168 +187,5 @@ public final class WslBridge implements AutoCloseable {
                 .lines()
                 .map(String::strip)
                 .anyMatch(distribution::equals);
-    }
-
-    private static void answers(Machine machine, List<String> relay) {
-        final Ran ran = run(relay, GET_INFO);
-        final String answer = new String(ran.out(), StandardCharsets.UTF_8);
-        if (!answer.contains("\"interfaces\"")) {
-            throw new MachinesException(
-                    "Porelo's daemon in '"
-                            + machine.name()
-                            + "' does not answer through "
-                            + String.join(" ", relay.subList(relay.size() - 6, relay.size()))
-                            + " (exit code "
-                            + ran.exit()
-                            + "): "
-                            + ran.said());
-        }
-    }
-
-    private record Ran(int exit, byte[] out, String said) {}
-
-    private static Ran run(List<String> command, byte @org.jspecify.annotations.Nullable [] input) {
-        final Process process;
-        try {
-            process = new ProcessBuilder(command).start();
-        } catch (IOException ex) {
-            throw new MachinesException(
-                    "Cannot start " + command.getFirst() + ": " + ex.getMessage(), ex);
-        }
-        final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        final ByteArrayOutputStream err = new ByteArrayOutputStream();
-        final Thread reader =
-                Thread.ofVirtual().start(() -> copy(process.getInputStream(), out, input != null));
-        final Thread errors =
-                Thread.ofVirtual().start(() -> copy(process.getErrorStream(), err, false));
-        try (OutputStream stdin = process.getOutputStream()) {
-            if (input != null) {
-                stdin.write(input);
-            }
-        } catch (IOException ex) {
-            // The process ended before it read; what it said tells why.
-        }
-        try {
-            reader.join(READY);
-            if (process.isAlive()) {
-                process.destroy();
-            }
-            if (!process.waitFor(READY.toMillis(), TimeUnit.MILLISECONDS)) {
-                process.destroyForcibly();
-            }
-            errors.join(READY);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            process.destroyForcibly();
-        }
-        final String said = err.toString(StandardCharsets.UTF_8).strip();
-        return new Ran(
-                process.isAlive() ? -1 : process.exitValue(),
-                out.toByteArray(),
-                said.isEmpty() ? "it said nothing" : said);
-    }
-
-    // Reads all, or with untilAnswer up to the first NUL: one Varlink reply is all a probe waits
-    // for.
-    private static void copy(InputStream from, ByteArrayOutputStream to, boolean untilAnswer) {
-        try {
-            int read;
-            while ((read = from.read()) >= 0) {
-                to.write(read);
-                if (untilAnswer && read == 0) {
-                    return;
-                }
-            }
-        } catch (IOException ex) {
-            // Ended; what was read stands.
-        }
-    }
-
-    private static void ownerOnly(Path socket) throws IOException {
-        // Windows has no POSIX permissions; there the socket lies under the person's own profile.
-        if (Files.getFileAttributeView(socket, PosixFileAttributeView.class) != null) {
-            final var ownerOnly = PosixFilePermissions.fromString("rw-------");
-            Files.setPosixFilePermissions(socket, ownerOnly);
-            if (!Files.getPosixFilePermissions(socket).equals(ownerOnly)) {
-                throw new IOException(socket + " is not readable by its owner alone");
-            }
-        }
-    }
-
-    private void accept() {
-        while (!closed) {
-            final SocketChannel client;
-            try {
-                client = server.accept();
-            } catch (IOException ex) {
-                return;
-            }
-            Thread.ofVirtual()
-                    .name("porelo-wsl-" + machine.name() + "-relay")
-                    .start(() -> join(client));
-        }
-    }
-
-    private void join(SocketChannel client) {
-        final Process process;
-        try {
-            process =
-                    new ProcessBuilder(relay)
-                            .redirectError(ProcessBuilder.Redirect.DISCARD)
-                            .start();
-        } catch (IOException ex) {
-            close(client);
-            return;
-        }
-        relays.add(process);
-        if (closed) {
-            end(process);
-        }
-        final Thread in =
-                Thread.ofVirtual()
-                        .start(
-                                () ->
-                                        pump(
-                                                Channels.newInputStream(client),
-                                                process.getOutputStream()));
-        pump(process.getInputStream(), Channels.newOutputStream(client));
-        end(process);
-        relays.remove(process);
-        in.interrupt();
-        close(client);
-    }
-
-    private static void end(Process process) {
-        process.destroy();
-        try {
-            if (!process.waitFor(READY.toMillis(), TimeUnit.MILLISECONDS)) {
-                process.destroyForcibly();
-            }
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            process.destroyForcibly();
-        }
-    }
-
-    private static void pump(InputStream from, OutputStream to) {
-        try (from;
-                to) {
-            final byte[] buffer = new byte[8192];
-            int read;
-            while ((read = from.read(buffer)) >= 0) {
-                to.write(buffer, 0, read);
-                to.flush();
-            }
-        } catch (IOException ex) {
-            // One side ended; the other ends with it.
-        }
-    }
-
-    private static void close(SocketChannel client) {
-        try {
-            client.close();
-        } catch (IOException ex) {
-            // It is gone either way.
-        }
     }
 }

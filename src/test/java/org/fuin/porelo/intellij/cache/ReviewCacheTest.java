@@ -386,6 +386,39 @@ class ReviewCacheTest {
     @Test
     @DisabledOnOs(OS.WINDOWS)
     @DisplayName(
+            "The ssh the cache is given is the one git runs, from a path with a space and a quote, never one the path finds")
+    void fetchesOverTheSshItIsGiven() throws IOException {
+        final Path bin = Files.createDirectories(dir.resolve("bin"));
+        final Path asked = dir.resolve("asked");
+        final Path found = bin.resolve("ssh");
+        Files.writeString(found, "#!/bin/sh\necho found > '" + asked + "'\nexit 255\n");
+        Files.setPosixFilePermissions(found, PosixFilePermissions.fromString("rwx------"));
+        final Path given = Files.createDirectories(dir.resolve("Open SSH's")).resolve("ssh.exe");
+        Files.writeString(given, "#!/bin/sh\necho given \"$@\" > '" + asked + "'\nexit 255\n");
+        Files.setPosixFilePermissions(given, PosixFilePermissions.fromString("rwx------"));
+        final Map<String, String> environment = new HashMap<>(NO_CONFIG);
+        environment.put("PATH", bin + ":" + System.getenv("PATH"));
+        final ReviewCache viaSsh =
+                new ReviewCache(dir.resolve("ssh"), environment, given.toString());
+
+        assertThatThrownBy(
+                        () ->
+                                viaSsh.fetch(
+                                        viaSsh.repository("m", "p", "r"),
+                                        "ssh://example.invalid/x",
+                                        "app",
+                                        pushed))
+                .as("a fetch over an ssh that refuses")
+                .isInstanceOf(CacheException.class);
+        assertThat(Files.readString(asked))
+                .as("which ssh git ran, and what it was given")
+                .startsWith("given ")
+                .contains("BatchMode=yes");
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    @DisplayName(
             "ssh is told never to ask when a remote of the person's is fetched by its name, which says nothing of ssh")
     void sshIsNeverLeftToAskForARemoteByName() throws IOException {
         final Path person = personsRepository();
