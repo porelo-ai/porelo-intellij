@@ -1,8 +1,8 @@
 # IJ01 — Work is reviewed in IntelliJ
 
-**Status:** Implementing; built but for the publishing, which comes with this repository's first push.
-**Size:** S - what is left is the publishing: a Gradle task, a CI job and its test; the review, approve,
-reject and the notice are built.
+**Status:** Implementing; built but for the Publish job and the install section of `doc/`.
+**Size:** S - what is left is the Publish job and the install section; the review, approve, reject, the notice and the
+Gradle task that writes `updatePlugins.xml` are built.
 
 **What must be true.** A developer reviews an agent's waiting work in IntelliJ IDEA, as they would
 review a colleague's change: they see what waits, read the diff in the IDE they know, and approve or
@@ -87,14 +87,17 @@ build. The plugin does those steps for them and keeps the safety the box gives.
   review tab in IntelliJ's diff windows (`ReviewEditor`, `ReviewTab`), approve with the commit shown and reject
   with a reason (`Decisions`, `Gate`), and the machines from the interface's list (`Machines`, `Tunnel`).
 - **Publishing:**
-  1. A Gradle task beside `buildPlugin` writes `updatePlugins.xml` for the zip, as `ddd-cqrs-dsl`'s `intellij/`
-     does; `pluginVersion` moves to the other repositories' line.
+  1. **Built:** `updatePluginsXml` beside `buildPlugin` writes `updatePlugins.xml` for the zip: the plugin's id and
+     name from `plugin.xml`, its version, `since-build`, and the zip's address under `<channel>/<version>/`. An IDE
+     offers a plugin only when its version is newer than the one installed, so a snapshot the Build publishes
+     carries its run number, `-PsnapshotStamp`, as `0.5.0-SNAPSHOT.<run>`, in the zip's `plugin.xml` too.
   2. A job "Publish" in `build.yml`, on `main` and on `v<version>` tags only, after `build` and `verifyPlugin`:
-     the zip and `updatePlugins.xml` uploaded with `jf rt upload` into `porelo-dist-intellij` under
-     `<channel>/<version>/` and `latest/`, each read back with no token; `permissions` as `check-actions` wants
-     them, the token a repository secret.
-  3. Seen red first: a test of the Gradle task's `updatePlugins.xml` (id, version, URL, since-build), against
-     a missing task.
+     the zip and `updatePlugins.xml` uploaded into `porelo-dist-intellij` under `<channel>/<version>/` and
+     `<channel>/latest/`, each read back with no token; `permissions` as `check-actions` wants them, the token the
+     secret `JF_ACCESS_TOKEN` the other repositories' Publish takes. The repository exists and is read without a
+     token.
+  3. **Built:** `UpdatePluginsTest` reads the `updatePlugins.xml` the build writes (id, version, URL, since-build);
+     seen red without the task and with a wrong channel in the URL.
   4. `doc/index.md` says how to install the plugin from the custom repository URL, once it exists: in IntelliJ
      IDEA's *Settings* - *Plugins* - *Manage Plugin Repositories*, the URL added, then the plugin installed from
      the Marketplace tab; each step done once as written.

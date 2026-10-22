@@ -11,7 +11,17 @@ plugins {
 }
 
 group = providers.gradleProperty("pluginGroup").get()
-version = providers.gradleProperty("pluginVersion").get()
+// An IDE offers a plugin from a custom repository only when its version is newer than the one installed, so every
+// snapshot the Build publishes carries the Build's run number, -PsnapshotStamp, after the snapshot version.
+version = providers.gradleProperty("pluginVersion").get().let { line ->
+    val stamp = providers.gradleProperty("snapshotStamp").orNull
+    when {
+        stamp == null -> line
+        !line.endsWith("-SNAPSHOT") -> throw GradleException("-PsnapshotStamp=$stamp is for a snapshot, and $line is none")
+        !stamp.matches(Regex("[0-9]+")) -> throw GradleException("-PsnapshotStamp=$stamp is no run number")
+        else -> "$line.$stamp"
+    }
+}
 
 repositories {
     mavenCentral()
@@ -156,6 +166,59 @@ val checkCitations = poreloRelease("checkCitations",
 val checkDocSite = poreloRelease("checkDocSite",
     "Every page of doc/ is in mkdocs.yml's navigation once, and every link on it can be followed.",
     "check-doc-site", "doc", "mkdocs.yml")
+
+// The custom plugin repository a person adds in the IDE: updatePlugins.xml names the zip by its published URL, under
+// the channel its version belongs to, in Artifactory's generic repository that the Publish job uploads both into.
+val updatePluginsXml = tasks.register("updatePluginsXml") {
+    description = "Writes the custom plugin repository's updatePlugins.xml for the plugin's zip."
+    group = "intellij platform"
+    val distribution = "https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij"
+    val zip = tasks.named<Zip>("buildPlugin").flatMap { it.archiveFile }
+    val pluginXml = layout.projectDirectory.file("src/main/resources/META-INF/plugin.xml")
+    val since = providers.gradleProperty("pluginSinceBuild")
+    val pluginVersion = version.toString()
+    val output = layout.buildDirectory.file("distributions/updatePlugins.xml")
+    inputs.file(zip)
+    inputs.file(pluginXml)
+    inputs.property("since", since)
+    inputs.property("version", pluginVersion)
+    outputs.file(output)
+    doLast {
+        val descriptor = pluginXml.asFile.readText()
+        val id = Regex("<id>([^<]+)</id>").find(descriptor)?.groupValues?.get(1)
+            ?: throw GradleException("plugin.xml names no <id>")
+        val name = Regex("<name>([^<]+)</name>").find(descriptor)?.groupValues?.get(1)
+            ?: throw GradleException("plugin.xml names no <name>")
+        // Each value goes into XML and a URL as it is, so only what needs no escaping in either is taken.
+        val plain = Regex("[A-Za-z0-9._+-]+")
+        listOf("id" to id, "version" to pluginVersion, "since-build" to since.get(), "zip" to zip.get().asFile.name)
+            .forEach { (what, value) ->
+                if (!value.matches(plain)) throw GradleException("The plugin's $what '$value' is not plain enough for a URL")
+            }
+        val channel = if (pluginVersion.contains("-SNAPSHOT")) "snapshots" else "releases"
+        val url = "$distribution/$channel/$pluginVersion/${zip.get().asFile.name}"
+        output.get().asFile.writeText(
+            """
+            |<?xml version="1.0" encoding="UTF-8"?>
+            |<plugins>
+            |  <plugin id="$id" url="$url" version="$pluginVersion">
+            |    <name>$name</name>
+            |    <idea-version since-build="${since.get()}"/>
+            |  </plugin>
+            |</plugins>
+            |""".trimMargin()
+        )
+    }
+}
+
+tasks.test {
+    // The test of the published descriptor reads the one this build writes, so a changed one runs it again rather
+    // than taking its result from the cache.
+    inputs.files(updatePluginsXml).withPropertyName("updatePlugins")
+    systemProperty("porelo.updatePlugins", updatePluginsXml.get().outputs.files.singleFile.absolutePath)
+    systemProperty("porelo.version", version.toString())
+    systemProperty("porelo.zip", tasks.named<Zip>("buildPlugin").get().archiveFile.get().asFile.absolutePath)
+}
 
 // What the 'Shared rules check' workflow runs: the checks on the documents, and the tests that read one.
 tasks.register("documents") {

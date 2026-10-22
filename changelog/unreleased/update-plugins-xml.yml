@@ -1,0 +1,2 @@
+title: The build writes updatePlugins.xml, the custom plugin repository's descriptor, beside the plugin's zip, and a snapshot built with -PsnapshotStamp carries that run number in its version
+type: added
