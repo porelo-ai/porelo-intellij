@@ -44,9 +44,11 @@ how to install and use the plugin is written down where the other chapters are.
 
 ## To be checked
 
-- That a stream held for hours through the plugin's ssh tunnel and through `porelo daemon connect` on Windows stays
-  open, or is opened again within the minute's read when it drops. Measured only for minutes so far: the live test
-  `LiveNoticeTest` on `fedora` through the tunnel, a task's first push known within the test's 3.96 s in all.
+- That a stream held for hours through `porelo daemon connect` on Windows stays open, or is opened again within the
+  minute's read when it drops. Through the plugin's ssh tunnel on Linux it is measured: `LiveStreamHoldTest` held
+  the stream 3 hours against `fedora`'s daemon with no end but one made on purpose, the tunnel's ssh killed half way,
+  after which the next reply came 5.3 s later; the daemon sends its list about every 15 minutes even unchanged. Seen
+  red with the pause before reopening made 70 s.
 - The daemon's list of projects carries counts only, so a task that pushes again, moving its waiting push to
   another commit, changes no count and is announced at the minute's read, not within seconds. Whether that wants a
   field of the daemon's (porelo) is asked once this is built.
