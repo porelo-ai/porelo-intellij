@@ -99,10 +99,17 @@ tasks.compileTestJava {
     options.errorprone.enabled = false
 }
 
+// The tests tagged documents read the repository's files as they are; Gradle knows only the test classes as inputs,
+// so without these a changed document would leave the result of the run before standing, or take it from the cache.
+val readDocuments = fileTree(layout.projectDirectory) {
+    exclude("build/**", ".gradle/**", ".git/**", ".idea/**", ".kotlin/**")
+}
+
 tasks.test {
     useJUnitPlatform {
         excludeTags("live")
     }
+    inputs.files(readDocuments).withPropertyName("documents").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // Against a real daemon on a machine somebody keeps, named in the environment; never part of the build.
@@ -126,6 +133,7 @@ val documentsTest = tasks.register<Test>("documentsTest") {
     useJUnitPlatform {
         includeTags("documents")
     }
+    inputs.files(readDocuments).withPropertyName("documents").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 fun poreloRelease(name: String, what: String, vararg arguments: String) = tasks.register<JavaExec>(name) {
