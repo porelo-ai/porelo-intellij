@@ -1,0 +1,2 @@
+title: The Build publishes the plugin to the custom plugin repository porelo-dist-intellij, a snapshot from main and a release from a v tag, each with its updatePlugins.xml
+type: added

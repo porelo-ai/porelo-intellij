@@ -1,8 +1,8 @@
 # IJ01 — Work is reviewed in IntelliJ
 
-**Status:** Implementing; built but for the Publish job and the install section of `doc/`.
-**Size:** S - what is left is the Publish job and the install section; the review, approve, reject, the notice and the
-Gradle task that writes `updatePlugins.xml` are built.
+**Status:** Implementing; built but for the install section of `doc/`, written once the first Publish has run.
+**Size:** S - what is left is the install section; the review, approve, reject, the notice, the Gradle task that writes
+`updatePlugins.xml` and the Publish steps are built.
 
 **What must be true.** A developer reviews an agent's waiting work in IntelliJ IDEA, as they would
 review a colleague's change: they see what waits, read the diff in the IDE they know, and approve or
@@ -91,11 +91,19 @@ build. The plugin does those steps for them and keeps the safety the box gives.
      name from `plugin.xml`, its version, `since-build`, and the zip's address under `<channel>/<version>/`. An IDE
      offers a plugin only when its version is newer than the one installed, so a snapshot the Build publishes
      carries its run number, `-PsnapshotStamp`, as `0.5.0-SNAPSHOT.<run>`, in the zip's `plugin.xml` too.
-  2. A job "Publish" in `build.yml`, on `main` and on `v<version>` tags only, after `build` and `verifyPlugin`:
-     the zip and `updatePlugins.xml` uploaded into `porelo-dist-intellij` under `<channel>/<version>/` and
-     `<channel>/latest/`, each read back with no token; `permissions` as `check-actions` wants them, the token the
-     secret `JF_ACCESS_TOKEN` the other repositories' Publish takes. The repository exists and is read without a
-     token.
+  2. **Built:** *Publish the plugin* in `build.yml`'s job, on `main` and on `v<version>` tags only, after `build`
+     and `verifyPlugin`, which on `main` build with `-PsnapshotStamp=<run number>`. The zip goes to the address
+     `updatePlugins.xml` names, so the address is the build's alone, and that descriptor beside it and as
+     `<channel>/latest/updatePlugins.xml`, each with `curl -T` and both checksums, the token `JF_ACCESS_TOKEN` handed
+     to `curl -K -` on its standard input, never in a file or on a command line (`curl` in the step, as
+     porelo-buildtools' [BT23](https://github.com/porelo-ai/porelo-buildtools/blob/main/issues/README.md#bt23) will replace). A release already published, or one whose state cannot be read, is
+     refused before anything is written. *The plugin is published, as an IDE reads it* reads both back with no
+     token and compares them with what was built. Run on the host against a stand-in `curl`: the three uploads and
+     their checksums, the token on standard input and in no file of the runner's, seen red with the earlier step that wrote one; each refusal made to happen (no token, an
+     address outside `porelo-dist-intellij`, a release already there, one whose state answered 503), and the read
+     back red on a changed upload. Its acceptance is the first Publish on `main`. A release from a `v<version>` tag cannot run yet:
+     `build.yml` starts on a push to `main` and on pull requests only, so a tag trigger comes with the first
+     release.
   3. **Built:** `UpdatePluginsTest` reads the `updatePlugins.xml` the build writes (id, version, URL, since-build);
      seen red without the task and with a wrong channel in the URL.
   4. `doc/index.md` says how to install the plugin from the custom repository URL, once it exists: in IntelliJ

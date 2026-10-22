@@ -40,10 +40,78 @@ jobs:
             - name: The pinned GraalVM
               uses: ./.github/actions/pinned-jdk
 
+            # A snapshot from main carries the run's number in its version, so an IDE offers it over the one before.
             - name: Build, tests and the shared checks
-              run: ./gradlew --no-daemon build
+              env:
+                  STAMP: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_number || '' }}
+              run: ./gradlew --no-daemon build ${STAMP:+-PsnapshotStamp=$STAMP}
 
             - name: The plugin verifier
+              env:
+                  STAMP: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_number || '' }}
               run: |
-                  ./gradlew --no-daemon verifyPlugin
+                  ./gradlew --no-daemon verifyPlugin ${STAMP:+-PsnapshotStamp=$STAMP}
                   df -h /
+
+            # The zip goes where updatePlugins.xml says it is, so the address is the build's alone; that descriptor goes
+            # beside it and as the channel's latest, which a person adds in the IDE once.
+            - name: Publish the plugin
+              timeout-minutes: 5
+              if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+              env:
+                  JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  descriptor=build/distributions/updatePlugins.xml
+                  url="$(sed -n 's/.* url="\([^"]*\)".*/\1/p' "$descriptor")"
+                  base=https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij/
+                  case "$url" in
+                    "$base"snapshots/*|"$base"releases/*) ;;
+                    *) echo "::error::updatePlugins.xml names no address in porelo-dist-intellij: '$url'"; exit 1 ;;
+                  esac
+                  zip="build/distributions/${url##*/}"
+                  [ -f "$zip" ] || { echo "::error::$zip, which updatePlugins.xml names, was not built"; exit 1; }
+                  directory="${url%/*}/"
+                  latest="${directory%/*/}/latest/"
+                  case "$directory" in
+                    "$base"releases/*)
+                      # A release is published once. Only a plain "not there" lets it go on: an answer that cannot be
+                      # read stops it rather than reading as "not published".
+                      status="$(curl -sL -o /dev/null -w '%{http_code}' -r 0-0 "$url")" || status=000
+                      case "$status" in
+                        404) ;;
+                        200|206) echo "::error::${url##*/} is published already"; exit 1 ;;
+                        *) echo "::error::whether ${url##*/} is published is unknown: $url answered $status"; exit 1 ;;
+                      esac ;;
+                  esac
+                  [ -n "$JF_ACCESS_TOKEN" ] || { echo "::error::secret JF_ACCESS_TOKEN is not set"; exit 1; }
+                  # The token reaches curl on its standard input, never a file or a command line.
+                  put() {
+                    printf 'header = "Authorization: Bearer %s"\n' "$JF_ACCESS_TOKEN" | curl -fsS -K - -o /dev/null -T "$1" \
+                        -H "X-Checksum-Sha1: $(sha1sum "$1" | cut -d' ' -f1)" \
+                        -H "X-Checksum-Sha256: $(sha256sum "$1" | cut -d' ' -f1)" \
+                        "$2$(basename "$1")"
+                    echo "  put   $2$(basename "$1")"
+                  }
+                  put "$zip" "$directory"
+                  put "$descriptor" "$directory"
+                  put "$descriptor" "$latest"
+                  echo "url=$url" >> "$GITHUB_OUTPUT"
+                  echo "latest=${latest}updatePlugins.xml" >> "$GITHUB_OUTPUT"
+              id: publish
+
+            # Read back as an IDE reads them, with no token: the very bytes just uploaded, not merely a file of that name.
+            - name: The plugin is published, as an IDE reads it
+              if: steps.publish.outcome == 'success'
+              env:
+                  URL: ${{ steps.publish.outputs.url }}
+                  LATEST: ${{ steps.publish.outputs.latest }}
+              run: |
+                  set -euo pipefail
+                  curl -fsSL -o "$RUNNER_TEMP/zip" "$URL"
+                  curl -fsSL -o "$RUNNER_TEMP/latest.xml" "$LATEST"
+                  [ "$(sha256sum < "$RUNNER_TEMP/zip")" = "$(sha256sum < "build/distributions/${URL##*/}")" ] \
+                      || { echo "::error::$URL is not the zip just built"; exit 1; }
+                  cmp -s "$RUNNER_TEMP/latest.xml" build/distributions/updatePlugins.xml \
+                      || { echo "::error::$LATEST is not the updatePlugins.xml just built"; exit 1; }
+                  echo "read back: $URL and $LATEST"
