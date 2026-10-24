@@ -112,7 +112,7 @@ tasks.compileTestJava {
 // The tests tagged documents read the repository's files as they are; Gradle knows only the test classes as inputs,
 // so without these a changed document would leave the result of the run before standing, or take it from the cache.
 val readDocuments = fileTree(layout.projectDirectory) {
-    exclude("build/**", ".gradle/**", ".git/**", ".idea/**", ".kotlin/**")
+    exclude("build/**", ".gradle/**", ".git/**", ".idea/**", ".intellijPlatform/**", ".kotlin/**")
 }
 
 tasks.test {
