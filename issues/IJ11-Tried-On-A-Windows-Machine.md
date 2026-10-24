@@ -27,5 +27,8 @@ What to try, each for the WSL entry and the ssh entry:
 - Stop the distribution (`wsl --terminate <name>`); the tool window says it is stopped, and it stays stopped.
 - Log in as another Windows user; the plugin there does not reach the first user's distribution.
 - For the ssh entry: remove the key from the agent; the machine is shown as not reached, and nothing waits.
+- Leave the IDE open for some hours with the WSL entry: the stream of projects through `porelo daemon connect`
+  stays open, or is opened again within the minute's read when it drops; a push made after hours is still
+  announced within seconds.
 
 What failed, with the plugin's version, goes to the channel; when nothing failed, this issue is done.

@@ -1,6 +1,7 @@
 # IJ09 — The build verifies every dependency
 
-**Status:** Implementing.
+**Status:** Implementing; blocked by `porelo-buildtools` 0.5.1, released with the close of release 0.6. Until then the
+file is renewed whenever the snapshot's dependencies move.
 **Size:** M - one generated file, Dependabot reduced to the actions, the way a version is moved and the file renewed,
 and a check that a tampered entry fails; no code of the plugin changes.
 

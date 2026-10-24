@@ -11,6 +11,18 @@ OpenSSH Authentication Agent, which runs `porelo daemon connect` there for each 
 GitHub's Windows runner on every change; the WSL way is untested on a Windows machine, built and tested on
 Linux against stand-ins only.
 
+## Installing it
+
+The plugin is installed from Porelo's own plugin repository, in IntelliJ IDEA 2026.1 or newer:
+
+1. Open *Settings*, then *Plugins*, click the gear icon, and choose *Manage Plugin Repositories*.
+2. Add the repository URL
+   `https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij/snapshots/latest/updatePlugins.xml`.
+3. On the *Marketplace* tab, search for *Porelo*, install it, and restart the IDE if it asks.
+
+Each snapshot the Build publishes carries its run number in its version, so a newer one is offered as an update
+there.
+
 ## What waits
 
 The *Porelo* tool window lists every push that waits at the gates of the machines you reach, grouped by project and

@@ -1,6 +1,7 @@
 # IJ02 — Live notices and a guide
 
-**Status:** Implementing.
+**Status:** Implementing; built and measured, the chapter's walk in an IDE waits for the operator, with
+[IJ01](README.md#ij01)'s install section.
 **Size:** M - a stream per machine in the gate and the watch, a `doc/` chapter, and a measured acceptance on a
 VM.
 
@@ -40,15 +41,17 @@ how to install and use the plugin is written down where the other chapters are.
    the tool window, the review tab, far-reaching files, approve and reject, opening a push in its project, the
    cache, the machines. How to install the plugin from the custom repository URL is
    [IJ01](README.md#ij01)'s, where that URL is made (the operator's decision of 2026-10-19).
-4. **Acceptance on a VM**, with a live test tagged `live` that times a push to its notice.
+4. **Built: acceptance on a VM**, `LiveNoticeTest`, tagged `live`, which times a push to its notice.
+   **Measured** against a real daemon on a Fedora VM through the plugin's ssh tunnel, a task's first push: the
+   stream said it 2.8 s after the push, and the plugin knew what it was 3.0 s after it, within the 5 s; with the
+   stream cut, a plain read found it. Seen red with the 5 s made 0. Held for hours through the same tunnel,
+   `LiveStreamHoldTest` kept the stream 3 hours with no end but one made on purpose, the tunnel's ssh killed half
+   way, after which the next reply came 5.3 s later; the daemon sends its list about every 15 minutes even
+   unchanged. Seen red with the pause before reopening made 70 s. The same through `porelo daemon connect` on
+   Windows is [IJ11](README.md#ij11)'s.
 
 ## To be checked
 
-- That a stream held for hours through `porelo daemon connect` on Windows stays open, or is opened again within the
-  minute's read when it drops. Through the plugin's ssh tunnel on Linux it is measured: `LiveStreamHoldTest` held
-  the stream 3 hours against `fedora`'s daemon with no end but one made on purpose, the tunnel's ssh killed half way,
-  after which the next reply came 5.3 s later; the daemon sends its list about every 15 minutes even unchanged. Seen
-  red with the pause before reopening made 70 s.
 - The daemon's list of projects carries counts only, so a task that pushes again, moving its waiting push to
   another commit, changes no count and is announced at the minute's read, not within seconds. Whether that wants a
   field of the daemon's (porelo) is asked once this is built.

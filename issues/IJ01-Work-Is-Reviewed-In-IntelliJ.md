@@ -1,8 +1,8 @@
 # IJ01 — Work is reviewed in IntelliJ
 
-**Status:** Implementing; built but for the install section of `doc/`, written once the first Publish has run.
-**Size:** S - what is left is the install section; the review, approve, reject, the notice, the Gradle task that writes
-`updatePlugins.xml` and the Publish steps are built.
+**Status:** Implementing; built, the install section's walk in an IDE waits for the operator.
+**Size:** S - what is left is the operator's walk of the install section; the review, approve, reject, the notice, the
+Gradle task that writes `updatePlugins.xml` and the Publish steps are built.
 
 **What must be true.** A developer reviews an agent's waiting work in IntelliJ IDEA, as they would
 review a colleague's change: they see what waits, read the diff in the IDE they know, and approve or
@@ -106,9 +106,32 @@ build. The plugin does those steps for them and keeps the safety the box gives.
      release.
   3. **Built:** `UpdatePluginsTest` reads the `updatePlugins.xml` the build writes (id, version, URL, since-build);
      seen red without the task and with a wrong channel in the URL.
-  4. `doc/index.md` says how to install the plugin from the custom repository URL, once it exists: in IntelliJ
-     IDEA's *Settings* - *Plugins* - *Manage Plugin Repositories*, the URL added, then the plugin installed from
-     the Marketplace tab; each step done once as written.
+  4. **Built:** *Installing it* in `doc/index.md` says how to install the plugin from the custom repository URL, for
+     the snapshot channel: in IntelliJ IDEA's *Settings* - *Plugins* - *Manage Plugin Repositories*, the URL added,
+     then the plugin installed from the Marketplace tab. Each step is done once as written in the operator's walk,
+     after sprint 2c of release 0.6.
+
+## The operator's walk
+
+One walk covers `doc/index.md` as written: this issue's install section and [IJ02](README.md#ij02)'s chapter. It
+needs IntelliJ IDEA 2026.1 or newer, and a machine in the Porelo interface's list with a task that can push.
+**Checked by me without an IDE:** the URL answers with an `updatePlugins.xml` that names the plugin's id, its
+version and `since-build="261"`, and the zip it names downloads, its `plugin.xml` naming *Porelo* at that version.
+**Not run by me**, since they need an IDE with a display: every step below.
+
+1. *Settings* → *Plugins* → the gear icon → *Manage Plugin Repositories*; add
+   `https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij/snapshots/latest/updatePlugins.xml`.
+2. *Marketplace* tab: search *Porelo*, install it, restart if asked. *Installed* shows it at `0.5.0-SNAPSHOT.<run>`.
+3. Open the *Porelo* tool window: every waiting push of the listed machines, grouped by project and repository; a
+   machine that does not answer says why.
+4. Let a task push once: a notice comes within seconds.
+5. *Review* in the notice: the files on the left, IntelliJ's diff on the right; far-reaching files first and marked.
+6. Reject one push with a reason (the task is told), approve another (its commit is on the branch named).
+7. With the push's repository open in a second window: *Open in* that project brings it forward, and `porelo/<push>`
+   is in its Git log; the working tree is unchanged.
+8. Once a newer snapshot is published, *Plugins* offers it as an update.
+
+What does not match `doc/index.md` goes to the channel, with the step and the plugin's version.
 
 ## Acceptance
 
