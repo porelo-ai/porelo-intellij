@@ -11,18 +11,20 @@ is `IJ`.
 | <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Built; the install section waits for the operator's walk |
 | <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | `porelo-buildtools` 0.5.1, with release 0.6 | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
+## Analyzed
+
+| # | size | blocked by | what it covers | open questions |
+|---|---|---|---|---|
+| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | `porelo` [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), [B291](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b291), [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292), [B293](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b293), [IJ12](README.md#ij12) | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes | 0 |
+
 ## Idea
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
+| <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | | `porelo` [B291](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b291), [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292) | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes |
+| <a id="ij13"></a>[IJ13](IJ13-Held-And-Outgoing-Forge-Comments-Released-In-IntelliJ.md) | | `porelo` [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171), [B293](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b293), [IJ04](README.md#ij04) | Held inbound forge comments (`E0`) and outgoing forge comments, replies, suggestions and verdicts shown with their exact destination, operation, commit and content, and released or dropped singly through the daemon; an edit invalidates a prior release |
 | <a id="ij11"></a>[IJ11](IJ11-Tried-On-A-Windows-Machine.md) | | | The WSL way and the ssh way tried once on a real Windows machine, with what to install and what to try; what failed goes to the channel, what passed into `doc/` with the plugin's version |
 | <a id="ij10"></a>[IJ10](IJ10-Relays-And-Connections-End-Cleanly.md) | | | Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first |
-
-## Estimated
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | XL | `porelo` [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171) | Comments on a push's lines written in the review tab and shown as threads with their origin; suggestions shown, never applied; outgoing forge comments and held incoming ones released one at a time |
 
 ## Finished
 

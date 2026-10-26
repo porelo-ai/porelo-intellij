@@ -1,70 +1,54 @@
 # IJ04 — Code comments in the review
 
-**Status:** Estimated; blocked by `porelo` [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166) (the comment model and the local review) and, for its second
-part, by `porelo` [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171) (comments to and from a forge).
-**Size:** XL - writing and showing threads inside IntelliJ's diff windows is several days alone; it splits into
-part 1 (L, with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)) and part 2 (M, its own issue once [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171)'s contract is written).
+**Status:** Analyzed; blocked by `porelo` [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), [B291](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b291), [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292), [B293](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b293) and [IJ12](README.md#ij12).
+**Size:** L - SARIF 2.1.0 reading and writing in `Gate`, inline diff threads through [IJ12](README.md#ij12)'s adapter, a discussion panel in `ReviewEditor` for file, general and outdated threads, read-only fix previews, and source-level and risk-class badges; the `collaborationTools` adapter ([IJ12](README.md#ij12)) and held or outgoing forge releases ([IJ13](README.md#ij13)) are split out.
 
-**What must be true.** A developer who reviews waiting work in IntelliJ comments on its lines there, as on a
-colleague's change, and reads in the same place what agents and people on the forge said about it, each marked with
-where it came from; and they release what goes out to a forge, and what comes in from someone not on the project's
-list, one comment at a time.
+**What must be true.** A developer who reviews waiting work in IntelliJ comments and proposes line replacements on its diff, files, or review using IntelliJ's code-review gutter and inlays, and reads in the same place what checking and building agents, linters, and people on a forge said, all carried as SARIF 2.1.0 and marked with their authenticated source level, origin, and the push's risk class.
 
 ## The shape
 
-### 1. Comments in the review tab
+### 1. Comments, findings and suggestions as SARIF 2.1.0
 
-- In the review tab's diff, a line or a range on the old or the new side takes a comment, with an optional
-  suggestion that holds replacement lines for exactly that range. It is sent through the daemon's contract; the
-  daemon checks the anchor against the commit shown and refuses one that is not there, and the plugin says so in its
-  words.
-- The comments on a push are shown in IntelliJ's diff beside their lines, as threads, each with its origin: the
-  person, an agent (which task, in which role: the developer's replies, or a task that reviews), or a forge account.
-  A thread is marked open or resolved.
-- A suggestion is shown as a small diff inside its comment. The plugin never applies one: the agent does, in its
-  task, and the result comes back through the gate as new work.
-- A reject sends the open comments to the task with the reason, as [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166) says.
+- Every comment, agent or linter finding, reply, and line-replacement suggestion is read and sent through the daemon's contract ([B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)) only as SARIF 2.1.0 in Porelo's closed profile ([B291](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b291)), read and written with `com.contrastsecurity:java-sarif` 2.0 and a maintained Jackson 2.x set hardened as [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292) specifies. No custom `Anchor`, `Comment`, `Thread`, or `CommentOrigin` wire records exist beside SARIF.
+- Root `version` is `"2.1.0"` and `properties["porelo/profileVersion"]` is `"1"`. Each run in `runs[]` carries `versionControlProvenance[0]` (`repositoryUri`, `revisionId`), `columnKind: "unicodeCodePoints"`, and `run.properties` (`"porelo/projectId"`, `"porelo/repositoryId"`, `"porelo/baseRevisionId"`, `"porelo/reviewRound"`, `"porelo/completeness"` in `complete`, `partial`, `failed` or `unknown`, and `"porelo/reviewVerdict"`).
+- Each item in `runs[].results[]` carries a daemon UUIDv4 `guid`, `ruleId`, `kind` (`"review"` with `level: "none"` for comments, `"fail"` with `"note"`, `"warning"` or `"error"` for findings), `message.text`, optional `message.markdown`, `locations[0].physicalLocation.artifactLocation.uri`, `region` (`startLine`, `endLine`, `startColumn`, `endColumn`), and `result.properties` (`"porelo/anchorKind"` in `line`, `file` or `general`, `"porelo/diffSide"` in `old` or `new`, `"porelo/threadId"`, `"porelo/replyTo"`, `"porelo/threadState"` in `open` or `resolved`, `"porelo/sourceKind"`, `"porelo/sourceLevel"` in `E0`, `E1`, `I1` or `A`, `"porelo/authorId"`, `"porelo/authorDisplayName"`, `"porelo/taskId"`, `"porelo/taskRole"`, `"porelo/forgeInstanceId"`, `"porelo/outdated"`, `"porelo/outdatedReason"`, `"porelo/draft"`, and `"porelo/deleted"`).
+- A line-replacement suggestion is carried in `result.fixes[0].artifactChanges[0].replacements[0]` (`deletedRegion`, `insertedContent.text`).
 
-### 2. What crosses to and from a forge
+### 2. Diff threads, discussion panel and read-only fix previews
 
-- Comments that wait to go out to a pull request are listed per push, with their text and anchor. Each is released or
-  dropped by the person; where a project has switched the release off, they are shown as gone out.
-- Comments from forge accounts not on the project's list are shown as held, apart from the delivered ones; each can be
-  released to the task singly.
-- Every release is the daemon's, through its contract; the plugin holds no forge token.
-- The interface does the same in `porelo-frontend` [F107](https://github.com/porelo-ai/porelo-frontend/blob/main/issues/README.md#f107); both read the comments from the same contract and show the same
-  origins.
+- In `ReviewEditor`, a line or a range of up to 100 inclusive lines on the `old` or `new` side of the diff takes a comment and an optional replacement suggestion, and existing `porelo/anchorKind: "line"` threads on the current push's commits are rendered beside their lines through [IJ12](README.md#ij12)'s replaceable adapter over `intellij.platform.collaborationTools`.
+- File comments (`porelo/anchorKind: "file"`, without a `region`), general review comments (`porelo/anchorKind: "general"`, without `locations`), and outdated threads (`porelo/outdated: true` or anchored to an earlier commit or `porelo/reviewRound`, relocated or marked by [B176](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b176)) are shown in a discussion panel in `ReviewEditor`.
+- A suggestion (`result.fixes[0]`) is shown inside its comment as a read-only `SimpleDiffRequest` preview computed in memory over the cached blob. The plugin never applies a suggestion to a document or working tree: the agent applies it in its task, and the result returns through the gate as a new push.
+- A reject in `Decisions.reject` drops the push with the person's reason while the daemon delivers the open SARIF threads to the task as structured review data ([B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)).
+- Releasing or dropping held inbound forge comments (`E0`) and outgoing forge comments, replies, suggestions, and verdicts is [IJ13](README.md#ij13)'s; the interface's counterpart is `porelo-frontend` [F107](https://github.com/porelo-ai/porelo-frontend/blob/main/issues/README.md#f107).
+
+### 3. Security requirements
+
+- **Hardened SARIF reading and writing ([B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292)):** Read and write SARIF with `com.contrastsecurity:java-sarif` 2.0 and a maintained Jackson 2.x BOM replacing its transitive Jackson 2.11.x. Enforce pre-binding stream limits before allocating model objects: at most 1 MiB UTF-8 per live document, 1 `run`, 100 `results`, `StreamReadConstraints` max nesting depth 24, max token count 100,000, max string length 16,384 characters, max key length 128 characters, and max number length 20 characters, with decoded profile bounds of 8 KiB per body, 4 KiB per property bag, at most 4 `relatedLocations`, and 100 inclusive lines per anchor. Enable `STRICT_DUPLICATE_DETECTION`, `FAIL_ON_TRAILING_TOKENS`, and `FAIL_ON_UNKNOWN_PROPERTIES`; disable scalar/array coercions, numeric enum values, unknown enum fallbacks, and class-name polymorphism; validate against the closed profile allow-list before POJO binding; drop sender snippets, artifact contents, invocations, external references, and unlisted property bags; refuse Unicode bidi controls and zero-width characters; and construct fresh model objects when sending so untrusted object graphs are never round-tripped. Renew `gradle/verification-metadata.xml` ([IJ09](README.md#ij09)) when dependencies move.
+- **Git-tree anchor resolution in the bare cache:** Validate `artifactLocation.uri` as a canonical repository-relative path (decode once, re-encode and compare, at most 1,024 decoded UTF-8 bytes and 3,072 encoded ASCII bytes; schemes, authority, absolute paths, backslashes, drive prefixes, queries, fragments, empty or dot components, encoded separators, decoded percent signs, and control or format characters refused) and resolve it only against pinned regular blobs in `ReviewCache` (`changes.commit()` matching `revisionId` for `new`, `changes.base()` matching `porelo/baseRevisionId` for `old`, where `ReviewCache.files` reads only `blob` objects from `git cat-file --batch` and ignores symlinks, trees, and submodules). Never fetch `$schema`, `hostedViewerUri`, `workItemUris`, or remote avatars, and never resolve a path against the host file system or an open IDE project.
+- **Safe comment rendering:** Render only the permitted Markdown subset (paragraphs, simple lists, emphasis, and code, at most 4 nesting levels) with all network access disabled (no `AsyncHtmlImageLoader`, no remote or local images, no raw HTML, no external links, autolinks, or `jetbrains://` links). Render daemon-authenticated origin (`porelo/sourceKind`, `porelo/authorDisplayName`, `porelo/taskId`, `porelo/taskRole`) and source-level badges (`E0`, `E1`, `I1`, `A` from [B293](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b293)) in header components outside the untrusted body.
+- **Suggestion confinement:** Admit at most 1 `fix`, 1 `artifactChange`, and 1 `replacement` on the `new` side of a regular blob, whose `deletedRegion` equals the primary anchor and whose `insertedContent.text` is at most the anchor's lines plus 10, 400 Unicode scalar values per line, and 8 KiB. Outdated, `old`-side, or `E0` suggestions have no actionable control, and every fix preview is read-only with no local apply action.
+- **State and authority separation:** Keep thread resolution (`porelo/threadState`) separate from `result.suppressions`, `run.properties["porelo/reviewVerdict"]`, and `Gate.approve` ([B136](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b136)). Suppressions, `baselineState`, a thread resolved on a forge by a non-`I1` account, or missing results never clear a gate finding or authorize approval. Display `run.properties["porelo/completeness"]` (`complete`, `partial`, `failed`, `unknown`) explicitly in `ReviewEditor` so a partial or failed run never looks like a clean review. Show the push's daemon-stamped source level (`E0`–`A`), code risk class (`C0`–`C3`), and two-person approval state ([B145](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b145)) for `E0` and `C3` changes in `WaitingTree` and `ReviewEditor`.
 
 ## Plan
 
-- **Part 1, with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)'s contract:**
-  1. **`Gate`** speaks [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)'s `Comment`, `Comments` and `ResolveThread`, with its `Anchor` (repository,
-     commit, path, side `old` or `new`, first and last line, at most 100 lines), a suggestion of at most the anchor's
-     lines plus 10, and each comment's `CommentOrigin`. `AnchorNotInCommit`, `SuggestionOutsideAnchor` and
-     `CommentTooLarge` become exceptions in words, as `BranchExistsException` does. Red first in `GateTest` against
-     a stand-in daemon.
-  2. **`ReviewEditor`**: a `DiffExtension` on the `DiffRequestPanel`'s viewer adds a gutter action "Comment" on a
-     line or a selection of either side, and shows each thread as a block inlay below its lines; a suggestion is
-     a small read-only diff inside its inlay. Nothing writes to a document or a file.
-  3. **Grouping threads to lines** is a pure function, tested outside the IDE. A thread stays on the commit it
-     names, so one of an earlier push of the same task is shown apart, as on an earlier commit: red first with such
-     a thread.
-  4. **`Decisions`**: a reject needs nothing new, as the daemon delivers the open threads with the reason; the
-     notice says what its `told` says.
-  5. The acceptance on the VM against a daemon with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), as a live test.
-- **Part 2, with [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171)'s contract:** a list per push of what waits to go out and what is held, each with Release
-  and Drop, through the gate; no forge token in the plugin.
+1. **Hardened SARIF profile reader and writer:** Use [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292)'s shared reader and writer if `porelo-wire` exports them, or add a `@NullMarked` package `org.fuin.porelo.intellij.sarif` (checked by `NullMarkedPackagesTest`) bundling `com.contrastsecurity:java-sarif` 2.0 and a maintained Jackson 2.x BOM in `gradle/libs.versions.toml` and `build.gradle.kts` and renewing `gradle/verification-metadata.xml` from an empty Gradle home ([IJ09](README.md#ij09)). Enforce the pre-binding stream limits, profile allow-list, canonical `artifactLocation.uri` validation, single-fix anchor confinement, and bidi/zero-width refusal before returning typed review data. Red first in unit tests against adversarial fixtures: an oversized document, nesting depth above 24, duplicate keys, unknown properties, a scheme or `..` in `artifactLocation.uri`, a bidi or zero-width character in `message.text`, and a fix outside its primary `new`-side anchor are each refused before binding.
+2. **`Gate` (`org.fuin.porelo.intellij.gate.Gate`):** Add [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166)'s `Comment`, paged `Comments`, and `ResolveThread` calls on `org.fuin.porelo.Tasks1` (`Gate.INTERFACE`), sending and reading validated SARIF 2.1.0 documents and cursor pages. Extend `PendingPush`, `Review`, `Waiting.Entry`, and `Gate.pending`, `Gate.review`, and `Gate.approve` to read the push's daemon-stamped source level (`E0`–`A`), code risk class (`C0`–`C3`), and two-person approval state ([B293](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b293), [B145](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b145)), and map comment, anchor, fix, and approval refusals in `Gate.refusal` into `GateException` subclasses in words, as `MovedSinceReviewException` and `BranchExistsException` do today. Red first in `GateTest` against `VarlinkServer`: valid and refused SARIF comment calls, paged `Comments` preserving `porelo/completeness`, and refusal when `revisionId` or `porelo/baseRevisionId` disagrees with the push.
+3. **Anchor and thread mapping against `ReviewCache` (`org.fuin.porelo.intellij.ide.ReviewTab`):** In `ReviewTab.read`, read the push's SARIF pages through `Gate` off the UI thread and keep them in `ReviewTab.Read`. Resolve each result's `artifactLocation.uri`, `region`, and `porelo/diffSide` as a pure function against the pinned blob bytes read from `ReviewCache.files` (`changes.base()` for `old`, `changes.commit()` for `new`, and `ReviewCache.file` for an earlier round's pinned commit), partitioning results into current inline `line` threads for each `ReviewTab.Side` and `file`, `general`, or `outdated` threads for the discussion panel without touching the host file system or any open IDE project. Red first in `ReviewTabTest`: a thread on an earlier commit or a missing/non-blob path is classified as outdated or unanchored rather than placed on the current diff, and an `old`-side or out-of-range fix is refused.
+4. **`ReviewEditor`, `WaitingTree`, and `Decisions` (`org.fuin.porelo.intellij.ide`):**
+   - In `WaitingTree.Renderer` and `ReviewEditor.header`, display the push's source level (`E0`–`A`), code risk class (`C0`–`C3`), SARIF `porelo/completeness`, and two-person approval state ([B145](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b145)).
+   - In `ReviewEditor.showSelected`, pass the selected file's inline threads and comment, reply, and resolve callbacks to [IJ12](README.md#ij12)'s `collaborationTools` adapter through the context tag on the `SimpleDiffRequest`, rendering comment bodies with the safe, network-free Markdown subset and rendering origin and `porelo/sourceLevel` badges in the header outside the body.
+   - Add a discussion panel in `ReviewEditor` for `file`, `general`, and `outdated` threads, and render `result.fixes[0]` inside its comment as a read-only `SimpleDiffRequest` preview over the cached blob bytes with no apply action.
+   - Keep `Decisions.approve` bound to `entry.push().commit()` ([B136](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b136)) and independent of `porelo/threadState`, `porelo/reviewVerdict`, and `suppressions`; `Decisions.reject` calls `gate.reject` as today while the daemon delivers the open SARIF threads with the reason.
+5. **Live acceptance on the VM (`LiveGateTest`):** Against a real daemon with [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166), write a line comment with a suggestion, a file comment, and a general comment, read them back as SARIF, reject the push so the task receives the open threads and replies, and verify the reply arrives with daemon-stamped origin `A`.
 
 ## Acceptance
 
-- On a VM against a real daemon: a comment written on a line in the review tab reaches the task; one on a line the
-  commit does not have is refused in words; the agent's reply appears in the thread with its origin. Each seen to fail
-  first against today's plugin.
-- A suggestion is shown as a diff and the working tree of the project open in the IDE is unchanged afterwards.
-- With [B171](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b171): a held forge comment released in the IDE reaches the task, and an outgoing one released there reaches the
-  pull request; one dropped goes nowhere.
+- On a VM against a real daemon: a line comment, a file comment, and a general comment written in the review tab reach the task as SARIF 2.1.0; an anchor outside the pinned blob, a path with a scheme or `..`, a bidi or zero-width character, or a fix outside its primary `new`-side anchor is refused in words; the agent's reply appears in the thread with its daemon-stamped origin and source level. Each seen to fail first against today's plugin.
+- A suggestion is shown as a read-only diff preview and the working tree of any project open in the IDE is unchanged afterwards.
+- `run.properties["porelo/completeness"]`, the push's source level (`E0`–`A`), code risk class (`C0`–`C3`), and two-person approval state are shown, and resolving every thread or receiving a SARIF verdict or suppression never enables or performs approval on its own.
 
 ## To be checked
 
-- Whether IntelliJ 2026.1's simple diff viewer takes block inlays through `DiffExtension`, or the review needs
-  a viewer of its own: measured before step 2.
+- Whether `porelo-wire` exports [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292)'s hardened `java-sarif` reader and writer for the plugin to call directly, or whether `porelo-intellij` bundles `com.contrastsecurity:java-sarif` 2.0 and the maintained Jackson 2.x BOM itself and runs the same pre-binding limits and profile allow-list checks locally (since `porelo` publishes a fixed set of artifacts to Central and [B291](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b291) and [B292](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b292) settle that publication boundary).
+- Exact Varlink method names, pagination cursor fields, and refusal error names in the `org.fuin.porelo.Tasks1` contract once [B166](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b166) and [B293](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b293) land.
