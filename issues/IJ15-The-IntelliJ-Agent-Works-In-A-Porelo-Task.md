@@ -6,7 +6,8 @@
 porelo-project [PJ59](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj59) lays out for
 sprint 7c, beside porelo-message-matrix and porelo-frontend. The task follows this repository through the gate and
 pushes to the host's Forgejo, whose build is read through the `forgejo` reader. The agent is reached in the project's
-room under the name its repository gives it. This issue is taken from start to Review inside the task, with the
+room as `Agent IntelliJ`, from the nickname `IntelliJ` that porelo-project's `project.yml` gives this repository
+once porelo [B298](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b298) is published. This issue is taken from start to Review inside the task, with the
 forge's build green.
 
 ## What moves, and what to check
