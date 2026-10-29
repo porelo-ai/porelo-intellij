@@ -25,6 +25,12 @@ checkout's token at hand.
   takes `porelo-buildtools` as a snapshot, as the operator decided on 2026-10-18, and are checked like everything else
   once a release is pinned: when `porelo-buildtools` 0.5.1 is released, this issue pins it and renews the file.
   Their own dependencies are releases and are checked now.
+- **Measured on `ae34741` against a local build of 0.5.1**, served from a file repository for the trial only:
+  pinned, the file gains `porelo-release`, `porelo-machines` and `porelo-json` 0.5.1, and `build` and `documents`
+  pass with the shared checks run by that `porelo-release`. Seen red: one digest of `porelo-release-0.5.1.jar`
+  changed fails `checkActions`, "One artifact failed verification: porelo-release-0.5.1.jar
+  (org.fuin.porelo:porelo-release:0.5.1)"; restored, green. The 0.5.1 that reaches Central is built anew, so its
+  digests are taken from Central, from an empty Gradle home, when it is pinned; nothing of the trial is committed.
 - **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
   does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
 - **Shown on the first move:** Gradle 9.8.1, logchange 1.20.0 and JSpecify 1.0.1, taken by hand from what
