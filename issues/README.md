@@ -13,14 +13,9 @@ is `IJ`.
 
 | # | size | blocked by | what it covers | open questions |
 |---|---|---|---|---|
+| <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | | *Approve* and *Reject* named in words beside their icons at the top of the review tab | 0 |
+| <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves | 1 |
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | [IJ12](README.md#ij12) | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes | 0 |
-
-## Accepted
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | | | A review tab open while its push moves to another commit says so as soon as the plugin knows, instead of waiting for *Approve* to be refused |
-| <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | | | *Approve* and *Reject* named in words at the top of the review tab, not only as a check mark and a cross |
 
 ## Idea
 
