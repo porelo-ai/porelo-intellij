@@ -37,6 +37,8 @@ each `Waiting.Entry` carries its push's commit.
 
 **What it can do with today's once-a-minute read:** the tab is marked at the next read, so within 60 s of the move,
 or at once after any decision made in this IDE. The daemon still refuses an approval of the old commit before that.
+A machine with an open review is read no more often than any other: the minute is enough, as decided, until the
+daemon's stream names moves.
 
 **What only comes when the daemon's stream of projects names what waits, not only how much:** today a reply of that
 stream carries, per repository, the count of waiting pushes, and a push that moves to another commit changes no count,
@@ -54,12 +56,6 @@ in it alone.
 - A push decided elsewhere, with `porelo gate reject` at the machine, marks an open tab *no longer waits* at the next
   read.
 - With the machine's daemon stopped, an open tab stays as it was: no *moved*, no *gone*.
-
-## Open questions
-
-- Until the daemon's stream names moves: should a machine with an open review be read every 10 s instead of every
-  minute, so the tab is marked within 10 s at the cost of one more small call to that machine every 10 s while a
-  review is open? Recommended: no, the minute stands, since the daemon refuses the old commit anyway.
 
 ## To be checked
 
