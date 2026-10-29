@@ -1,6 +1,8 @@
 # IJ15 — The IntelliJ Agent Works In A Porelo Task
 
-**Status:** Idea; blocked by [IJ14](README.md#ij14).
+**Status:** Analyzed; blocked by [IJ14](README.md#ij14).
+**Size:** S - `porelo.yml` and one small change taken through the gate; the rest is reading and measuring in the
+task, with the forge's build from [IJ14](README.md#ij14).
 
 **What must be true.** This repository's agent works in a Porelo task of the project `porelo` on the move's host, as
 the project's procedure for an agent's move lays out. The task follows this repository through the gate and pushes to
@@ -8,18 +10,47 @@ the host's Forgejo, whose build is read through the `forgejo` reader. The agent 
 `Agent IntelliJ`, from the nickname `IntelliJ` that porelo-project's `project.yml` gives this repository. This issue
 is taken from start to Review inside the task, with the forge's build green.
 
-## What moves, and what to check
+## Plan
 
 - **The repository:** `porelo-intellij` alone; no other repository is kept by this agent.
-- **The task's image:** this repository's `porelo.yml`, Ubuntu by digest with the pinned GraalVM. Its base is
-  Ubuntu 24.04 while the Build runs on 26.04; which one the task takes is read before the move.
-- **Gradle's downloads:** the Gradle Wrapper's distribution and an IntelliJ IDEA for every version `verifyPlugin`
-  checks, some 17 GB, come at build time and are checked against `gradle/verification-metadata.xml`. Whether the task
-  keeps them between builds, and has the disk for them, is measured before the move.
-- **Forgejo's build:** [IJ14](README.md#ij14). The Windows job and Publish stay on GitHub.
-- **The live tests:** `./gradlew liveTest` needs a daemon with a task that pushed, reached today over ssh in the VM
-  account `intellij`. Whether a task reaches such a machine, or the tests run against the host's own daemon, is read
-  before the move.
-- **The host's forge:** the move host's inventory names `porelo-intellij` in `forge_repositories`, and the forge's
-  registry holds the `porelo-release` and `porelo-machines` snapshots the build resolves.
-- **The way back:** none beyond the one the move's procedure gives every agent.
+- **The task's image, `porelo.yml`:** it stays on Ubuntu 24.04 by digest, the image the forge's runner gives both
+  Ubuntu labels, so the task builds where the forge's build runs; GitHub's 26.04 builds the same sources. Its
+  GraalVM is set to the pin `porelo-machines` gives at the move, and the image gains what the agent's harness needs
+  that the procedure does not bring itself, read from the agent's definition before the move.
+- **Gradle's downloads:** the wrapper's distribution, the libraries and an IntelliJ IDEA for each of the three
+  versions (`platformVersion` and `verifyIdeVersions`), some 17 GB, come at build time into `~/.gradle`, checked
+  against `gradle/verification-metadata.xml`. The task keeps `~/.gradle` in its workspace, so a second build
+  downloads nothing; measured before the move.
+- **The move's own change:** this issue's move to Review, through the gate to `porelo/<task>`, with the pull request
+  the gate opens and its forge build green, read through the `forgejo` reader inside the task.
+- **The live tests:** not part of this change, which does not touch how the plugin speaks to a daemon; where they
+  run afterwards is the open question below.
+- **The host's forge:** the move host's inventory names `porelo-intellij` in `forge_repositories`, and its registry
+  holds the `porelo-buildtools` snapshot `gradle/libs.versions.toml` names.
+- **The way back:** the one the move's procedure gives every agent; this repository adds nothing to it.
+
+**Red first:** the procedure's check, read on the host before the task starts, fails on its first line (no task
+runs); after the move each line passes.
+
+## Acceptance
+
+- The procedure's check passes line by line: the task runs, its push reached the forge as `porelo/<task>`, the
+  forge's Build of it was read by the build reader, the gate opened the pull request, the task is in the room's
+  `agent-card.json`, and a message naming `Agent IntelliJ` wakes it and is answered in the room.
+- Inside the task `./gradlew build documents` passes, and a second run downloads nothing.
+
+## Open questions
+
+- After the move, where do `./gradlew liveTest` run before a change to how the plugin speaks to a daemon is handed
+  over: against the host's own daemon from the task, against a machine of the host's pool, or still on the
+  development machine's VM until such a machine exists?
+- If the task has not the disk for three IDEs, may the forge's `verifyPlugin` stand in for the local one before a
+  hand-over?
+
+## To be checked
+
+- The task's free disk and whether `~/.gradle` survives a restart of the task, measured in the task.
+- Which tools the agent's harness needs in the image beyond `porelo.yml`'s, and that the skills this repository
+  names reach the task checked against their digests.
+- That the task's egress reaches JetBrains' IDE downloads, the Gradle distribution, Central, Sonatype and the
+  skills' store.
