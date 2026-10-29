@@ -3,13 +3,6 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
-## Review
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Published; the operator walks the install section |
-| <a id="ij02"></a>[IJ02](IJ02-Live-Notices-And-A-Guide.md) | M | | Notices within seconds through `WatchProjects`, measured at 3 s on a VM; `doc/index.md` grown by what a person does. Published; the operator walks the chapter, with [IJ01](README.md#ij01)'s |
-
 ## Implementing
 
 | # | size | blocked by | what it covers |
@@ -42,6 +35,8 @@ is `IJ`.
 
 | # | Title | What was built |
 |---|---|---|
+| <a id="ij01"></a>[IJ01](README.md#ij01) | Work is reviewed in IntelliJ | A tool window of every waiting push, its diff read in IntelliJ's own diff windows from a bare cache with nothing checked out, approved with the commit shown or rejected with a reason through the daemon's contract, and the plugin published to a custom plugin repository. |
+| <a id="ij02"></a>[IJ02](README.md#ij02) | Live notices and a guide | A waiting push announced within seconds through the daemon's stream of projects, measured at 3 s on a VM, and `doc/` saying how to install and use the plugin, with the operator's walk in `doc/operator-test.md`. |
 | <a id="ij07"></a>[IJ07](README.md#ij07) | Sokar is renamed Porelo | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo, speaking to a Porelo daemon and installed afresh; a test of the documents refuses the old name. |
 | <a id="ij08"></a>[IJ08](README.md#ij08) | Reformatted to the shared style | Google Java Style in its AOSP variant checked by Spotless in `build`, the shared `.editorconfig` checked by `checkShared`, and one commit that only reformats, which `git blame` skips. |
 | <a id="ij06"></a>[IJ06](README.md#ij06) | The code read against its skills | All of the plugin's code, tests and build read against the five skills `AGENTS.md` names; 31 defects fixed, 17 of them with a test of their own seen red first. |
