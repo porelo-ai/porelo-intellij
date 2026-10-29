@@ -1,6 +1,6 @@
 # IJ17 — Approve and Reject named in words
 
-**Status:** Backlog.
+**Status:** Implementing.
 **Size:** XS - one file of the plugin, its guide and a changelog entry; no contract, and no test, since it changes only
 what reads wrong.
 
