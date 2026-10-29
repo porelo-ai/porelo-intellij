@@ -3,11 +3,16 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
-## Implementing
+## Review
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
 | <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
+
+## Implementing
+
+| # | size | blocked by | what it covers |
+|---|---|---|---|
 | <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
 ## Backlog

@@ -10,6 +10,7 @@ import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.FileEditorState;
@@ -105,17 +106,21 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
     private JComponent header(Waiting.Entry entry, ReviewTab.Read read) {
         final DefaultActionGroup actions = new DefaultActionGroup();
         actions.add(
-                new Act(
-                        "Approve",
-                        "Forward exactly " + shortId(entry.push().commit()) + ", the commit shown",
-                        AllIcons.Actions.Checked,
-                        () -> Decisions.approve(project, entry, this::close)));
+                namedInWords(
+                        new Act(
+                                "Approve",
+                                "Forward exactly "
+                                        + shortId(entry.push().commit())
+                                        + ", the commit shown",
+                                AllIcons.Actions.Checked,
+                                () -> Decisions.approve(project, entry, this::close))));
         actions.add(
-                new Act(
-                        "Reject",
-                        "Drop this push and tell its task why",
-                        AllIcons.Actions.Cancel,
-                        () -> Decisions.reject(project, entry, this::close)));
+                namedInWords(
+                        new Act(
+                                "Reject",
+                                "Drop this push and tell its task why",
+                                AllIcons.Actions.Cancel,
+                                () -> Decisions.reject(project, entry, this::close))));
         for (final IntoProjects.Target target : read.into()) {
             actions.add(
                     new Act(
@@ -372,6 +377,12 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         public int compareTo(VcsRevisionNumber other) {
             return id.compareTo(other.asString());
         }
+    }
+
+    /** The two decisions read beside their icons; the other actions keep theirs as tooltips. */
+    private static Act namedInWords(Act act) {
+        act.getTemplatePresentation().putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true);
+        return act;
     }
 
     /** One toolbar button of the review. */

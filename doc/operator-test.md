@@ -167,7 +167,7 @@ an IDE with a display. Each step says which.
     of the selected file. *Not run.* The daemon's ranking was seen on the test VM: `build.gradle.kts` first, *a build
     script: it runs on every build*.
 
-22. In that tab: click *Approve*, the check mark at the top of the tab.
+22. In that tab: click *Approve* at the top of the tab.
 
     Expected: a dialog *Forward First change of task A (commit <40 digits>) from default / ij-walk on this machine
     onto the branch:*, with `porelo/ij-walk-a` filled in; the commit begins with the 12 digits of the header.
@@ -189,7 +189,7 @@ an IDE with a display. Each step says which.
 
     Expected: a tab *ij-walk-b: First change of task B*. *Not run.*
 
-26. In that tab: click *Reject*, the cross at the top of the tab.
+26. In that tab: click *Reject* at the top of the tab.
 
     Expected: a dialog *Why is … rejected? The task that pushed it is told.* *Not run.*
 
@@ -242,7 +242,7 @@ an IDE with a display. Each step says which.
     notice *Waits for review: Third change of task B* only at the plugin's own read, once a minute, so within 60 s;
     the daemon's stream shows a moved push by no count. *The push seen on the test VM; the notice not run.*
 
-34. In the tab of step 32: click *Approve*, the check mark at the top of the tab.
+34. In the tab of step 32: click *Approve* at the top of the tab.
 
     Expected: the dialog names the commit of *Second change of task B*, the one the tab shows. *Not run.*
 
@@ -256,7 +256,7 @@ an IDE with a display. Each step says which.
 
     Expected: a tab *ij-walk-b: Third change of task B*, its header naming the first 12 digits of `<new>`. *Not run.*
 
-37. In that tab: click *Approve*, the check mark at the top of the tab.
+37. In that tab: click *Approve* at the top of the tab.
 
     Expected: the dialog names the commit `<new>`. *Not run.*
 

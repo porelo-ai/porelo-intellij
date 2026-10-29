@@ -1,6 +1,6 @@
 # IJ17 — Approve and Reject named in words
 
-**Status:** Implementing.
+**Status:** Review.
 **Size:** XS - one file of the plugin, its guide and a changelog entry; no contract, and no test, since it changes only
 what reads wrong.
 
@@ -33,6 +33,9 @@ No test is written: a label reads wrong or right and does no harm, as `AGENTS.md
   icons; a screenshot of the tab's header is attached to the handover.
 - `verifyPlugin` passes against every IntelliJ IDEA version `gradle.properties` names.
 
-## To be checked
+## Checked
 
-- That `verifyPlugin` reports no internal or experimental use for `ActionUtil.SHOW_TEXT_IN_TOOLBAR`.
+- `verifyPlugin` reports the plugin *Compatible* with IntelliJ IDEA 2026.1 and 2026.2 and names no internal or
+  experimental use, `ActionUtil.SHOW_TEXT_IN_TOOLBAR` among them.
+- In `runIde` on a private Xvfb display, against the daemon of `fedora`, an open review tab shows *Approve* and
+  *Reject* in words beside their icons, and *Read Again* as an icon.
