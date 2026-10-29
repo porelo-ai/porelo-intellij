@@ -5,28 +5,33 @@ snapshot channel, two tasks that push, a push read in the tool window, one appro
 rejected with a reason, a new push announced within 5 s, and an approval of a commit that has moved refused.
 
 **What it needs, on the laptop:** IntelliJ IDEA 2026.1 or newer; Porelo 0.5.1 snapshot 350 or newer, set up in your
-own account, with its daemon running, its Porelo-Vault there, and the agent `claude` installed. Nothing else is
-installed: the two scripts make a throwaway repository and take it out again.
+own account, with its daemon running, its Porelo-Vault there, and the agent `claude` installed; `python3`. Nothing
+else is installed: the two scripts make a throwaway repository and take it out again.
 
 **Windows:** IntelliJ IDEA with any project of yours open, since a review opens in a project's window; this Claude
 session, for the commands prefixed with `!`, which ask for nothing; and two terminals of their own, *terminal 1* and
 *terminal 2*, for the two tasks, since starting a task may ask for the Vault-Passphrase.
 
 **The scripts** are in `~/.porelo/handover/porelo-intellij/walk-ij/` on the laptop, their digests in `SHA256SUMS`
-beside them. `ij-walk-setup.sh` makes the upstream `~/.porelo/walk-ij/ij-walk.git` with one commit and adds it to
-Porelo's project `default` as `ij-walk`; it refuses to start over anything an earlier walk left, and removes what it
-made when it fails. `ij-walk-clean.sh` removes the two tasks, `ij-walk` with the gate's mirror that removing it
-keeps, the plugin's cache of that gate, and `~/.porelo/walk-ij`, and nothing else. Inside a task, the repository's
-own `walk-push.sh` makes one change and pushes it: the subject goes into `README.md` and every file named, and is
-the commit's message.
+beside them. `ij-walk-setup.sh` makes the upstream `~/.porelo/walk-ij/ij-walk.git` with one commit, adds it to
+Porelo's project `default` as `ij-walk`, and makes the folders of the plugin's cache for that gate; it refuses to
+start over anything an earlier walk left, and removes what it made when it fails or is interrupted.
+`ij-walk-clean.sh` removes the two tasks, `ij-walk` with the gate's mirror that removing it keeps, the plugin's cache
+of that gate and the folders the walk made, and `~/.porelo/walk-ij`; it removes nothing without that folder, and
+nothing that names another address. Inside a task, the repository's own `walk-push.sh` makes one change and pushes
+it: the subject goes into `README.md` and every file named, and is the commit's message.
+
+**The plugin's name for the laptop** is `this machine`, the name the Porelo interface gives this computer's daemon;
+the setup prints the name it found, and the dialogs below show it.
 
 **Duration:** about 30 minutes, a guess. The first task builds its image: on the test VM that took 70 s, the second
 task 20 s.
 
 **What was run before:** every command was rehearsed on a test VM with Porelo 0.5.1 snapshot of 2026-10-25 and the
 stub agent instead of `claude`, the approvals and the rejection made with `porelo gate` instead of the plugin, and the
-plugin's client checked there against the walk's tasks: a new push was known within 5 s. The steps in IntelliJ IDEA
-were not run, since they need an IDE with a display. Each step says which.
+plugin's client checked there against the walk's tasks: a new push was known within 5 s. The scripts' refusals and
+their removal after a failure were made to happen there too. The steps in IntelliJ IDEA were not run, since they need
+an IDE with a display. Each step says which.
 
 ## The steps
 
@@ -52,18 +57,27 @@ were not run, since they need an IDE with a display. Each step says which.
     ! bash ~/.porelo/handover/porelo-intellij/walk-ij/ij-walk-setup.sh
     ```
 
-    Expected: `OK    upstream …/.porelo/walk-ij/ij-walk.git at <commit>` and `OK    project 'default' has 'ij-walk'`. A
-    line starting `FAILED in guide step 3` names what is in the way. *Seen on the test VM.*
+    Expected: `OK    upstream …/.porelo/walk-ij/ij-walk.git at <commit>`, `OK    project 'default' has 'ij-walk'` and
+    `OK    the plugin names this computer 'this machine'`. A line starting `FAILED in guide step 3` names what is in
+    the way. *Seen on the test VM, where the name is `This computer`; the name `this machine` read on the laptop.*
 
-4. In IntelliJ IDEA: *File* → *Settings* → *Plugins*.
+4. In IntelliJ IDEA: *File* → *Settings*.
+
+    Expected: the *Settings* dialog. *Not run.*
+
+5. In *Settings*: click *Plugins* on the left.
 
     Expected: the *Plugins* page with the tabs *Marketplace* and *Installed*. *Not run.*
 
-5. On that page: the gear icon → *Manage Plugin Repositories*.
+6. On that page: the gear icon → *Manage Plugin Repositories*.
 
-    Expected: the list of custom plugin repositories. *Not run.*
+    Expected: the dialog *Custom Plugin Repositories*. *Not run.*
 
-6. In that list: *+*, enter the URL below, and *OK*:
+7. In that dialog: click *+*.
+
+    Expected: a field for a repository URL. *Not run.*
+
+8. In that field: enter this URL and confirm it with *OK*:
 
     ```
     https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij/snapshots/latest/updatePlugins.xml
@@ -72,24 +86,37 @@ were not run, since they need an IDE with a display. Each step says which.
     Expected: the URL is in the list. *Not run.* The URL was read without an IDE: it names `org.fuin.porelo` at
     `0.5.0-SNAPSHOT.20` with `since-build="261"`.
 
-7. On the *Marketplace* tab: search *Porelo* and click *Install*.
+9. Close *Custom Plugin Repositories* with *OK*.
 
-    Expected: *Porelo* is installed; the button turns into *Installed* or *Restart IDE*. *Not run.*
+    Expected: the *Plugins* page again. *Not run.*
 
-8. On the *Installed* tab: find *Porelo*.
+10. On the *Marketplace* tab: search for *Porelo*.
+
+    Expected: *Porelo* in the results. *Not run.*
+
+11. At *Porelo*: click *Install*.
+
+    Expected: the button turns into *Installed* or *Restart IDE*. *Not run.*
+
+12. On the *Installed* tab: find *Porelo*.
 
     Expected: *Porelo* at `0.5.0-SNAPSHOT.20` or newer. *Not run.*
 
-9. Close *Settings* with *OK*, and restart the IDE if it asks.
+13. Close *Settings* with *OK*.
 
-    Expected: the IDE's window with your project. *Not run.*
+    Expected: the IDE's window with your project, or a question whether to restart the IDE. *Not run.*
 
-10. In IntelliJ IDEA: *View* → *Tool Windows* → *Porelo*.
+14. Only if the IDE asks: restart it.
+
+    Expected: the IDE's window with your project again. *Not run.*
+
+15. In IntelliJ IDEA: *View* → *Tool Windows* → *Porelo*.
 
     Expected: the tool window on the left, with nothing of `ij-walk`: *Nothing waits for review*, or the pushes of
-    your other projects. No line *The machines cannot be read*. *Not run.*
+    your other projects. A line *The machines cannot be read* may name `vm-drive`, the interface's other machine,
+    when it is off; it must not name `this machine`. *Not run.*
 
-11. Start task A, in terminal 1 on the laptop, in your home directory:
+16. Start task A, in terminal 1 on the laptop, in your home directory:
 
     ```
     porelo task start ij-walk-a -p default -r ij-walk --agent claude --attach shell
@@ -99,7 +126,7 @@ were not run, since they need an IDE with a display. Each step says which.
     `porelo[default/ij-walk-a] /workspace$` above a status bar `[porelo]`. *Seen on the test VM with `--agent stub`;
     with `claude` not run.*
 
-12. Push from task A, in terminal 1 at the task's prompt:
+17. Push from task A, in terminal 1 at the task's prompt:
 
     ```
     bash walk-push.sh "First change of task A" build.gradle.kts
@@ -109,15 +136,17 @@ were not run, since they need an IDE with a display. Each step says which.
     within 5 s: a notice *Waits for review: First change of task A*, naming 1 far-reaching file. *The push seen on the
     test VM; the notice not run.*
 
-13. Start task B, in terminal 2 on the laptop, in your home directory, once task A's prompt is there:
+18. Start task B, in terminal 2 on the laptop, in your home directory, once task A's prompt is there:
 
     ```
     porelo task start ij-walk-b -p default -r ij-walk --agent claude --attach shell
     ```
 
-    Expected: the prompt `porelo[default/ij-walk-b] /workspace$`. *Seen on the test VM with `--agent stub`.*
+    Expected: the prompt `porelo[default/ij-walk-b] /workspace$`. *Seen on the test VM with `--agent stub`.* Two
+    tasks of one repository started at the same moment can leave the second without a gate, a fault of Porelo's,
+    which is why this waits for task A.
 
-14. Push from task B, in terminal 2 at the task's prompt:
+19. Push from task B, in terminal 2 at the task's prompt:
 
     ```
     bash walk-push.sh "First change of task B"
@@ -127,44 +156,48 @@ were not run, since they need an IDE with a display. Each step says which.
     IDEA, within 5 s: a notice *Waits for review: First change of task B*. *The push seen on the test VM; the notice
     not run.*
 
-15. In the *Porelo* tool window: click `ij-walk-a`.
+20. In the *Porelo* tool window: click `ij-walk-a`.
 
     Expected: a tab *ij-walk-a: First change of task A*, its header naming `ij-walk-a` and the first 12 digits of the
     commit; on the left `build.gradle.kts` first, marked far-reaching, then `README.md`; on the right IntelliJ's diff
     of the selected file. *Not run.* The daemon's ranking was seen on the test VM: `build.gradle.kts` first, *a build
     script: it runs on every build*.
 
-16. In that tab: click *Approve*.
+21. In that tab: click *Approve*.
 
-    Expected: a dialog *Forward First change of task A (commit <40 digits>) from default / ij-walk on This computer
+    Expected: a dialog *Forward First change of task A (commit <40 digits>) from default / ij-walk on this machine
     onto the branch:*, with `porelo/ij-walk-a` filled in; the commit begins with the 12 digits of the header.
     *Not run.*
 
-17. In that dialog: click *OK*.
+22. In that dialog: click *OK*.
 
     Expected: a notice *Forwarded …*; `ij-walk-a` leaves the tool window. *Not run.*
 
-18. Read what arrived upstream, in this Claude session on the laptop:
+23. Read what arrived upstream, in this Claude session on the laptop:
 
     ```
     ! git -C ~/.porelo/walk-ij/ij-walk.git log -1 --format='%H %s' porelo/ij-walk-a
     ```
 
-    Expected: the 40 digits the dialog of step 16 showed, and *First change of task A*. *Seen on the test VM.*
+    Expected: the 40 digits the dialog of step 21 showed, and *First change of task A*. *Seen on the test VM.*
 
-19. In the *Porelo* tool window: click `ij-walk-b`.
+24. In the *Porelo* tool window: click `ij-walk-b`.
 
     Expected: a tab *ij-walk-b: First change of task B*. *Not run.*
 
-20. In that tab: click *Reject*.
+25. In that tab: click *Reject*.
 
     Expected: a dialog *Why is … rejected? The task that pushed it is told.* *Not run.*
 
-21. In that dialog: type `Keep the readme as it is.` and click *OK*.
+26. In that dialog: type `Keep the readme as it is.`
+
+    Expected: the text in the dialog's field. *Not run.*
+
+27. In that dialog: click *OK*.
 
     Expected: a notice *Rejected; its task was told*; `ij-walk-b` leaves the tool window. *Not run.*
 
-22. Read task B's inbox, in terminal 2 at the task's prompt:
+28. Read task B's inbox, in terminal 2 at the task's prompt:
 
     ```
     cat /run/porelo/mail/inbox/new/*.json
@@ -172,7 +205,7 @@ were not run, since they need an IDE with a display. Each step says which.
 
     Expected: one message whose text ends *They said: Keep the readme as it is.* *Seen on the test VM.*
 
-23. Drop the rejected commit from task B, in terminal 2 at the task's prompt:
+29. Drop the rejected commit from task B, in terminal 2 at the task's prompt:
 
     ```
     git reset -q --hard HEAD~1
@@ -180,7 +213,7 @@ were not run, since they need an IDE with a display. Each step says which.
 
     Expected: no output. *Seen on the test VM.*
 
-24. Push from task B again, in terminal 2 at the task's prompt:
+30. Push from task B again, in terminal 2 at the task's prompt:
 
     ```
     bash walk-push.sh "Second change of task B"
@@ -190,45 +223,44 @@ were not run, since they need an IDE with a display. Each step says which.
     IDEA, within 5 s, counted from that line: a notice *Waits for review: Second change of task B*. *The push seen on
     the test VM, and the plugin's client knew such a push there within 5 s; the notice not run.*
 
-25. In the *Porelo* tool window: click `ij-walk-b`.
+31. In the *Porelo* tool window: click `ij-walk-b`.
 
-    Expected: a tab *ij-walk-b: Second change of task B*, its header naming the commit's first 12 digits. Keep the
+    Expected: a tab *ij-walk-b: Second change of task B*, its header naming the commit's first 12 digits. Leave the
     tab open. *Not run.*
 
-26. Move task B's push to another commit, in terminal 2 at the task's prompt:
+32. Move task B's push to another commit, in terminal 2 at the task's prompt:
 
     ```
     bash walk-push.sh "Third change of task B"
     ```
 
-    Expected in terminal 2: `   <old>..<new>  HEAD -> refs/porelo/incoming/ij-walk-b`. Expected in IntelliJ IDEA: no
-    notice within seconds, since a push that only moves changes no count in the daemon's stream; within a minute, at
-    the plugin's own read, a notice *Waits for review: Third change of task B*. *The push seen on the test VM; the
-    notice not run.*
+    Expected in terminal 2: `   <old>..<new>  HEAD -> refs/porelo/incoming/ij-walk-b`. Expected in IntelliJ IDEA: a
+    notice *Waits for review: Third change of task B* only at the plugin's own read, once a minute, so within 60 s;
+    the daemon's stream shows a moved push by no count. *The push seen on the test VM; the notice not run.*
 
-27. In the tab of step 25: click *Approve*.
+33. In the tab of step 31: click *Approve*.
 
     Expected: the dialog names the commit of *Second change of task B*, the one the tab shows. *Not run.*
 
-28. In that dialog: click *OK*.
+34. In that dialog: click *OK*.
 
     Expected: an error notice *Approving ij-walk-b failed: ij-walk-b moved from <old> to <new> after it was shown;
     nothing was forwarded*, and the tab closes. *Not run.* The daemon's refusal was seen on the test VM: *moved since
     it was reviewed … nothing was forwarded*.
 
-29. In the *Porelo* tool window: click `ij-walk-b`.
+35. In the *Porelo* tool window: click `ij-walk-b`.
 
     Expected: a tab *ij-walk-b: Third change of task B*, its header naming the first 12 digits of `<new>`. *Not run.*
 
-30. In that tab: click *Approve*.
+36. In that tab: click *Approve*.
 
     Expected: the dialog names the commit `<new>`. *Not run.*
 
-31. In that dialog: click *OK*.
+37. In that dialog: click *OK*.
 
     Expected: a notice *Forwarded …*; `ij-walk-b` leaves the tool window. *Not run.*
 
-32. Read what arrived upstream, in this Claude session on the laptop:
+38. Read what arrived upstream, in this Claude session on the laptop:
 
     ```
     ! git -C ~/.porelo/walk-ij/ij-walk.git log -3 --format='%h %s' porelo/ij-walk-b
@@ -237,7 +269,7 @@ were not run, since they need an IDE with a display. Each step says which.
     Expected: *Third change of task B*, *Second change of task B*, *Start the walk's repository*; the rejected *First
     change of task B* is not there. *Seen on the test VM.*
 
-33. Remove what the walk made, in this Claude session on the laptop:
+39. Remove what the walk made, in this Claude session on the laptop:
 
     ```
     ! bash ~/.porelo/handover/porelo-intellij/walk-ij/ij-walk-clean.sh
@@ -245,8 +277,8 @@ were not run, since they need an IDE with a display. Each step says which.
 
     Expected: `removed   porelo-default-ij-walk-a`, `removed   porelo-default-ij-walk-b`, and
     `OK    the walk's tasks, the repository 'ij-walk' and …/.porelo/walk-ij are gone`; the task shells in terminals 1
-    and 2 end. A line starting `FAILED in guide step 33` names what is left. *Seen on the test VM, the shells ending
-    not.*
+    and 2 end. A line starting `FAILED in guide step 39` names what is left, and running it again tries again.
+    *Seen on the test VM, the shells ending not.*
 
 ## What to do with a finding
 
