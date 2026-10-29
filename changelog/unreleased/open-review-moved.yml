@@ -1,0 +1,2 @@
+title: An open review says within a minute when its push moved to another commit or was decided elsewhere, and disables Approve and Reject; a moved push is read again at its new commit
+type: changed

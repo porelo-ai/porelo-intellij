@@ -7,10 +7,12 @@ import com.intellij.diff.contents.DiffContent;
 import com.intellij.diff.requests.SimpleDiffRequest;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.actionSystem.ex.ActionUtil;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.FileEditorState;
@@ -27,6 +29,7 @@ import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNodeRenderer;
 import com.intellij.openapi.vcs.changes.ui.SimpleAsyncChangesBrowser;
 import com.intellij.openapi.vcs.history.VcsRevisionNumber;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.ui.EditorNotificationPanel;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.SimpleColoredComponent;
 import com.intellij.ui.SimpleTextAttributes;
@@ -40,6 +43,8 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import org.fuin.porelo.intellij.gate.Waiting;
@@ -67,10 +72,32 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
 
     private final Map<Change, ReviewTab.Side> sides = new IdentityHashMap<>();
 
+    /** Says, once the watch knows, that the push moved to another commit; hidden until then. */
+    private final EditorNotificationPanel moved =
+            new EditorNotificationPanel(EditorNotificationPanel.Status.Warning);
+
+    /** Says, once the watch knows, that the push was decided elsewhere; hidden until then. */
+    private final EditorNotificationPanel gone =
+            new EditorNotificationPanel(EditorNotificationPanel.Status.Warning);
+
+    /** The push as it waits now, which reading it again opens; set on the UI thread. */
+    private volatile Waiting.Entry latest;
+
+    /** Whether the push waits at the commit shown; set on the UI thread, read by the toolbar. */
+    private volatile boolean decidable = true;
+
+    /** Whether the push still waits at all, so it can be read again; as {@link #decidable}. */
+    private volatile boolean readable = true;
+
+    private volatile boolean disposed;
+
+    private @Nullable ActionToolbar bar;
+
     ReviewEditor(Project project, ReviewFile file) {
         this.project = project;
         this.file = file;
         final Waiting.Entry entry = file.entry();
+        latest = entry;
         final ReviewTab.Read read = file.read();
         final List<Change> changes = new ArrayList<>();
         @Nullable Change first = null;
@@ -90,7 +117,19 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         final JBSplitter split = new JBSplitter(false, "porelo.review.split", 0.3f);
         split.setFirstComponent(tree);
         split.setSecondComponent(diff.getComponent());
-        component.add(header(entry, read), BorderLayout.NORTH);
+        moved.createActionLabel("Read Again", this::readAgain);
+        moved.setVisible(false);
+        // Nothing of it is left to read.
+        gone.setText("This push no longer waits: it was decided elsewhere.");
+        gone.createActionLabel("Close", () -> closeEvery(project, entry));
+        gone.setVisible(false);
+        final JPanel lines = new JPanel(new BorderLayout());
+        lines.add(moved, BorderLayout.NORTH);
+        lines.add(gone, BorderLayout.SOUTH);
+        final JPanel top = new JPanel(new BorderLayout());
+        top.add(lines, BorderLayout.NORTH);
+        top.add(header(entry, read), BorderLayout.CENTER);
+        component.add(top, BorderLayout.NORTH);
         component.add(split, BorderLayout.CENTER);
         // The tree is built in the background; the first file - the most far-reaching - is selected
         // once it is.
@@ -101,26 +140,78 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
                             () -> tree.getViewer().setSelectedChanges(List.of(selectFirst)));
         }
         showSelected();
+        final Consumer<Snapshot> follow =
+                snapshot ->
+                        ApplicationManager.getApplication()
+                                .invokeLater(() -> mark(snapshot.now(entry)), ignored -> disposed);
+        final PoreloWatch watch = PoreloWatch.get();
+        watch.listen(follow, this);
+        // What the watch read while the review was read, or before a split of a marked tab: marked
+        // here,
+        // on the UI thread the editor is made on, so a newer read's mark always comes after it.
+        mark(watch.last().now(entry));
+    }
+
+    /**
+     * Marks the review while its push waits at another commit or no longer waits, as the daemon
+     * would refuse a decision on what is shown then, and lifts the mark once it waits at the commit
+     * shown again. What is not known changes nothing.
+     */
+    private void mark(Waiting.Now now) {
+        switch (now) {
+            case Waiting.Now.Moved to -> {
+                latest = to.entry();
+                moved.setText(
+                        "This push moved to "
+                                + shortId(to.entry().push().commit())
+                                + " after it was opened; what is shown no longer waits.");
+                moved.setVisible(true);
+                gone.setVisible(false);
+                decidable = false;
+                readable = true;
+            }
+            case Waiting.Now.Gone ignored -> {
+                moved.setVisible(false);
+                gone.setVisible(true);
+                decidable = false;
+                readable = false;
+            }
+            case Waiting.Now.Same ignored -> {
+                latest = file.entry();
+                moved.setVisible(false);
+                gone.setVisible(false);
+                decidable = true;
+                readable = true;
+            }
+            case Waiting.Now.Unknown ignored -> {
+                return;
+            }
+        }
+        if (bar != null) {
+            bar.updateActionsAsync();
+        }
+    }
+
+    /** Reads the push anew at the commit it waits at now, which may not be the one shown. */
+    private void readAgain() {
+        closeEvery(project, file.entry());
+        ReviewTab.open(project, latest);
     }
 
     private JComponent header(Waiting.Entry entry, ReviewTab.Read read) {
         final DefaultActionGroup actions = new DefaultActionGroup();
         actions.add(
-                namedInWords(
-                        new Act(
-                                "Approve",
-                                "Forward exactly "
-                                        + shortId(entry.push().commit())
-                                        + ", the commit shown",
-                                AllIcons.Actions.Checked,
-                                () -> Decisions.approve(project, entry, this::close))));
+                decision(
+                        "Approve",
+                        "Forward exactly " + shortId(entry.push().commit()) + ", the commit shown",
+                        AllIcons.Actions.Checked,
+                        () -> Decisions.approve(project, entry, this::close)));
         actions.add(
-                namedInWords(
-                        new Act(
-                                "Reject",
-                                "Drop this push and tell its task why",
-                                AllIcons.Actions.Cancel,
-                                () -> Decisions.reject(project, entry, this::close))));
+                decision(
+                        "Reject",
+                        "Drop this push and tell its task why",
+                        AllIcons.Actions.Cancel,
+                        () -> Decisions.reject(project, entry, this::close)));
         for (final IntoProjects.Target target : read.into()) {
             actions.add(
                     new Act(
@@ -138,13 +229,12 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
                         "Read Again",
                         "Read this push again from its machine",
                         AllIcons.Actions.Refresh,
-                        () -> {
-                            closeEvery(project, entry);
-                            ReviewTab.open(project, entry);
-                        }));
-        final var bar =
+                        this::readAgain,
+                        () -> readable));
+        final ActionToolbar bar =
                 ActionManager.getInstance().createActionToolbar("PoreloReview", actions, true);
         bar.setTargetComponent(component);
+        this.bar = bar;
         final String asked = read.review().asked();
         final JBLabel what =
                 new JBLabel(
@@ -317,6 +407,7 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
 
     @Override
     public void dispose() {
+        disposed = true;
         // The diff panel and the tree's listener were registered with this editor, and go with it.
         tree.getViewer().shutdown();
     }
@@ -379,8 +470,12 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         }
     }
 
-    /** The two decisions read beside their icons; the other actions keep theirs as tooltips. */
-    private static Act namedInWords(Act act) {
+    /**
+     * Makes one of the two decisions: read beside its icon, where the other actions keep theirs as
+     * tooltips, and enabled only while what is shown still waits.
+     */
+    private Act decision(String text, String description, javax.swing.Icon icon, Runnable run) {
+        final Act act = new Act(text, description, icon, run, () -> decidable);
         act.getTemplatePresentation().putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true);
         return act;
     }
@@ -390,14 +485,31 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
 
         private final Runnable run;
 
+        private final BooleanSupplier enabled;
+
         Act(String text, String description, javax.swing.Icon icon, Runnable run) {
+            this(text, description, icon, run, () -> true);
+        }
+
+        Act(
+                String text,
+                String description,
+                javax.swing.Icon icon,
+                Runnable run,
+                BooleanSupplier enabled) {
             super(text, description, icon);
             this.run = run;
+            this.enabled = enabled;
         }
 
         @Override
         public void actionPerformed(AnActionEvent event) {
             run.run();
+        }
+
+        @Override
+        public void update(AnActionEvent event) {
+            event.getPresentation().setEnabled(enabled.getAsBoolean());
         }
 
         @Override

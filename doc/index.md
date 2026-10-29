@@ -38,7 +38,9 @@ on the left, IntelliJ's diff of the selected one on the right, against where the
 the branch's later work is not shown as removed. The files the daemon ranks far-reaching - a workflow, a build file,
 IDE settings, anything that runs or decides what runs - come first and are marked. A file the daemon ranks that the
 diff does not show is refused rather than left out, so what is approved is never more than what was shown. *Read
-Again* reads the push anew from its machine.
+Again* reads the push anew from its machine. A tab whose push moved to another commit, or was decided elsewhere,
+says so above its header within a minute, at once after a decision in this IDE, and *Approve* and *Reject* are
+disabled: a moved push is read again at its new commit, one decided elsewhere is closed.
 
 ## Approving and rejecting
 

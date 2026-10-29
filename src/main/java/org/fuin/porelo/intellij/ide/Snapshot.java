@@ -19,6 +19,17 @@ public record Snapshot(Waiting waiting, @Nullable String unreadable, @Nullable I
     public static final Snapshot NONE = new Snapshot(new Waiting(List.of(), List.of()), null, null);
 
     /**
+     * Says what the push an open review shows is now, as {@link Waiting#now} does, and unknown when
+     * nothing was read yet or the last read failed: what is kept then is older than the review.
+     *
+     * @param shown The push as the review was opened with it.
+     * @return What it is now.
+     */
+    public Waiting.Now now(Waiting.Entry shown) {
+        return at == null || unreadable != null ? new Waiting.Now.Unknown() : waiting.now(shown);
+    }
+
+    /**
      * Reads what waits, or says why it could not be read, keeping what was read before.
      *
      * @param before What was read last.

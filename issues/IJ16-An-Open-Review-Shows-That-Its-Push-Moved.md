@@ -1,6 +1,6 @@
 # IJ16 — An open review shows that its push moved
 
-**Status:** Implementing.
+**Status:** Review.
 **Size:** S - one pure function in `gate` with its tests, the review tab listening to the watch, one paragraph of
 `doc/index.md`; no contract changes, and the faster half waits for the daemon.
 
@@ -10,7 +10,7 @@ Today its header stays at the commit it was opened with, *waiting 0m*, until *Ap
 
 ## Why
 
-The operator's walk found it: a task pushed again while its review was open, and the tab gave no sign until the
+A walk through the plugin found it: a task pushed again while its review was open, and the tab gave no sign until the
 approval failed. The refusal keeps a moved commit from being forwarded, so nothing wrong goes through; the person
 only learns late that they read an old commit.
 
@@ -57,7 +57,39 @@ in it alone.
   read.
 - With the machine's daemon stopped, an open tab stays as it was: no *moved*, no *gone*.
 
-## To be checked
+## Built differently from the plan
 
-- That a listener registered with the editor as its parent is removed when the tab closes, read in IntelliJ's
-  `Disposer` contract and seen in the running IDE.
+- **A push decided elsewhere offers *Close*, not *Read Again*:** nothing of it is left to read, and reading it
+  again only failed.
+- ***Read Again* opens the commit the push moved to**, from the line and from the toolbar. Before, it read the
+  commit the tab was opened with, which the daemon refused once the push had moved. For a push decided
+  elsewhere, the toolbar's *Read Again* is disabled too.
+- **A tab is marked as it opens** when the watch already knows, so a push that moved while it was read, or a
+  split of a marked tab, is not shown as decidable until the next read.
+- **The mark lifts** when the push waits at the commit shown again, such as after a task reset and pushed the
+  same commit, so a commit that waits is never shown as one that does not.
+
+## Checked
+
+On `fedora` against its daemon, in `runIde` on a private Xvfb display reached through an ssh tunnel to the
+daemon's socket; screenshots in `~/.porelo/handover/porelo-intellij/ij16/`.
+
+- **Moved:** a task pushed again while its review was open. The tab named the new commit and disabled *Approve*
+  and *Reject* 33 s and 52 s after the push, in two tries. *Read Again* opened the new commit, with both decisions
+  enabled again.
+- **Decided elsewhere:** `porelo gate reject` at the machine marked the open tab *no longer waits* 2 s later,
+  since the stream's count changed. *Close* closed it.
+- **Daemon stopped:** `systemctl --user stop porelod` with a review open, and a read forced. The tool window said
+  `fedora` does not answer; the tab stayed as it was for 83 s.
+- **Each condition of `Waiting.now` and `Snapshot.now` has a test that goes red without it:** the name of the
+  push, the silent machine being its own, and the guard against no read or a failed one. Each was broken
+  once and seen red.
+- **The listener ends with the tab:** it is registered with the editor as its `Disposable` parent, which
+  IntelliJ disposes when the tab closes. Each mark is also dropped once the editor is disposed. No failed
+  listener was logged after tabs were closed.
+
+## Left open
+
+- **A machine taken out of the interface's list while a review of it is open** is neither silent nor answering
+  in the next read, so the tab would say *no longer waits*. A read does not record which machines it asked;
+  that would take a field in `Waiting`, more than this S.

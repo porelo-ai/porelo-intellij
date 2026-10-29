@@ -263,6 +263,68 @@ class WaitingTest {
 
     @Test
     @DisplayName(
+            "An open review's push is said to have moved, with the commit it waits at now, or to be gone only from a machine that answered")
+    void saysWhatAnOpenReviewsPushIsNow() {
+        final Machine machine = new Machine("m", dir.resolve("m.sock"), null, null);
+        final Waiting.Entry shown = entry(machine, "p", COMMIT);
+        final Waiting.Entry moved = entry(machine, "p", "0123456789abcdef0123456789abcdef01234567");
+
+        assertThat(new Waiting(List.of(shown), List.of()).now(shown))
+                .as("waiting as shown")
+                .isEqualTo(new Waiting.Now.Same());
+        assertThat(new Waiting(List.of(moved), List.of()).now(shown))
+                .as("waiting at another commit")
+                .isEqualTo(new Waiting.Now.Moved(moved));
+        assertThat(new Waiting(List.of(), List.of()).now(shown))
+                .as("decided elsewhere")
+                .isEqualTo(new Waiting.Now.Gone());
+        assertThat(new Waiting(List.of(), List.of(new Waiting.Silent("m", "why"))).now(shown))
+                .as("its machine silent")
+                .isEqualTo(new Waiting.Now.Unknown());
+        assertThat(new Waiting(List.of(moved), List.of(new Waiting.Silent("o", "why"))).now(shown))
+                .as("waiting at another commit, another machine silent")
+                .isEqualTo(new Waiting.Now.Moved(moved));
+    }
+
+    @Test
+    @DisplayName(
+            "Another push in the same repository, or one of the same name on another machine, in another project or in another repository, is not taken for the one an open review shows")
+    void anotherPlacesPushIsNotTheOneShown() {
+        final Machine machine = new Machine("m", dir.resolve("m.sock"), null, null);
+        final Machine other = new Machine("o", dir.resolve("o.sock"), null, null);
+        final Waiting.Entry shown = entry(machine, "p", COMMIT);
+        final String elsewhere = "0123456789abcdef0123456789abcdef01234567";
+        final List<Waiting.Entry> others =
+                List.of(
+                        entry(other, "p", elsewhere),
+                        new Waiting.Entry(
+                                machine,
+                                "other",
+                                "core",
+                                "u",
+                                "/m",
+                                new PendingPush("p", elsewhere, "s", "w", "at", "f"),
+                                0),
+                        new Waiting.Entry(
+                                machine,
+                                "porelo",
+                                "other",
+                                "u",
+                                "/m",
+                                new PendingPush("p", elsewhere, "s", "w", "at", "f"),
+                                0),
+                        entry(machine, "another", elsewhere));
+
+        assertThat(new Waiting(others, List.of()).now(shown))
+                .as("only others of that name wait")
+                .isEqualTo(new Waiting.Now.Gone());
+        assertThat(new Waiting(others, List.of(new Waiting.Silent("m", "why"))).now(shown))
+                .as("only others of that name wait, its machine silent")
+                .isEqualTo(new Waiting.Now.Unknown());
+    }
+
+    @Test
+    @DisplayName(
             "The projects' stream says something new waits only when a repository's count of waiting pushes moved, not when anything else did")
     void pendingMovedOnlyWhenACountDid() {
         final List<Project> before = List.of(project("p", repository("a", 1), repository("b", 0)));

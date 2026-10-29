@@ -108,6 +108,54 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
     }
 
     /**
+     * Says what the push an open review shows is in this read: the same, moved to another commit,
+     * gone from a machine that answered, or unknown because its machine did not answer.
+     *
+     * <p>A machine that is not silent answered, even with nothing waiting: the read lists every
+     * machine the plugin reaches either by its pushes or among the silent.
+     *
+     * @param shown The push as the review was opened with it.
+     * @return What it is now.
+     */
+    public Now now(Entry shown) {
+        final String machine = shown.machine().name();
+        if (silent.stream().anyMatch(one -> one.machine().equals(machine))) {
+            return new Now.Unknown();
+        }
+        for (final Entry entry : pushes) {
+            if (entry.machine().name().equals(machine)
+                    && entry.project().equals(shown.project())
+                    && entry.repository().equals(shown.repository())
+                    && entry.push().name().equals(shown.push().name())) {
+                return entry.push().commit().equals(shown.push().commit())
+                        ? new Now.Same()
+                        : new Now.Moved(entry);
+            }
+        }
+        return new Now.Gone();
+    }
+
+    /** What the push an open review shows is in a newer read. */
+    public sealed interface Now {
+
+        /** It still waits at the commit shown. */
+        record Same() implements Now {}
+
+        /**
+         * It waits at another commit.
+         *
+         * @param entry The push as it waits now.
+         */
+        record Moved(Entry entry) implements Now {}
+
+        /** Its machine answered, and it waits no more: decided elsewhere. */
+        record Gone() implements Now {}
+
+        /** Its machine did not answer, or nothing was read: nothing is said. */
+        record Unknown() implements Now {}
+    }
+
+    /**
      * Returns what waits grouped by project and repository, the group with the newest push first.
      *
      * <p>A group's label is {@code project / repository}; where the same one waits on several

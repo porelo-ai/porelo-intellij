@@ -10,7 +10,7 @@ tooltips say *Approve* and *Reject*.
 
 ## Why
 
-The operator's walk found that the two decisions show as icons only, beside the tab's other actions.
+A walk through the plugin found that the two decisions show as icons only, beside the tab's other actions.
 `doc/operator-test.md` now names the icons; the tab itself does not.
 
 ## Plan
