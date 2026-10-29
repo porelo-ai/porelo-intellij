@@ -24,7 +24,7 @@ The forge's runner gives every job the labels `ubuntu-24.04` and `ubuntu-26.04` 
   pull request, which `pull_request` already builds; the push trigger stays `main`, so GitHub runs no build twice.
 - **`build.yml`, Publish and its read-back:** both also need `vars.PORELO_PUBLISH == 'true'`; a first step fails
   when the variable is neither `true` nor `false`, so a missing one never leaves the plugin unpublished silently.
-  GitHub's repository carries `vars.PORELO_PUBLISH=true` before this change is pushed.
+  On GitHub `PORELO_PUBLISH=true` is already in place as a variable of the organization, for all its repositories.
 - **`windows.yml`:** its job runs only `if: vars.PORELO_PUBLISH == 'true'`, the switch the host's documentation names
   for central-only jobs; without it the job would wait on the forge for a `windows-2025` runner that never comes.
 - **`delete-runs.yml`:** the same condition, since it calls GitHub's API.
