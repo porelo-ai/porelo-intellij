@@ -1,6 +1,6 @@
 # IJ16 — An open review shows that its push moved
 
-**Status:** Idea.
+**Status:** Accepted.
 
 **What must be true.** A review tab that is open while its push moves to another commit says so, as soon as the
 plugin knows it: the tab is marked as showing a commit that no longer waits, and offers to read the push again.

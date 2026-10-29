@@ -1,6 +1,6 @@
 # IJ17 — Approve and Reject named in words
 
-**Status:** Idea.
+**Status:** Accepted.
 
 **What must be true.** A person reading a review tab for the first time finds *Approve* and *Reject* without
 hovering: the two decisions are named in words at the top of the tab, not only as a check mark and a cross whose
