@@ -71,7 +71,7 @@ in it alone.
 
 ## Checked
 
-On `fedora` against its daemon, in `runIde` on a private Xvfb display reached through an ssh tunnel to the
+On a test VM against its daemon, in `runIde` on a private Xvfb display reached through an ssh tunnel to the
 daemon's socket; screenshots in `~/.porelo/handover/porelo-intellij/ij16/`.
 
 - **Moved:** a task pushed again while its review was open. The tab named the new commit and disabled *Approve*
@@ -80,7 +80,7 @@ daemon's socket; screenshots in `~/.porelo/handover/porelo-intellij/ij16/`.
 - **Decided elsewhere:** `porelo gate reject` at the machine marked the open tab *no longer waits* 2 s later,
   since the stream's count changed. *Close* closed it.
 - **Daemon stopped:** `systemctl --user stop porelod` with a review open, and a read forced. The tool window said
-  `fedora` does not answer; the tab stayed as it was for 83 s.
+  the test VM does not answer; the tab stayed as it was for 83 s.
 - **Each condition of `Waiting.now` and `Snapshot.now` has a test that goes red without it:** the name of the
   push, the silent machine being its own, and the guard against no read or a failed one. Each was broken
   once and seen red.

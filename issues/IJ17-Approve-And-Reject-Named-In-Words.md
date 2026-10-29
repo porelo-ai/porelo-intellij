@@ -37,5 +37,5 @@ No test is written: a label reads wrong or right and does no harm, as `AGENTS.md
 
 - `verifyPlugin` reports the plugin *Compatible* with IntelliJ IDEA 2026.1 and 2026.2 and names no internal or
   experimental use, `ActionUtil.SHOW_TEXT_IN_TOOLBAR` among them.
-- In `runIde` on a private Xvfb display, against the daemon of `fedora`, an open review tab shows *Approve* and
+- In `runIde` on a private Xvfb display, against the daemon of a test VM, an open review tab shows *Approve* and
   *Reject* in words beside their icons, and *Read Again* as an icon.
