@@ -1,6 +1,6 @@
 # IJ16 — An open review shows that its push moved
 
-**Status:** Analyzed.
+**Status:** Backlog.
 **Size:** S - one pure function in `gate` with its tests, the review tab listening to the watch, one paragraph of
 `doc/index.md`; no contract changes, and the faster half waits for the daemon.
 
