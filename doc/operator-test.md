@@ -167,7 +167,7 @@ an IDE with a display. Each step says which.
     of the selected file. *Not run.* The daemon's ranking was seen on the test VM: `build.gradle.kts` first, *a build
     script: it runs on every build*.
 
-22. In that tab: click *Approve*.
+22. In that tab: click *Approve*, the check mark at the top of the tab.
 
     Expected: a dialog *Forward First change of task A (commit <40 digits>) from default / ij-walk on this machine
     onto the branch:*, with `porelo/ij-walk-a` filled in; the commit begins with the 12 digits of the header.
@@ -189,7 +189,7 @@ an IDE with a display. Each step says which.
 
     Expected: a tab *ij-walk-b: First change of task B*. *Not run.*
 
-26. In that tab: click *Reject*.
+26. In that tab: click *Reject*, the cross at the top of the tab.
 
     Expected: a dialog *Why is … rejected? The task that pushed it is told.* *Not run.*
 
@@ -242,7 +242,7 @@ an IDE with a display. Each step says which.
     notice *Waits for review: Third change of task B* only at the plugin's own read, once a minute, so within 60 s;
     the daemon's stream shows a moved push by no count. *The push seen on the test VM; the notice not run.*
 
-34. In the tab of step 32: click *Approve*.
+34. In the tab of step 32: click *Approve*, the check mark at the top of the tab.
 
     Expected: the dialog names the commit of *Second change of task B*, the one the tab shows. *Not run.*
 
@@ -256,7 +256,7 @@ an IDE with a display. Each step says which.
 
     Expected: a tab *ij-walk-b: Third change of task B*, its header naming the first 12 digits of `<new>`. *Not run.*
 
-37. In that tab: click *Approve*.
+37. In that tab: click *Approve*, the check mark at the top of the tab.
 
     Expected: the dialog names the commit `<new>`. *Not run.*
 
@@ -279,9 +279,10 @@ an IDE with a display. Each step says which.
     ! bash ~/.porelo/handover/porelo-intellij/walk-ij/ij-walk-clean.sh
     ```
 
-    Expected: `removed   porelo-default-ij-walk-a`, `removed   porelo-default-ij-walk-b`, and
-    `OK    the walk's tasks, the repository 'ij-walk' and …/.porelo/walk-ij are gone`; the task shells in terminals 1
-    and 2 end. A line starting `FAILED in guide step 40` names what is left, and running it again tries again.
+    Expected: `removed   porelo-default-ij-walk-a`, `removed   porelo-default-ij-walk-b`, Porelo's own line
+    `removed  ij-walk from 'default'; its mirror and anything waiting in it stay`, after which the script removes that
+    mirror, and `OK    the walk's tasks, the repository 'ij-walk' and …/.porelo/walk-ij are gone`; the task shells in
+    terminals 1 and 2 end. A line starting `FAILED in guide step 40` names what is left, and running it again tries again.
     *Seen on the test VM, the shells ending not.*
 
 ## What to do with a finding
