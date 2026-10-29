@@ -13,13 +13,8 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
-| <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
-
-## Backlog
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
 | <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves |
+| <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
 ## Analyzed
 
