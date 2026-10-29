@@ -1,6 +1,6 @@
 # IJ01 — Work is reviewed in IntelliJ
 
-**Status:** Implementing; built, the install section's walk in an IDE waits for the operator.
+**Status:** Review; pushed and published as a snapshot, the operator walks the install section in an IDE.
 **Size:** S - what is left is the operator's walk of the install section; the review, approve, reject, the notice, the
 Gradle task that writes `updatePlugins.xml` and the Publish steps are built.
 

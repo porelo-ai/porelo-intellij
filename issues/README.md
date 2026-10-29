@@ -3,12 +3,17 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
+## Review
+
+| # | size | blocked by | what it covers |
+|---|---|---|---|
+| <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Published; the operator walks the install section |
+| <a id="ij02"></a>[IJ02](IJ02-Live-Notices-And-A-Guide.md) | M | | Notices within seconds through `WatchProjects`, measured at 3 s on a VM; `doc/index.md` grown by what a person does. Published; the operator walks the chapter, with [IJ01](README.md#ij01)'s |
+
 ## Implementing
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
-| <a id="ij02"></a>[IJ02](IJ02-Live-Notices-And-A-Guide.md) | M | | Notices within seconds through `WatchProjects`, measured at 3 s on a VM; `doc/index.md` grown by what a person does. Its walk waits for the operator, with [IJ01](README.md#ij01)'s |
-| <a id="ij01"></a>[IJ01](IJ01-Work-Is-Reviewed-In-IntelliJ.md) | S | | A tool window lists every waiting push; its diff is read in IntelliJ's own diff windows from a bare cache, nothing checked out; approve with the commit shown, or reject with a reason, through the daemon's contract. Built; the install section waits for the operator's walk |
 | <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
 ## Analyzed

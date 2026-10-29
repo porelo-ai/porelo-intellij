@@ -1,7 +1,7 @@
 # IJ02 — Live notices and a guide
 
-**Status:** Implementing; built and measured, the chapter's walk in an IDE waits for the operator, with
-[IJ01](README.md#ij01)'s install section.
+**Status:** Review; pushed, measured and published as a snapshot, the operator walks the chapter in an IDE,
+with [IJ01](README.md#ij01)'s install section.
 **Size:** M - a stream per machine in the gate and the watch, a `doc/` chapter, and a measured acceptance on a
 VM.
 
@@ -53,8 +53,9 @@ how to install and use the plugin is written down where the other chapters are.
 ## To be checked
 
 - The daemon's list of projects carries counts only, so a task that pushes again, moving its waiting push to
-  another commit, changes no count and is announced at the minute's read, not within seconds. Whether that wants a
-  field of the daemon's (porelo) is asked once this is built.
+  another commit, changes no count and is announced at the minute's read, not within seconds. Asked of `porelo`'s
+  agent: whether `WatchProjects` can carry what changes when a waiting push moves, such as its commit, so the watch
+  reads that repository again.
 
 ## Acceptance
 
