@@ -1,6 +1,6 @@
 # IJ14 — Every Workflow Runs On The Host's Forge As On GitHub
 
-**Status:** Analyzed.
+**Status:** Estimated.
 **Size:** M - five workflow files, the JDK action and the build script's snapshot repository change, with no contract
 of another repository changed; the first runs on a forge runner with 8 GiB and the IDEs' 17 GB are the risk.
 
@@ -24,6 +24,7 @@ The forge's runner gives every job the labels `ubuntu-24.04` and `ubuntu-26.04` 
   pull request, which `pull_request` already builds; the push trigger stays `main`, so GitHub runs no build twice.
 - **`build.yml`, Publish and its read-back:** both also need `vars.PORELO_PUBLISH == 'true'`; a first step fails
   when the variable is neither `true` nor `false`, so a missing one never leaves the plugin unpublished silently.
+  GitHub's repository carries `vars.PORELO_PUBLISH=true` before this change is pushed.
 - **`windows.yml`:** its job runs only `if: vars.PORELO_PUBLISH == 'true'`, the switch the host's documentation names
   for central-only jobs; without it the job would wait on the forge for a `windows-2025` runner that never comes.
 - **`delete-runs.yml`:** the same condition, since it calls GitHub's API.
