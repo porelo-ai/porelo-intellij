@@ -58,7 +58,7 @@ build. The plugin does those steps for them and keeps the safety the box gives.
 
 ### 5. Later, not first
 
-- *Run its tests* on the waiting work, in a fresh container on the machine ([B95](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b95) `gate try`, [F74](https://github.com/porelo-ai/porelo-frontend/blob/main/issues/README.md#f74)), its
+- *Run its tests* on the waiting work, in a fresh container on the machine (`porelo gate try`), its
   output in IntelliJ's run window - never on the developer's computer.
 - Starting work from IntelliJ ("let an agent work on this branch") - a separate requirement.
 
@@ -95,8 +95,8 @@ build. The plugin does those steps for them and keeps the safety the box gives.
      and `verifyPlugin`, which on `main` build with `-PsnapshotStamp=<run number>`. The zip goes to the address
      `updatePlugins.xml` names, so the address is the build's alone, and that descriptor beside it and as
      `<channel>/latest/updatePlugins.xml`, each with `curl -T` and both checksums, the token `JF_ACCESS_TOKEN` handed
-     to `curl -K -` on its standard input, never in a file or on a command line (`curl` in the step, as
-     porelo-buildtools' [BT23](https://github.com/porelo-ai/porelo-buildtools/blob/main/issues/README.md#bt23) will replace). A release already published, or one whose state cannot be read, is
+     to `curl -K -` on its standard input, never in a file or on a command line (`curl` in the step, until
+     a shared upload command replaces it). A release already published, or one whose state cannot be read, is
      refused before anything is written. *The plugin is published, as an IDE reads it* reads both back with no
      token and compares them with what was built. Run on the host against a stand-in `curl`: the three uploads and
      their checksums, the token on standard input and in no file of the runner's, seen red with the earlier step that wrote one; each refusal made to happen (no token, an
@@ -108,8 +108,7 @@ build. The plugin does those steps for them and keeps the safety the box gives.
      seen red without the task and with a wrong channel in the URL.
   4. **Built:** *Installing it* in `doc/index.md` says how to install the plugin from the custom repository URL, for
      the snapshot channel: in IntelliJ IDEA's *Settings* - *Plugins* - *Manage Plugin Repositories*, the URL added,
-     then the plugin installed from the Marketplace tab. Each step is done once as written in the operator's walk,
-     after sprint 2c of release 0.6.
+     then the plugin installed from the Marketplace tab. Each step is done once as written in the operator's walk.
 
 ## The operator's walk
 

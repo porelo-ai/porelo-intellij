@@ -3,12 +3,10 @@
 **Status:** Idea; blocked by [IJ14](README.md#ij14).
 
 **What must be true.** This repository's agent works in a Porelo task of the project `porelo` on the move's host, as
-porelo-project [PJ59](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj59) lays out for
-sprint 7c, beside porelo-message-matrix and porelo-frontend. The task follows this repository through the gate and
-pushes to the host's Forgejo, whose build is read through the `forgejo` reader. The agent is reached in the project's
-room as `Agent IntelliJ`, from the nickname `IntelliJ` that porelo-project's `project.yml` gives this repository
-once porelo [B298](https://github.com/porelo-ai/porelo/blob/main/issues/base/README.md#b298) is published. This issue is taken from start to Review inside the task, with the
-forge's build green.
+the project's procedure for an agent's move lays out. The task follows this repository through the gate and pushes to
+the host's Forgejo, whose build is read through the `forgejo` reader. The agent is reached in the project's room as
+`Agent IntelliJ`, from the nickname `IntelliJ` that porelo-project's `project.yml` gives this repository. This issue
+is taken from start to Review inside the task, with the forge's build green.
 
 ## What moves, and what to check
 
@@ -22,4 +20,6 @@ forge's build green.
 - **The live tests:** `./gradlew liveTest` needs a daemon with a task that pushed, reached today over ssh in the VM
   account `intellij`. Whether a task reaches such a machine, or the tests run against the host's own daemon, is read
   before the move.
-- **The way back:** none beyond the move's own step 5, which holds for every agent.
+- **The host's forge:** the move host's inventory names `porelo-intellij` in `forge_repositories`, and the forge's
+  registry holds the `porelo-release` and `porelo-machines` snapshots the build resolves.
+- **The way back:** none beyond the one the move's procedure gives every agent.

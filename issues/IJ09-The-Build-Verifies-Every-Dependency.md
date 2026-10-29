@@ -1,7 +1,7 @@
 # IJ09 — The build verifies every dependency
 
-**Status:** Implementing; blocked by `porelo-buildtools` 0.5.1, released with the close of release 0.6. Until then the
-file is renewed whenever the snapshot's dependencies move.
+**Status:** Implementing; waits for `porelo-buildtools` 0.5.1 to be released. Until then the file is renewed
+whenever the snapshot's dependencies move.
 **Size:** M - one generated file, Dependabot reduced to the actions, the way a version is moved and the file renewed,
 and a check that a tampered entry fails; no code of the plugin changes.
 
@@ -23,8 +23,8 @@ checkout's token at hand.
   signature ("Gradle does *not* verify changing dependencies", its user guide; measured: a wrong digest written for
   `porelo-release` 0.5.1-SNAPSHOT passes). So `porelo-release` and `porelo-machines` stay unchecked while the build
   takes `porelo-buildtools` as a snapshot, as the operator decided on 2026-10-18, and are checked like everything else
-  once a release is pinned: `porelo-buildtools` 0.5.1 follows this round, and this issue then pins it and renews the
-  file. Their own dependencies are releases and are checked now.
+  once a release is pinned: when `porelo-buildtools` 0.5.1 is released, this issue pins it and renews the file.
+  Their own dependencies are releases and are checked now.
 - **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
   does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
 - **Shown on the first move:** Gradle 9.8.1, logchange 1.20.0 and JSpecify 1.0.1, taken by hand from what

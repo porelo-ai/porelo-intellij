@@ -3,10 +3,10 @@
 **Status:** Idea.
 
 **What must be true.** This repository's workflows run unchanged on the move's host's Forgejo and on GitHub, with
-only the values of variables and secrets differing, as porelo-project
-[PJ60](https://github.com/porelo-ai/porelo-project/blob/main/issues/README.md#pj60) asks of every repository that
-builds. On the forge the plugin is built, tested, checked and verified; publishing and the Windows job run on GitHub
-alone, each switched by a variable present on both forges, never by a branch in a workflow.
+only the values of variables and secrets differing, as porelo-host's
+[local registry and publication settings](https://github.com/porelo-ai/porelo-host/blob/main/doc/local-forge.md#the-local-registry-and-publication-settings)
+name them. On the forge the plugin is built, tested, checked and verified; publishing and the Windows job run on
+GitHub alone, each switched by a variable present on both forges, never by a branch in a workflow.
 
 ## What to read before it is analyzed
 
@@ -22,6 +22,6 @@ alone, each switched by a variable present on both forges, never by a branch in 
   is decided here.
 - **`windows.yml`:** GitHub's Windows runner only, switched by a variable present on both forges.
 - **`delete-runs.yml`** calls GitHub's API by hand only; **`shared-rules.yml`**'s scheduled step reads GitHub's
-  activity once porelo-buildtools [BT35](https://github.com/porelo-ai/porelo-buildtools/blob/main/issues/README.md#bt35)'s
-  step is taken, which refuses any other forge; **`workflows.yml`** needs Python with PyYAML on the runner.
+  activity with the shared rules
+  check, which reads GitHub's activity only; **`workflows.yml`** needs Python with PyYAML on the runner.
 - **Seen to fail first:** today's `build.yml` on the host's Forgejo.
