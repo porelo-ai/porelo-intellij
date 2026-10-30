@@ -14,13 +14,13 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
+| <a id="ij18"></a>[IJ18](IJ18-A-Host-Is-Reached-As-Its-Card-Says.md) | M | | Every ssh the plugin starts for a host - tunnel, Windows relay, review fetch - runs with the interface's per-host ssh file from the host card, so the card's host key is enforced and the person's own ssh configuration cannot redirect it |
 | <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
 
 ## Analyzed
 
 | # | size | blocked by | what it covers | open questions |
 |---|---|---|---|---|
-| <a id="ij18"></a>[IJ18](IJ18-A-Host-Is-Reached-As-Its-Card-Says.md) | M | | Every ssh the plugin starts for a host - tunnel, Windows relay, review fetch - runs with the interface's per-host ssh file from the host card, so the card's host key is enforced and the person's own ssh configuration cannot redirect it | 0 |
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | [IJ12](README.md#ij12) | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes | 0 |
 
 ## Idea

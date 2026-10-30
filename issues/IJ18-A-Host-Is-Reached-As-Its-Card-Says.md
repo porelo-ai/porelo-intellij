@@ -1,6 +1,6 @@
 # IJ18 — A host is reached as its card says
 
-**Status:** Analyzed.
+**Status:** Implementing; Estimated and Backlog (operator, 2026-10-30, sprint 6m).
 **Size:** M - one contract another repository writes and this one reads, ssh calls in two packages wired through
 four, harm tests on the Windows runner and as live tests, the guide and the documentation.
 
