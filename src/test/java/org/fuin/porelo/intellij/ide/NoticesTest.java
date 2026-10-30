@@ -18,7 +18,7 @@ class NoticesTest {
     void markupFromTheAgentIsText() {
         final Waiting.Entry entry =
                 new Waiting.Entry(
-                        new Machine("m<i>", Path.of("/m.sock").toAbsolutePath(), null, null),
+                        new Machine("m<i>", Path.of("/m.sock").toAbsolutePath()),
                         "p",
                         "r",
                         "u",

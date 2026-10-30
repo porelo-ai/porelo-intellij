@@ -38,13 +38,13 @@ class LiveRelayOverSshTest {
             "A real daemon is read through the relay over ssh, its socket named to porelo daemon connect through the machine's shell")
     void readsARealDaemonOverSsh() {
         final Machine machine =
-                Machine.overSsh("live", env("PORELO_LIVE_HOST"), env("PORELO_LIVE_SOCKET"));
+                Machine.overSsh(
+                        "live",
+                        env("PORELO_LIVE_HOST"),
+                        env("PORELO_LIVE_SOCKET"),
+                        Path.of(env("PORELO_LIVE_SSH_CONFIG")));
 
-        try (Relay relay =
-                        Relay.overSsh(
-                                machine,
-                                runtime,
-                                List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG")));
+        try (Relay relay = Relay.overSsh(machine, runtime, List.of("ssh"));
                 Gate gate = new Gate(relay.socket())) {
             assertThat(gate.projects())
                     .extracting(Project::name)

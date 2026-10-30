@@ -122,7 +122,12 @@ public final class PoreloWatch implements Disposable {
      */
     public Changes fetch(Waiting.Entry entry) {
         final String url = entry.source(mirror -> java.nio.file.Files.isDirectory(Path.of(mirror)));
-        return cache().fetch(repository(entry), url, entry.push().name(), entry.push().commit());
+        return cache().fetch(
+                        repository(entry),
+                        url,
+                        entry.machine().sshConfig(),
+                        entry.push().name(),
+                        entry.push().commit());
     }
 
     /**
@@ -159,7 +164,12 @@ public final class PoreloWatch implements Disposable {
      */
     public void fetchInto(Waiting.Entry entry, Path root) {
         final String url = entry.source(mirror -> java.nio.file.Files.isDirectory(Path.of(mirror)));
-        cache().fetchInto(root, url, entry.push().name(), entry.push().commit());
+        cache().fetchInto(
+                        root,
+                        url,
+                        entry.machine().sshConfig(),
+                        entry.push().name(),
+                        entry.push().commit());
     }
 
     /**

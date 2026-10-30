@@ -77,8 +77,9 @@ class LiveStreamHoldTest {
                         "live",
                         runtime.resolve("unused.sock"),
                         env("PORELO_LIVE_HOST"),
-                        env("PORELO_LIVE_SOCKET"));
-        final List<String> ssh = List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG"));
+                        env("PORELO_LIVE_SOCKET"),
+                        Path.of(env("PORELO_LIVE_SSH_CONFIG")));
+        final List<String> ssh = List.of("ssh");
         final List<String> wsl = List.of("wsl.exe");
         final Duration hold = Duration.ofMinutes(minutes);
         final Path logFile = Path.of(env("PORELO_LIVE_HOLD_LOG"));

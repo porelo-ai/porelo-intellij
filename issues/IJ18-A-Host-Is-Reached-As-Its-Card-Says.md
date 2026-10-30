@@ -1,6 +1,6 @@
 # IJ18 — A host is reached as its card says
 
-**Status:** Implementing; Estimated and Backlog (operator, 2026-10-30, sprint 6m).
+**Status:** Review.
 **Size:** M - one contract another repository writes and this one reads, ssh calls in two packages wired through
 four, harm tests on the Windows runner and as live tests, the guide and the documentation.
 
@@ -41,43 +41,41 @@ Read in today's code:
 
 Steps:
 
-1. **`machine.Machine`, `machine.Machines`:** a machine over ssh carries the path of its `<host>.conf`. An entry
-   whose file is missing goes to the machines not reached, naming the missing file, and is never reached through the
-   person's own ssh configuration.
+1. **`machine.Machine`, `machine.Machines`:** a machine over ssh carries the path of its `<host>.conf`, and `Machine`
+   refuses a host without one. An entry whose host is no lower-case DNS label, or whose file is missing, goes to the
+   machines not reached, naming why, and is never reached through the person's own ssh configuration.
 2. **`machine.Tunnel`, `machine.Relay`:** both pass `-F <host>.conf` right after the ssh they are given and before
    their own options, so it is the last `-F` ssh reads, the one that counts.
-3. **`gate.Waiting`, `cache.ReviewCache`, `ide.PoreloWatch`:** a review's address from a host reached this way carries
-   its `<host>.conf`, and `ls-remote` and `fetch` in `fetch` and `fetchInto` run ssh with `-F <host>.conf`, over any
-   `GIT_SSH_COMMAND`, `GIT_SSH` or `core.sshCommand` of the person's. `fetchRemote`, the person's own remote, and an
-   address the gate names for a socket somebody else forwards keep the person's ssh.
-4. **`.github/workflows/windows.yml`:** the runner's `~/.ssh/config` gains an entry diverting `<host>` to its sshd,
-   and the sshd serves a mirror for `fetch` and `fetchInto`; the test key stays in Windows' agent, as today.
-5. **`doc/index.md`, `doc/operator-test.md`:** the hand-made `~/.ssh/config` entry goes; the guide's steps take the
-   interface's file.
-6. **Changelog:** one entry under `changelog/unreleased/`, type *changed*.
+3. **`gate.Waiting`, `cache.ReviewCache`, `ide.PoreloWatch`:** `fetch` and `fetchInto` take the machine's
+   `<host>.conf`, and their `ls-remote` and `fetch` run with `GIT_SSH_COMMAND` set to the plugin's ssh with
+   `-F <host>.conf` and `GIT_SSH` removed; `GIT_SSH_COMMAND` outranks `core.sshCommand`. `fetchRemote`, the person's
+   own remote, and an address the gate names for a socket somebody else forwards keep the person's ssh.
+4. **`doc/index.md`:** how a host is reached. `doc/operator-test.md` names no ssh configuration of its own, so it
+   stays.
+5. **Changelog:** one entry under `changelog/unreleased/`, type *changed*.
 
-ssh reads `~/.ssh` from the account's home, not from `HOME`, so no test writes the `~/.ssh` of a machine it runs
-on. The tests that run ssh run on GitHub's Windows runner in `windowsSshTest`, whose workflow already writes the
-runner's own `~/.ssh` and which is thrown away afterwards, and as live tests from the host against the VM, which stand
-the person's own ssh configuration as the file they hand the plugin's ssh, as they do today. `build` runs none of
-them.
+ssh reads `~/.ssh` from the account's home, not from `HOME`, so no test writes the `~/.ssh` of a machine it runs on.
 
 - **Red first, against a connection diverted to a machine that is not the host:** the person's ssh configuration
-  (the runner's `~/.ssh`, or the live test's file) points `<host>` at an sshd and trusts its key, while
-  `<host>.known_hosts` holds another key, the card's. Today each call connects; afterwards each refuses. The calls
-  are the relay, `fetch` and `fetchInto` on the Windows runner, and the tunnel, the relay, `fetch` and `fetchInto` in
-  the live tests; `fetch` and `fetchInto` each three times, with `GIT_SSH_COMMAND`, `GIT_SSH` (a script running the
-  person's ssh) or `core.sshCommand` set alone, since git takes only one of them. The tunnel's refusal names the
-  machine, the relay's and the fetch's the host.
-- **The same calls with `<host>.known_hosts` holding the sshd's own key reach the daemon and fetch the review**, so a
-  refusal above comes from the key and not from a call that never works.
-- **The fallback to the person's unchecked ssh:** a machine without its `<host>.conf` is among those not reached,
-  naming the missing file, and is never connected to; a unit test in `build`, since it starts no ssh.
+  reaches the host and trusts its key, while the host card's configuration pins another key and includes the
+  person's for the address and account. Today each call connects; afterwards each refuses. The relay runs so on
+  GitHub's Windows runner in `windowsSshTest`, against the runner's own `~/.ssh/known_hosts`, which its workflow
+  already writes; the tunnel and the relay in `liveTest` against the VM, with the person's configuration as the file
+  the live tests hand their ssh. The tunnel's refusal names the machine, the relay's the host.
+- **The review fetches:** in `build`, with a stand-in ssh that serves the mirror only when given `-F <host>.conf`,
+  and the person's ssh set alone by `GIT_SSH_COMMAND`, `GIT_SSH` and `core.sshCommand` in turn; `fetch` and
+  `fetchInto` each fetch the push, and the person's ssh is never run. Without the override the person's ssh is run
+  and the fetch fails, seen red.
+- **The same calls with the card naming the host's own key reach the daemon**, on the runner and in the live tests,
+  so a refusal above comes from the key and not from a call that never works.
+- **The fallback to the person's unchecked ssh:** a machine without its `<host>.conf`, or with a host name no card
+  gives, is among those not reached, naming why; a unit test in `build`, seen red without the check.
 
 ## Acceptance
 
-- On GitHub's Windows runner through `ssh.exe`, and as live tests on the VM, each with the calls named above: the
-  card's host key reaches the daemon and fetches a review; the diverted connection is refused by every call, seen red
-  first.
+- On GitHub's Windows runner through `ssh.exe`, and as live tests on the VM, with the calls named above: the card's
+  host key reaches the daemon; the diverted connection is refused, seen red first.
+- In `build`: the review fetches go through the host's configuration alone, whichever way the person named an ssh,
+  seen red without the override.
 - A machine whose `<host>.conf` is missing is not connected to, and its refusal names the file.
 - `build`, `verifyPlugin` and `documents` green.

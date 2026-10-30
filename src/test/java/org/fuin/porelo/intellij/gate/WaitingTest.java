@@ -142,7 +142,7 @@ class WaitingTest {
                                                         "ORDINARY",
                                                         "reason",
                                                         "")))));
-        return new Machine(name, daemon.socketPath(), null, null);
+        return new Machine(name, daemon.socketPath());
     }
 
     @Test
@@ -181,7 +181,7 @@ class WaitingTest {
     @Test
     @DisplayName("A machine that does not answer is said, and the others are still listed")
     void aMachineThatDoesNotAnswerIsSaid() {
-        final Machine gone = new Machine("gone", dir.resolve("gone.sock"), null, null);
+        final Machine gone = new Machine("gone", dir.resolve("gone.sock"));
 
         final Waiting waiting =
                 Waiting.read(
@@ -206,7 +206,7 @@ class WaitingTest {
     @DisplayName(
             "An entry the plugin does not reach is said after the machines that did not answer, with its why")
     void anEntryItDoesNotReachIsSaid() {
-        final Machine gone = new Machine("gone", dir.resolve("gone.sock"), null, null);
+        final Machine gone = new Machine("gone", dir.resolve("gone.sock"));
         final Machines.Listed listed =
                 new Machines.Listed(
                         List.of(gone, machine("one", "2026-10-07T16:00:00Z")),
@@ -236,7 +236,7 @@ class WaitingTest {
     @DisplayName(
             "A push is new when it was not seen, or when it moved to another commit, and not otherwise")
     void saysWhatIsNew() {
-        final Machine machine = new Machine("m", dir.resolve("m.sock"), null, null);
+        final Machine machine = new Machine("m", dir.resolve("m.sock"));
         final Waiting.Entry kept = entry(machine, "kept", COMMIT);
         final Waiting.Entry moved = entry(machine, "moved", COMMIT);
         final Waiting before = new Waiting(List.of(kept, moved), List.of());
@@ -265,7 +265,7 @@ class WaitingTest {
     @DisplayName(
             "An open review's push is said to have moved, with the commit it waits at now, or to be gone only from a machine that answered")
     void saysWhatAnOpenReviewsPushIsNow() {
-        final Machine machine = new Machine("m", dir.resolve("m.sock"), null, null);
+        final Machine machine = new Machine("m", dir.resolve("m.sock"));
         final Waiting.Entry shown = entry(machine, "p", COMMIT);
         final Waiting.Entry moved = entry(machine, "p", "0123456789abcdef0123456789abcdef01234567");
 
@@ -290,8 +290,8 @@ class WaitingTest {
     @DisplayName(
             "Another push in the same repository, or one of the same name on another machine, in another project or in another repository, is not taken for the one an open review shows")
     void anotherPlacesPushIsNotTheOneShown() {
-        final Machine machine = new Machine("m", dir.resolve("m.sock"), null, null);
-        final Machine other = new Machine("o", dir.resolve("o.sock"), null, null);
+        final Machine machine = new Machine("m", dir.resolve("m.sock"));
+        final Machine other = new Machine("o", dir.resolve("o.sock"));
         final Waiting.Entry shown = entry(machine, "p", COMMIT);
         final String elsewhere = "0123456789abcdef0123456789abcdef01234567";
         final List<Waiting.Entry> others =
@@ -366,8 +366,8 @@ class WaitingTest {
     @DisplayName(
             "What one machine says now replaces what it said before, and nothing of the other machines changes")
     void oneMachineReadAgainReplacesOnlyItsOwn() {
-        final Machine one = new Machine("one", dir.resolve("1.sock"), null, null);
-        final Machine two = new Machine("two", dir.resolve("2.sock"), null, null);
+        final Machine one = new Machine("one", dir.resolve("1.sock"));
+        final Machine two = new Machine("two", dir.resolve("2.sock"));
         final Waiting.Entry old = at(one, "old", "2026-10-07T15:00:00Z");
         final Waiting.Entry other = at(two, "other", "2026-10-07T16:00:00Z");
         final Waiting before =
@@ -419,8 +419,8 @@ class WaitingTest {
     @DisplayName(
             "Pushes are grouped by project and repository, newest group first, naming a machine only where needed")
     void groupsByProjectAndRepository() {
-        final Machine one = new Machine("one", dir.resolve("1.sock"), null, null);
-        final Machine two = new Machine("two", dir.resolve("2.sock"), null, null);
+        final Machine one = new Machine("one", dir.resolve("1.sock"));
+        final Machine two = new Machine("two", dir.resolve("2.sock"));
         final Waiting.Entry newest = entry(one, "porelo", "core", "newest");
         final Waiting.Entry docs = entry(one, "site", "site", "docs");
         final Waiting.Entry older = entry(one, "porelo", "core", "older");
@@ -466,8 +466,13 @@ class WaitingTest {
                                 + mirror
                                 + " refs/porelo/incoming/app:refs/remotes/porelo/app");
         final Machine tunnelled =
-                new Machine("t", dir.resolve("t.sock"), "i@192.0.2.10", "/run/user/1/s.sock");
-        final Machine plain = new Machine("p", dir.resolve("p.sock"), null, null);
+                new Machine(
+                        "t",
+                        dir.resolve("t.sock"),
+                        "i@192.0.2.10",
+                        "/run/user/1/s.sock",
+                        dir.resolve("t.conf"));
+        final Machine plain = new Machine("p", dir.resolve("p.sock"));
 
         assertThat(
                         new Waiting.Entry(tunnelled, "default", "app", "u", mirror, push, 0)
@@ -512,8 +517,8 @@ class WaitingTest {
     @DisplayName(
             "Grouped by machine, each machine lists its projects and repositories without naming itself again")
     void groupsByMachine() {
-        final Machine one = new Machine("one", dir.resolve("1.sock"), null, null);
-        final Machine two = new Machine("two", dir.resolve("2.sock"), null, null);
+        final Machine one = new Machine("one", dir.resolve("1.sock"));
+        final Machine two = new Machine("two", dir.resolve("2.sock"));
         final Waiting.Entry newest = entry(two, "porelo", "core", "newest");
         final Waiting.Entry docs = entry(one, "site", "site", "docs");
         final Waiting.Entry older = entry(two, "porelo", "core", "older");
@@ -548,7 +553,8 @@ class WaitingTest {
                         "build1",
                         dir.resolve("b.sock"),
                         "i@192.0.2.10",
-                        "/run/user/1001/porelo/porelod.sock");
+                        "/run/user/1001/porelo/porelod.sock",
+                        dir.resolve("b.conf"));
         final Machine wsl = Machine.wsl("Ubuntu on Windows", "Ubuntu");
         final PendingPush push = new PendingPush("app", COMMIT, "s", "w", "at", "f");
 

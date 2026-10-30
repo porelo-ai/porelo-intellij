@@ -96,7 +96,8 @@ class ReviewCacheTest {
             "A push is read against where it and the mirror's default branch last met, so the branch's later work is not shown as removed")
     void readsAPushAgainstWhereItStarted() {
         final Changes changes =
-                cache.fetch(cache.repository("m", "p", "r"), mirror.toString(), "app", pushed);
+                cache.fetch(
+                        cache.repository("m", "p", "r"), mirror.toString(), null, "app", pushed);
 
         assertThat(changes.branch()).as("the branch the mirror's HEAD names").isEqualTo("trunk");
         assertThat(changes.base())
@@ -115,7 +116,7 @@ class ReviewCacheTest {
             "A file is read from the cache as each side has it, and a file one side lacks is absent")
     void readsBothSidesOfAFile() {
         final Path repository = cache.repository("m", "p", "r");
-        final Changes changes = cache.fetch(repository, mirror.toString(), "app", pushed);
+        final Changes changes = cache.fetch(repository, mirror.toString(), null, "app", pushed);
 
         assertThat(text(cache.file(repository, changes.base(), "notes.txt")))
                 .as("the base's notes")
@@ -132,7 +133,7 @@ class ReviewCacheTest {
     @DisplayName("The cache is bare: nothing is checked out")
     void nothingIsCheckedOut() throws IOException {
         final Path repository = cache.repository("m", "p", "r");
-        cache.fetch(repository, mirror.toString(), "app", pushed);
+        cache.fetch(repository, mirror.toString(), null, "app", pushed);
 
         assertThat(
                         git(
@@ -164,6 +165,7 @@ class ReviewCacheTest {
                                 cache.fetch(
                                         cache.repository("m", "p", "r"),
                                         mirror.toString(),
+                                        null,
                                         "app",
                                         pushed))
                 .as("a push that moved")
@@ -181,12 +183,13 @@ class ReviewCacheTest {
                                 cache.fetch(
                                         repository,
                                         mirror.toString(),
+                                        null,
                                         "--upload-pack=touch x",
                                         pushed))
                 .as("an option as a name")
                 .isInstanceOf(CacheException.class)
                 .hasMessageContaining("not a name");
-        assertThatThrownBy(() -> cache.fetch(repository, mirror.toString(), "app", "HEAD"))
+        assertThatThrownBy(() -> cache.fetch(repository, mirror.toString(), null, "app", "HEAD"))
                 .as("a ref as a commit")
                 .isInstanceOf(CacheException.class)
                 .hasMessageContaining("not a full commit");
@@ -212,7 +215,7 @@ class ReviewCacheTest {
         final String unstaged = git(person, "diff");
         final String refs = git(person, "for-each-ref", "--format=%(refname) %(objectname)");
 
-        cache.fetchInto(person, mirror.toString(), "app", pushed);
+        cache.fetchInto(person, mirror.toString(), null, "app", pushed);
 
         assertThat(git(person, "rev-parse", "refs/remotes/porelo/app"))
                 .as("the push's ref in the person's repository")
@@ -239,7 +242,7 @@ class ReviewCacheTest {
         final String now = git(work, "rev-parse", "HEAD");
         git(work, "push", "-q", "-f", mirror.toString(), "HEAD:refs/porelo/incoming/app");
 
-        assertThatThrownBy(() -> cache.fetchInto(person, mirror.toString(), "app", pushed))
+        assertThatThrownBy(() -> cache.fetchInto(person, mirror.toString(), null, "app", pushed))
                 .as("a push that moved")
                 .isInstanceOf(CacheException.class)
                 .hasMessageContaining("app now holds " + now + ", not " + pushed);
@@ -312,6 +315,7 @@ class ReviewCacheTest {
                                                 slow.fetch(
                                                         slow.repository("m", "p", "r"),
                                                         "ssh://example.invalid/x",
+                                                        null,
                                                         "app",
                                                         pushed))
                                 .as("a fetch that never gets an answer")
@@ -336,6 +340,7 @@ class ReviewCacheTest {
                                         slow.fetch(
                                                 slow.repository("m", "p", "r"),
                                                 "ssh://example.invalid/x",
+                                                null,
                                                 "app",
                                                 pushed);
                                     } catch (RuntimeException ex) {
@@ -357,6 +362,109 @@ class ReviewCacheTest {
         assertThat(ended()).as("the git and ssh it started, ended").isTrue();
     }
 
+    /**
+     * An ssh that serves the mirror as a host would, running git's command here, but only when it
+     * is given the host's own configuration; any other ssh stands for a machine that is not the
+     * host.
+     */
+    private Path hostsSsh(Path config) throws IOException {
+        final Path ssh = Files.createDirectories(dir.resolve("host")).resolve("ssh");
+        Files.writeString(
+                ssh,
+                "#!/bin/sh\n"
+                        + "seen=\n"
+                        + "while [ $# -gt 1 ]; do\n"
+                        + "  [ \"$1\" = -F ] && [ \"$2\" = '"
+                        + config
+                        + "' ] && seen=1\n"
+                        + "  shift\n"
+                        + "done\n"
+                        + "[ -n \"$seen\" ] || exit 255\n"
+                        + "exec sh -c \"$1\"\n");
+        Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwx------"));
+        return ssh;
+    }
+
+    /** The person's own ssh, which leads somewhere else, and says when it is run. */
+    private Path personsSsh(Path used) throws IOException {
+        final Path ssh = Files.createDirectories(dir.resolve("persons-ssh")).resolve("ssh");
+        Files.writeString(ssh, "#!/bin/sh\necho \"$@\" >> '" + used + "'\nexit 255\n");
+        Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwx------"));
+        return ssh;
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    @DisplayName(
+            "A host reached through its ssh configuration is fetched from through that alone, whichever way the person named an ssh of their own")
+    void aHostIsReachedThroughItsSshConfigurationAlone() throws IOException {
+        final Path config = dir.resolve("config/porelo/ssh/build1.conf");
+        Files.createDirectories(config.getParent());
+        Files.writeString(config, "Host build1\n");
+        final Path used = dir.resolve("used");
+        final Path persons = personsSsh(used);
+        final Path global = dir.resolve("gitconfig");
+        Files.writeString(global, "[core]\n\tsshCommand = '" + persons + "'\n");
+        final String url = "ssh://build1" + mirror;
+        final Path person = personsRepository();
+        final Map<String, Map<String, String>> ways =
+                Map.of(
+                        "GIT_SSH_COMMAND", Map.of("GIT_SSH_COMMAND", "'" + persons + "'"),
+                        "GIT_SSH", Map.of("GIT_SSH", persons.toString()),
+                        "core.sshCommand", Map.of("GIT_CONFIG_GLOBAL", global.toString()));
+
+        for (final var way : ways.entrySet()) {
+            final Map<String, String> environment = new HashMap<>(NO_CONFIG);
+            environment.putAll(way.getValue());
+            final ReviewCache viaHost =
+                    new ReviewCache(
+                            dir.resolve("cache-" + way.getKey()),
+                            environment,
+                            hostsSsh(config).toString());
+
+            final Changes changes =
+                    viaHost.fetch(viaHost.repository("m", "p", "r"), url, config, "app", pushed);
+            viaHost.fetchInto(person, url, config, "app", pushed);
+
+            assertThat(changes.commit())
+                    .as("the push fetched from the host, the person's ssh set by " + way.getKey())
+                    .isEqualTo(pushed);
+            assertThat(git(person, "rev-parse", "refs/remotes/porelo/app"))
+                    .as("the push fetched into the person's repository, by " + way.getKey())
+                    .isEqualTo(pushed);
+            assertThat(used).as("the person's own ssh, set by " + way.getKey()).doesNotExist();
+            git(person, "update-ref", "-d", "refs/remotes/porelo/app");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A relative ssh configuration is refused before git runs, so it never names a file in the person's repository")
+    void aRelativeSshConfigurationIsRefused() throws IOException {
+        final Path person = personsRepository();
+        final Path relative = Path.of("build1.conf");
+        final String url = "ssh://build1" + mirror;
+
+        assertThatThrownBy(
+                        () ->
+                                cache.fetch(
+                                        cache.repository("m", "p", "r"),
+                                        url,
+                                        relative,
+                                        "app",
+                                        pushed))
+                .as("a fetch with a relative ssh configuration")
+                .isInstanceOf(CacheException.class)
+                .hasMessageContaining("no absolute path");
+        assertThatThrownBy(() -> cache.fetchInto(person, url, relative, "app", pushed))
+                .as("a fetch into the person's repository with a relative ssh configuration")
+                .isInstanceOf(CacheException.class)
+                .hasMessageContaining("no absolute path");
+        assertThat(cache.repository("m", "p", "r"))
+                .as("the cache's repository, which git would have made")
+                .doesNotExist();
+    }
+
     @Test
     @DisabledOnOs(OS.WINDOWS)
     @DisplayName(
@@ -376,6 +484,7 @@ class ReviewCacheTest {
                                 viaSsh.fetch(
                                         viaSsh.repository("m", "p", "r"),
                                         "ssh://example.invalid/x",
+                                        null,
                                         "app",
                                         pushed))
                 .as("a fetch over an ssh that refuses")
@@ -406,6 +515,7 @@ class ReviewCacheTest {
                                 viaSsh.fetch(
                                         viaSsh.repository("m", "p", "r"),
                                         "ssh://example.invalid/x",
+                                        null,
                                         "app",
                                         pushed))
                 .as("a fetch over an ssh that refuses")
@@ -467,6 +577,7 @@ class ReviewCacheTest {
                                                 cache.fetch(
                                                         repository,
                                                         mirror.toString(),
+                                                        null,
                                                         "app",
                                                         pushed);
                                             } catch (InterruptedException | RuntimeException ex) {

@@ -52,9 +52,15 @@ that pushed it.
 ## The machines and the cache
 
 The plugin reaches the machines the Porelo interface lists in its own settings, which it reads and never writes, and
-this computer's daemon whether the list names it or not. A machine elsewhere is reached through a tunnel over your
-own ssh, from Windows through its own `ssh.exe`; a WSL 2 distribution on Windows through `porelo daemon connect`. A review is fetched into the plugin's own
-cache, `porelo-intellij` under `$XDG_CACHE_HOME` or `~/.cache`, one repository with no working tree for each gate.
+this computer's daemon whether the list names it or not. A machine elsewhere is reached through a tunnel over ssh,
+from Windows through its own `ssh.exe`, and only as its host card says: through the ssh configuration the interface
+writes from the card, `porelo/ssh/<host>.conf` beside its settings, with the card's host key pinned in
+`<host>.known_hosts`. That configuration is the only one ssh reads for it, for the tunnel and for every fetch of a
+review, so neither your own `~/.ssh/config`, your known hosts nor an ssh you named for git can lead it to another
+machine. A host whose configuration is missing is listed as not reached, naming the file; a host that answers with
+another key than its card names is refused. A WSL 2 distribution on Windows is reached through `porelo daemon
+connect`. A review is fetched into the plugin's own cache, `porelo-intellij` under `$XDG_CACHE_HOME` or `~/.cache`,
+one repository with no working tree for each gate.
 
 ## In the project you work in
 
@@ -73,4 +79,4 @@ Reading it there is reading it, not running it: do not build the push or run its
 
 - **It never checks out a waiting push.** It reads it from a cache of its own with no working tree, so there is
   nothing the IDE could open as a project, import, build or run; *Open in* a project writes a ref, never a file.
-- **It stores no credential.** It reaches a machine over the person's own ssh, with their ssh agent.
+- **It stores no credential.** It reaches a machine with the key in the person's own ssh agent.

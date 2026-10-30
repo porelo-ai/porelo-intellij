@@ -29,12 +29,15 @@ import org.junit.jupiter.api.io.TempDir;
                 "a tunnel forwards to a unix socket with ssh -L, which the plugin raises on Linux only; Windows relays over ssh instead")
 class TunnelTest {
 
+    private static final Path CONFIG = Path.of("/home/dev/.config/porelo/ssh/build1.conf");
+
     private static final Machine BUILD1 =
             new Machine(
                     "build 1",
                     Path.of("/run/user/1000/porelo-tunnel-build-1.sock"),
-                    "dev@build1",
-                    "/run/user/1001/porelo/porelod.sock");
+                    "build1",
+                    "/run/user/1001/porelo/porelod.sock",
+                    CONFIG);
 
     @TempDir Path dir;
 
@@ -67,6 +70,8 @@ class TunnelTest {
             assertThat(Files.readAllLines(dir.resolve("args"), StandardCharsets.UTF_8))
                     .as("what ssh was given")
                     .containsExactly(
+                            "-F",
+                            CONFIG.toString(),
                             "-N",
                             "-o",
                             "BatchMode=yes",
@@ -82,7 +87,7 @@ class TunnelTest {
                             dir.resolve("porelo-intellij-build-1.sock")
                                     + ":/run/user/1001/porelo/porelod.sock",
                             "--",
-                            "dev@build1");
+                            "build1");
         }
         assertThat(dir.resolve("porelo-intellij-build-1.sock"))
                 .as("the socket once the tunnel is closed")
@@ -157,7 +162,12 @@ class TunnelTest {
     @DisplayName("A host ssh would read as an option is refused before ssh starts")
     void refusesAHostThatLooksLikeAnOption() {
         final Machine evil =
-                new Machine("evil", Path.of("/x.sock"), "-oProxyCommand=touch /tmp/x", "/r.sock");
+                new Machine(
+                        "evil",
+                        Path.of("/x.sock"),
+                        "-oProxyCommand=touch /tmp/x",
+                        "/r.sock",
+                        CONFIG);
 
         assertThatThrownBy(() -> Tunnel.raise(evil, dir, ssh("forward")))
                 .as("a host starting with '-'")

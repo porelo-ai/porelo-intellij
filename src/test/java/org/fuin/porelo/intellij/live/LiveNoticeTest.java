@@ -51,9 +51,9 @@ class LiveNoticeTest {
                         "live",
                         Path.of("/nowhere.sock"),
                         env("PORELO_LIVE_HOST"),
-                        env("PORELO_LIVE_SOCKET"));
-        try (Tunnel tunnel =
-                Tunnel.raise(machine, dir, List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG")))) {
+                        env("PORELO_LIVE_SOCKET"),
+                        Path.of(env("PORELO_LIVE_SSH_CONFIG")));
+        try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"))) {
             final Waiting before = Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
             final AtomicReference<List<Project>> first = new AtomicReference<>();
             final AtomicReference<Long> moved = new AtomicReference<>();

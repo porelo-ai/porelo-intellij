@@ -36,6 +36,14 @@ class MachinesTest {
         Files.writeString(file, json, StandardCharsets.UTF_8);
     }
 
+    /** Writes a host's ssh configuration where the interface writes it from the host card. */
+    private Path sshConfig(Path folder, String host) throws IOException {
+        final Path config = folder.resolve("porelo/ssh").resolve(host + ".conf");
+        Files.createDirectories(config.getParent());
+        Files.writeString(config, "Host " + host + "\n", StandardCharsets.UTF_8);
+        return config;
+    }
+
     @Test
     @DisabledOnOs(
             value = OS.WINDOWS,
@@ -44,12 +52,13 @@ class MachinesTest {
     @DisplayName(
             "A machine with a host and a remote socket is reached through a tunnel, one without is opened as it is")
     void readsBothKindsOfMachine() throws IOException {
+        final Path build1 = sshConfig(dir.resolve("config"), "build1");
         write(
                 """
                 {"refreshSeconds": 60, "muted": [],
                  "machines": [
                    {"name": "build1", "socket": "/run/user/1000/porelo-tunnel-build1.sock",
-                    "host": "dev@build1", "remoteSocket": "/run/user/1001/porelo/porelod.sock"},
+                    "host": "build1", "remoteSocket": "/run/user/1001/porelo/porelod.sock"},
                    {"name": "forwarded", "socket": "/tmp/somebody-elses.sock"}
                  ]}
                 """);
@@ -62,14 +71,12 @@ class MachinesTest {
                         new Machine(
                                 "build1",
                                 Path.of("/run/user/1000/porelo-tunnel-build1.sock"),
-                                "dev@build1",
-                                "/run/user/1001/porelo/porelod.sock"),
-                        new Machine("forwarded", Path.of("/tmp/somebody-elses.sock"), null, null),
+                                "build1",
+                                "/run/user/1001/porelo/porelod.sock",
+                                build1),
+                        new Machine("forwarded", Path.of("/tmp/somebody-elses.sock")),
                         new Machine(
-                                Machines.THIS_COMPUTER,
-                                dir.resolve("run/porelo/porelod.sock"),
-                                null,
-                                null));
+                                Machines.THIS_COMPUTER, dir.resolve("run/porelo/porelod.sock")));
         assertThat(all)
                 .extracting(Machine::needsATunnel)
                 .as("which of them needs a tunnel")
@@ -97,10 +104,7 @@ class MachinesTest {
                 .as("the machines")
                 .containsExactly(
                         new Machine(
-                                Machines.THIS_COMPUTER,
-                                dir.resolve("run/porelo/porelod.sock"),
-                                null,
-                                null));
+                                Machines.THIS_COMPUTER, dir.resolve("run/porelo/porelod.sock")));
     }
 
     @Test
@@ -154,12 +158,13 @@ class MachinesTest {
     void onWindowsAWslEntryAndAnSshEntryAreReached() throws IOException {
         final Path file = dir.resolve("roaming/porelo/frontend.json");
         Files.createDirectories(file.getParent());
+        final Path build1 = sshConfig(dir.resolve("roaming"), "build1");
         Files.writeString(
                 file,
                 """
                 {"machines": [
                    {"name": "Ubuntu on Windows", "kind": "wsl", "distribution": "Ubuntu"},
-                   {"name": "build1", "socket": "C:\\\\Users\\\\a\\\\t.sock", "host": "a@build1",
+                   {"name": "build1", "socket": "C:\\\\Users\\\\a\\\\t.sock", "host": "build1",
                     "remoteSocket": "/run/user/1001/porelo/porelod.sock"},
                    {"name": "carried over", "socket": "/run/user/1000/porelo/porelod.sock"},
                    {"name": "nameless distribution", "kind": "wsl"}
@@ -188,7 +193,7 @@ class MachinesTest {
                 .containsExactly(
                         Machine.wsl("Ubuntu on Windows", "Ubuntu"),
                         Machine.overSsh(
-                                "build1", "a@build1", "/run/user/1001/porelo/porelod.sock"));
+                                "build1", "build1", "/run/user/1001/porelo/porelod.sock", build1));
         assertThat(listed.unreachable())
                 .as("what it keeps but does not reach there")
                 .containsExactly(
@@ -224,8 +229,76 @@ class MachinesTest {
     }
 
     @Test
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
+    @DisplayName(
+            "A host without the ssh configuration from its card is not reached, naming the file, so the person's own ssh never takes its place")
+    void aHostWithoutItsSshConfigurationIsNotReached() throws IOException {
+        write(
+                """
+                {"machines": [
+                   {"name": "build1", "socket": "/run/user/1000/porelo-tunnel-build1.sock",
+                    "host": "build1", "remoteSocket": "/run/user/1001/porelo/porelod.sock"}
+                 ]}
+                """);
+
+        final Machines.Listed listed = machines().read();
+
+        assertThat(listed.machines())
+                .extracting(Machine::name)
+                .as("the machines the plugin reaches")
+                .containsExactly(Machines.THIS_COMPUTER);
+        assertThat(listed.unreachable())
+                .as("what it keeps but does not reach")
+                .containsExactly(
+                        new Machines.Unreachable(
+                                "build1",
+                                "has no ssh configuration from its host card, "
+                                        + dir.resolve("config/porelo/ssh/build1.conf")));
+    }
+
+    @Test
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
+    @DisplayName(
+            "A host named as no host card names one is not reached, so it never leads ssh to another file, account or option")
+    void aHostThatIsNoHostCardsNameIsNotReached() throws IOException {
+        for (final String host : List.of("dev@build1", "../build1", "-oProxyCommand=x", "Build1")) {
+            sshConfig(dir.resolve("config"), "build1");
+            write(
+                    """
+                    {"machines": [
+                       {"name": "m", "socket": "/run/user/1000/m.sock",
+                        "host": "%s", "remoteSocket": "/run/user/1001/porelo/porelod.sock"}
+                     ]}
+                    """
+                            .formatted(host));
+
+            final Machines.Listed listed = machines().read();
+
+            assertThat(listed.machines())
+                    .extracting(Machine::name)
+                    .as("the machines the plugin reaches, with the host " + host)
+                    .containsExactly(Machines.THIS_COMPUTER);
+            assertThat(listed.unreachable())
+                    .as("what it keeps but does not reach, with the host " + host)
+                    .containsExactly(
+                            new Machines.Unreachable(
+                                    "m",
+                                    "names the host '"
+                                            + host
+                                            + "', which is no host name a host card gives"));
+        }
+    }
+
+    @Test
     @DisplayName("A host without a remote socket is refused, naming the file and the machine")
     void refusesHalfATunnel() throws IOException {
+        sshConfig(dir.resolve("config"), "h");
         write("{\"machines\": [{\"name\": \"half\", \"socket\": \"/a.sock\", \"host\": \"h\"}]}");
 
         assertThatThrownBy(() -> machines().all())
@@ -268,12 +341,13 @@ class MachinesTest {
             disabledReason =
                     "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
     void theSecondMachineOfANameIsNotReached() throws IOException {
+        sshConfig(dir.resolve("config"), "other");
         write(
                 """
                 {"machines": [
                    {"name": "x", "socket": "/run/user/1000/a.sock"},
                    {"name": "x", "socket": "/run/user/1000/b.sock",
-                    "host": "dev@other", "remoteSocket": "/run/user/1001/porelo/porelod.sock"}
+                    "host": "other", "remoteSocket": "/run/user/1001/porelo/porelod.sock"}
                  ]}
                 """);
 
@@ -282,7 +356,7 @@ class MachinesTest {
         assertThat(listed.machines())
                 .filteredOn(machine -> machine.name().equals("x"))
                 .as("the machines named x the plugin reaches")
-                .containsExactly(new Machine("x", Path.of("/run/user/1000/a.sock"), null, null));
+                .containsExactly(new Machine("x", Path.of("/run/user/1000/a.sock")));
         assertThat(listed.unreachable())
                 .extracting(Machines.Unreachable::name)
                 .as("the entries it keeps but does not reach")
@@ -293,6 +367,7 @@ class MachinesTest {
     @DisplayName(
             "A socket that is no absolute path is refused, so a tunnel never forwards to a port or opens a file where the IDE happens to run")
     void refusesASocketThatIsNoPath() throws IOException {
+        sshConfig(dir.resolve("config"), "h");
         write(
                 "{\"machines\": [{\"name\": \"port\", \"socket\": \"/a.sock\", \"host\": \"h\", \"remoteSocket\": \"localhost:22\"}]}");
         assertThatThrownBy(() -> machines().all())

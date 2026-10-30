@@ -20,8 +20,9 @@ import java.util.Set;
  * An ssh forward of a machine's daemon socket to a socket of the plugin's own.
  *
  * <p>Its own and never the interface's, so neither ends or refuses the other's. ssh runs without a
- * prompt, with the person's own configuration and agent: an unknown host key or a key it cannot use
- * fails, and ssh's words say why.
+ * prompt, with {@code -F} naming the machine's ssh configuration from its host card and the key in
+ * the person's agent: a host key other than the card's or a key it cannot use fails, and ssh's
+ * words say why.
  */
 public final class Tunnel implements AutoCloseable {
 
@@ -83,6 +84,9 @@ public final class Tunnel implements AutoCloseable {
                 Objects.requireNonNull(machine.host(), "a machine without a tunnel has no host");
         final String remote =
                 Objects.requireNonNull(machine.remoteSocket(), "a machine without a tunnel");
+        final Path sshConfig =
+                Objects.requireNonNull(
+                        machine.sshConfig(), "a machine without an ssh configuration");
         // ssh would read a host that starts with '-' as one of its own options.
         if (host.startsWith("-")) {
             throw new MachinesException(
@@ -95,6 +99,8 @@ public final class Tunnel implements AutoCloseable {
         final Path socket = socketFor(runtimeDirectory, machine);
         clear(machine, socket);
         final List<String> command = new ArrayList<>(ssh);
+        // Right after the given ssh, so it is the last -F ssh reads and the one that counts.
+        command.addAll(List.of("-F", sshConfig.toString()));
         command.addAll(
                 List.of(
                         "-N",

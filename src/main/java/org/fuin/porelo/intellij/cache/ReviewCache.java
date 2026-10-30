@@ -24,7 +24,8 @@ import org.jspecify.annotations.Nullable;
  * <p>A review fetches the waiting push and the gate mirror's default branch there, and reads both
  * as git objects: with no working tree there is nothing an IDE could open as a project, import,
  * build or run, and no repository of the person's is written to. git runs without a prompt, with
- * the person's own configuration and ssh.
+ * the person's own configuration and ssh, except that a host reached through its ssh configuration
+ * is reached through that alone.
  */
 public final class ReviewCache {
 
@@ -118,21 +119,27 @@ public final class ReviewCache {
      * @param repository The gate's bare repository in this cache.
      * @param url Where the gate's mirror is: its path on this computer, {@code ssh://<host><path>},
      *     or {@code //wsl.localhost/<distribution><path>} on Windows.
+     * @param sshConfig The ssh configuration that reaches the host of an {@code ssh://} address,
+     *     given to ssh with {@code -F} over any ssh the person named; {@code null} for the person's
+     *     own ssh.
      * @param name The push's name.
      * @param commit The commit that was shown, which is what the changes are of.
      * @return What the commit changes against where it and the branch last met.
      * @throws CacheException If git fails, or the push no longer holds the commit that was shown.
      */
-    public Changes fetch(Path repository, String url, String name, String commit) {
+    public Changes fetch(
+            Path repository, String url, @Nullable Path sshConfig, String name, String commit) {
         checked(name, commit);
+        absolute(sshConfig);
         synchronized (
                 TURNS.computeIfAbsent(
                         repository.toAbsolutePath().normalize(), key -> new Object())) {
-            return fetched(repository, url, name, commit);
+            return fetched(repository, url, sshConfig, name, commit);
         }
     }
 
-    private Changes fetched(Path repository, String url, String name, String commit) {
+    private Changes fetched(
+            Path repository, String url, @Nullable Path sshConfig, String name, String commit) {
         if (!Files.isDirectory(repository)) {
             try {
                 Files.createDirectories(repository.getParent());
@@ -142,11 +149,12 @@ public final class ReviewCache {
             }
             text(null, "init", "--quiet", "--bare", repository.toString());
         }
-        final String branch = defaultBranch(repository, url);
+        final String branch = defaultBranch(repository, url, sshConfig);
         final String base = "refs/porelo/base/" + branch;
         final String incoming = "refs/porelo/incoming/" + name;
-        text(
-                repository,
+        reach(
+                List.of("--git-dir", repository.toString()),
+                sshConfig,
                 "fetch",
                 "--quiet",
                 "--no-tags",
@@ -185,16 +193,20 @@ public final class ReviewCache {
      *
      * @param root The git root of the person's repository.
      * @param url Where the gate's mirror is, as {@link #fetch} takes it.
+     * @param sshConfig The ssh configuration that reaches its host, as {@link #fetch} takes it.
      * @param name The push's name.
      * @param commit The commit that was shown.
      * @throws CacheException If git fails, or the push no longer holds the commit that was shown;
      *     then the ref is not left behind.
      */
-    public void fetchInto(Path root, String url, String name, String commit) {
+    public void fetchInto(
+            Path root, String url, @Nullable Path sshConfig, String name, String commit) {
         checked(name, commit);
+        absolute(sshConfig);
         final String ref = PERSONS + name;
-        textIn(
-                root,
+        reach(
+                List.of("-C", root.toString()),
+                sshConfig,
                 "fetch",
                 "--quiet",
                 "--no-tags",
@@ -353,11 +365,19 @@ public final class ReviewCache {
         return files;
     }
 
-    private String defaultBranch(Path repository, String url) {
+    private String defaultBranch(Path repository, String url, @Nullable Path sshConfig) {
         // The mirror's HEAD names its source's default branch, which is what the gate reads a push
         // against.
         for (final String line :
-                text(repository, "ls-remote", "--symref", "--", url, "HEAD").split("\n")) {
+                reach(
+                                List.of("--git-dir", repository.toString()),
+                                sshConfig,
+                                "ls-remote",
+                                "--symref",
+                                "--",
+                                url,
+                                "HEAD")
+                        .split("\n")) {
             if (line.startsWith("ref: ")) {
                 final String ref = line.substring("ref: ".length()).split("\t", 2)[0];
                 final var branch = BRANCH.matcher(ref);
@@ -398,6 +418,15 @@ public final class ReviewCache {
         return result.text();
     }
 
+    /** Runs git that reaches a mirror, through the host's own ssh configuration when it has one. */
+    private String reach(List<String> place, @Nullable Path sshConfig, String... arguments) {
+        final Result result = run(place, null, sshConfig, arguments);
+        if (result.exit() != 0) {
+            throw failed(arguments, result);
+        }
+        return result.text();
+    }
+
     private Result runIn(Path root, String... arguments) {
         return run(List.of("-C", root.toString()), null, arguments);
     }
@@ -420,6 +449,14 @@ public final class ReviewCache {
     }
 
     private Result run(List<String> place, byte @Nullable [] input, String... arguments) {
+        return run(place, input, null, arguments);
+    }
+
+    private Result run(
+            List<String> place,
+            byte @Nullable [] input,
+            @Nullable Path sshConfig,
+            String... arguments) {
         final List<String> command = new ArrayList<>(List.of("git"));
         command.addAll(place);
         command.addAll(List.of(arguments));
@@ -436,6 +473,16 @@ public final class ReviewCache {
             builder.environment().put("GIT_CONFIG_VALUE_0", "*");
         }
         builder.environment().putAll(environment);
+        if (sshConfig != null) {
+            // GIT_SSH_COMMAND outranks GIT_SSH and core.sshCommand, so no ssh of the person's,
+            // and none of their hosts or known keys, can take the host's place.
+            builder.environment().remove("GIT_SSH");
+            builder.environment()
+                    .put("GIT_SSH_COMMAND", sshWithoutPrompt + " -F " + quoted(sshConfig));
+            // The person's variant, such as Plink's, would make git give OpenSSH options it reads
+            // as others.
+            builder.environment().put("GIT_SSH_VARIANT", "ssh");
+        }
         // A remote fetched by its name may be reached over ssh too, which its name does not say.
         if ((List.of(arguments).contains("fetch")
                         || List.of(arguments).stream()
@@ -486,6 +533,20 @@ public final class ReviewCache {
         }
         return new Result(
                 git.exitValue(), out.toByteArray(), error.toString(StandardCharsets.UTF_8));
+    }
+
+    // git runs ssh in the person's repository for fetchInto, where a relative path would name a
+    // file of theirs.
+    private static void absolute(@Nullable Path sshConfig) {
+        if (sshConfig != null && !sshConfig.isAbsolute()) {
+            throw new CacheException(
+                    "The ssh configuration '" + sshConfig + "' is no absolute path");
+        }
+    }
+
+    private static String quoted(Path path) {
+        // git hands the command to a shell, as it does the ssh above.
+        return "'" + path.toString().replace('\\', '/').replace("'", "'\\''") + "'";
     }
 
     /** Ends git and what it started, such as ssh, which would otherwise outlive it. */

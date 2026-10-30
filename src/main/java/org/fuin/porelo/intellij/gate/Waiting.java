@@ -287,9 +287,10 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
         /**
          * Says where a review fetches this push from.
          *
-         * <p>Over the person's ssh to the host the plugin tunnels to; for a WSL distribution, from
-         * the path Windows reaches it at; from the mirror's path when the machine is this computer;
-         * and for a socket somebody else forwards, from the ssh address the gate itself names.
+         * <p>Over the host's ssh configuration to the host the plugin tunnels to, which {@link
+         * Machine#sshConfig} names; for a WSL distribution, from the path Windows reaches it at;
+         * from the mirror's path when the machine is this computer; and for a socket somebody else
+         * forwards, from the ssh address the gate itself names.
          *
          * @param here Tells whether a directory exists on this computer.
          * @return A path or an {@code ssh://} address.

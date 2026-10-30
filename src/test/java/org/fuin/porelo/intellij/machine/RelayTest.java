@@ -31,6 +31,8 @@ import org.junit.jupiter.api.io.TempDir;
                 "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
 class RelayTest {
 
+    private static final Path CONFIG = Path.of("/home/dev/.config/porelo/ssh/build1.conf");
+
     @TempDir Path dir;
 
     private VarlinkServer daemon;
@@ -93,7 +95,8 @@ class RelayTest {
     @DisplayName(
             "A machine over ssh is read through the relay, ssh asked for no prompt and the remote socket quoted as one word")
     void readsTheDaemonOverSsh() throws IOException {
-        final Machine build1 = Machine.overSsh("build 1", "dev@build1", daemonSocket.toString());
+        final Machine build1 =
+                Machine.overSsh("build 1", "dev@build1", daemonSocket.toString(), CONFIG);
 
         try (Relay relay = Relay.overSsh(build1, dir, ssh("connect"));
                 Gate gate = new Gate(relay.socket())) {
@@ -107,6 +110,8 @@ class RelayTest {
         }
         final List<String> once =
                 List.of(
+                        "-F",
+                        CONFIG.toString(),
                         "-T",
                         "-o",
                         "BatchMode=yes",
@@ -132,7 +137,8 @@ class RelayTest {
     @DisplayName(
             "A machine ssh cannot reach is refused in ssh's own words, and no end of the plugin's is left")
     void saysWhatSshSaidWhenItCannotReach() {
-        final Machine build1 = Machine.overSsh("build 1", "dev@build1", daemonSocket.toString());
+        final Machine build1 =
+                Machine.overSsh("build 1", "dev@build1", daemonSocket.toString(), CONFIG);
 
         assertThatThrownBy(() -> Relay.overSsh(build1, dir, ssh("refuse")))
                 .as("a host whose key ssh does not know")
@@ -162,7 +168,7 @@ class RelayTest {
             assertThatThrownBy(
                             () ->
                                     Relay.overSsh(
-                                            Machine.overSsh("sly", "dev@build1", remote),
+                                            Machine.overSsh("sly", "dev@build1", remote, CONFIG),
                                             dir,
                                             ssh("connect")))
                     .as("the remote socket " + remote)
@@ -175,7 +181,8 @@ class RelayTest {
     @Test
     @DisplayName("A host that ssh would read as one of its options is refused before ssh runs")
     void refusesAHostThatReadsAsAnOption() {
-        final Machine sly = Machine.overSsh("sly", "-oProxyCommand=touch", daemonSocket.toString());
+        final Machine sly =
+                Machine.overSsh("sly", "-oProxyCommand=touch", daemonSocket.toString(), CONFIG);
 
         assertThatThrownBy(() -> Relay.overSsh(sly, dir, ssh("connect")))
                 .as("a host that starts with '-'")

@@ -41,7 +41,7 @@ class SnapshotTest {
     void nothingIsSaidWithoutARead(@TempDir Path dir) {
         final Waiting.Entry shown =
                 new Waiting.Entry(
-                        new Machine("m", dir.resolve("m.sock"), null, null),
+                        new Machine("m", dir.resolve("m.sock")),
                         "p",
                         "r",
                         "u",

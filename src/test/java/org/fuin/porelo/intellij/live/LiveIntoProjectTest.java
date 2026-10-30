@@ -48,13 +48,12 @@ class LiveIntoProjectTest {
                         "live",
                         Path.of("/nowhere.sock"),
                         env("PORELO_LIVE_HOST"),
-                        env("PORELO_LIVE_SOCKET"));
+                        env("PORELO_LIVE_SOCKET"),
+                        Path.of(env("PORELO_LIVE_SSH_CONFIG")));
         final String task = env("PORELO_LIVE_TASK");
         final String commit = env("PORELO_LIVE_COMMIT");
-        final String ssh = "ssh -F " + env("PORELO_LIVE_SSH_CONFIG") + " -o BatchMode=yes";
         final Waiting.Entry entry;
-        try (Tunnel tunnel =
-                Tunnel.raise(machine, dir, List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG")))) {
+        try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"))) {
             final Waiting waiting =
                     Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
             entry =
@@ -75,10 +74,10 @@ class LiveIntoProjectTest {
         Files.writeString(person.resolve("new.txt"), "not added\n");
         final String head = git(person, "rev-parse", "HEAD");
         final String status = git(person, "status", "--porcelain=v1", "--untracked-files=all");
-        final ReviewCache cache =
-                new ReviewCache(dir.resolve("cache"), Map.of("GIT_SSH_COMMAND", ssh));
+        final ReviewCache cache = new ReviewCache(dir.resolve("cache"), Map.of());
 
-        cache.fetchInto(person, entry.source(path -> false), task, commit);
+        cache.fetchInto(
+                person, entry.source(path -> false), entry.machine().sshConfig(), task, commit);
 
         assertThat(git(person, "rev-parse", "refs/remotes/porelo/" + task))
                 .as("the push's ref")

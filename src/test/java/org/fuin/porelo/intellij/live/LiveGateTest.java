@@ -46,13 +46,12 @@ class LiveGateTest {
                         "live",
                         Path.of("/nowhere.sock"),
                         env("PORELO_LIVE_HOST"),
-                        env("PORELO_LIVE_SOCKET"));
+                        env("PORELO_LIVE_SOCKET"),
+                        Path.of(env("PORELO_LIVE_SSH_CONFIG")));
         final String task = env("PORELO_LIVE_TASK");
         final String commit = env("PORELO_LIVE_COMMIT");
 
-        try (Tunnel tunnel =
-                Tunnel.raise(
-                        machine, runtime, List.of("ssh", "-F", env("PORELO_LIVE_SSH_CONFIG")))) {
+        try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"))) {
             final Waiting waiting =
                     Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
 

@@ -16,8 +16,9 @@ class ConnectionsTest {
             new Machine(
                     "build 1",
                     Path.of("/run/user/1000/porelo-tunnel-build-1.sock").toAbsolutePath(),
-                    "dev@build1",
-                    "/run/user/1001/porelo/porelod.sock");
+                    "build1",
+                    "/run/user/1001/porelo/porelod.sock",
+                    Path.of("/home/dev/.config/porelo/ssh/build1.conf").toAbsolutePath());
 
     @TempDir Path dir;
 

@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.fuin.porelo.wire.Json;
 import org.fuin.porelo.wire.JsonException;
 import org.jspecify.annotations.Nullable;
@@ -20,14 +21,22 @@ import org.jspecify.annotations.Nullable;
  * neither. An entry with a {@code kind} (a WSL distribution, with its {@code distribution}) is
  * reached on Windows only; elsewhere, and of any other kind, it is kept and shown as one the plugin
  * does not reach, never opened as a path. On Windows a machine over ssh is relayed to, and a socket
- * of a Linux machine is not reached. Only those fields are read; the file holds the interface's
- * other settings too. This computer's own daemon is reached as well, with no tunnel, whether or not
- * the file names it, except on Windows, which has none.
+ * of a Linux machine is not reached. A machine over ssh is reached only through {@code
+ * porelo/ssh/<host>.conf} beside that file, which the interface writes from the host's card; one
+ * without it is kept and shown as one the plugin does not reach. Only those fields are read; the
+ * file holds the interface's other settings too. This computer's own daemon is reached as well,
+ * with no tunnel, whether or not the file names it, except on Windows, which has none.
  */
 public final class Machines {
 
     /** What this computer's daemon is called when the interface's file does not name it. */
     public static final String THIS_COMPUTER = "This computer";
+
+    /**
+     * A host's name, as a host card gives it: one lower-case DNS label, which is also the name of
+     * its ssh configuration's file and can be neither a path nor an option of ssh.
+     */
+    private static final Pattern HOST = Pattern.compile("[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?");
 
     private final Map<String, String> environment;
 
@@ -90,7 +99,7 @@ public final class Machines {
         final Path local = localSocket();
         if (machines.stream()
                 .noneMatch(machine -> !machine.needsATunnel() && local.equals(machine.socket()))) {
-            add(machines, unreachable, new Machine(THIS_COMPUTER, local, null, null));
+            add(machines, unreachable, new Machine(THIS_COMPUTER, local));
         }
         return new Listed(machines, unreachable);
     }
@@ -246,10 +255,24 @@ public final class Machines {
                                                 + "')"));
                 continue;
             }
-            if (windows && !text(fields.get("host")).isEmpty()) {
+            final String host = text(fields.get("host"));
+            final @Nullable Path sshConfig = host.isEmpty() ? null : sshConfig(host);
+            if (!host.isEmpty() && (sshConfig == null || !Files.isRegularFile(sshConfig))) {
+                unreachable.add(
+                        new Unreachable(
+                                name,
+                                sshConfig == null
+                                        ? "names the host '"
+                                                + host
+                                                + "', which is no host name a host card gives"
+                                        : "has no ssh configuration from its host card, "
+                                                + sshConfig));
+                continue;
+            }
+            if (windows && sshConfig != null) {
                 // The interface's socket is its own end of a tunnel; Windows relays over ssh
                 // instead.
-                add(machines, unreachable, overSsh(file, name, fields));
+                add(machines, unreachable, overSsh(file, name, fields, sshConfig));
                 continue;
             }
             if (windows && !text(fields.get("socket")).isEmpty()) {
@@ -258,7 +281,7 @@ public final class Machines {
                                 name, "is a socket of a Linux machine, which Windows cannot open"));
                 continue;
             }
-            final Machine machine = machine(file, name, fields);
+            final Machine machine = machine(file, name, fields, sshConfig);
             if (machine != null) {
                 add(machines, unreachable, machine);
             }
@@ -279,7 +302,21 @@ public final class Machines {
         }
     }
 
-    private static @Nullable Machine machine(Path file, String name, Map<?, ?> fields) {
+    /**
+     * Returns where the interface keeps the ssh configuration of a host.
+     *
+     * @param host The host's name, as a machine's entry names it.
+     * @return {@code porelo/ssh/<host>.conf} beside the interface's file, or {@code null} when the
+     *     name is no host name a host card gives.
+     */
+    public @Nullable Path sshConfig(String host) {
+        return HOST.matcher(host).matches()
+                ? file().resolveSibling("ssh").resolve(host + ".conf")
+                : null;
+    }
+
+    private static @Nullable Machine machine(
+            Path file, String name, Map<?, ?> fields, @Nullable Path sshConfig) {
         final String socket = text(fields.get("socket"));
         // The interface drops these itself when it reads the file, so they are nothing the person
         // sees.
@@ -293,13 +330,15 @@ public final class Machines {
                     name,
                     Path.of(socket),
                     host.isEmpty() ? null : host,
-                    remoteSocket.isEmpty() ? null : remoteSocket);
+                    remoteSocket.isEmpty() ? null : remoteSocket,
+                    null,
+                    sshConfig);
         } catch (IllegalArgumentException ex) {
             throw new MachinesException(file + ": " + ex.getMessage(), ex);
         }
     }
 
-    private static Machine overSsh(Path file, String name, Map<?, ?> fields) {
+    private static Machine overSsh(Path file, String name, Map<?, ?> fields, Path sshConfig) {
         final String remoteSocket = text(fields.get("remoteSocket"));
         try {
             return new Machine(
@@ -307,7 +346,8 @@ public final class Machines {
                     null,
                     text(fields.get("host")),
                     remoteSocket.isEmpty() ? null : remoteSocket,
-                    null);
+                    null,
+                    sshConfig);
         } catch (IllegalArgumentException ex) {
             throw new MachinesException(file + ": " + ex.getMessage(), ex);
         }

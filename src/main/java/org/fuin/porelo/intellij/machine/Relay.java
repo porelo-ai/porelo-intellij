@@ -69,11 +69,12 @@ public final class Relay implements AutoCloseable {
     /**
      * Opens the relay to a machine reached over ssh once its daemon answers through it.
      *
-     * <p>Each connection runs {@code ssh -T -o BatchMode=yes <host> porelo daemon connect --socket
-     * <remote socket>}: ssh never asks at a terminal, and the key comes from the person's own
-     * configuration and agent.
+     * <p>Each connection runs {@code ssh -F <ssh configuration> -T -o BatchMode=yes <host> porelo
+     * daemon connect --socket <remote socket>}: ssh never asks at a terminal, reads only the
+     * machine's ssh configuration from its host card, and takes the key from the person's agent.
      *
-     * @param machine A machine that names a host and the daemon's socket there.
+     * @param machine A machine that names a host, the daemon's socket there and the host's ssh
+     *     configuration.
      * @param runtimeDirectory Where the plugin's end goes.
      * @param ssh The ssh command, Windows' {@code ssh.exe} unless a test stands in for it.
      * @return The relay, open.
@@ -84,6 +85,9 @@ public final class Relay implements AutoCloseable {
         final String host = Objects.requireNonNull(machine.host(), "a machine without a host");
         final String remote =
                 Objects.requireNonNull(machine.remoteSocket(), "a machine without a remote socket");
+        final Path sshConfig =
+                Objects.requireNonNull(
+                        machine.sshConfig(), "a machine without an ssh configuration");
         // ssh would read a host that starts with '-' as one of its own options.
         if (host.startsWith("-")) {
             throw new MachinesException(
@@ -106,6 +110,8 @@ public final class Relay implements AutoCloseable {
                             + " only letters, digits and . _ / - are taken");
         }
         final List<String> command = new ArrayList<>(ssh);
+        // Right after the given ssh, so it is the last -F ssh reads and the one that counts.
+        command.addAll(List.of("-F", sshConfig.toString()));
         command.addAll(
                 List.of(
                         "-T",
