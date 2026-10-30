@@ -50,7 +50,7 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
 
 ## Shared across the Porelo repositories
 
-> **BEGIN Shared Area** · sha256 `a8b6aba8f03d9607` · changed 2026-10-30T11:57Z
+> **BEGIN Shared Area** · sha256 `f6e677e5a98f4d56` · changed 2026-10-30T13:48Z
 
 Identical in every repository `project.yml` names but `porelo-parent`, which holds only the parent pom
 and no `AGENTS.md`. The markers carry the SHA-256 of the lines between them (the first 16 hex digits)
@@ -330,6 +330,9 @@ and the UTC time that text last changed; change it in the channel first, never i
 - **Before a walk starts, have the responsible repositories prepare the operator’s test environment
   with the newest intended snapshots and verify installed versions and adapter commits.** Keep an
   ongoing walk stable.
+- **A bug fix made during a running walk gets only its short unit tests, not the full suite, so the
+  walk is held up as little as possible.** The walk’s live rerun is the fix’s test; the reading by
+  another model follows after the walk.
 - **Budget each lease using its provider’s billing units at the current price.** Include every new
   lease required for a rerun.
 - **An assigned isolated test environment’s test-only vault may be unlocked, reset, or recreated
@@ -513,4 +516,4 @@ and the UTC time that text last changed; change it in the channel first, never i
   with `+`: estimates summed, the earliest start and the stack's readiness, VM time and tokens counted
   once.
 
-> **END Shared Area** · sha256 `a8b6aba8f03d9607`
+> **END Shared Area** · sha256 `f6e677e5a98f4d56`
