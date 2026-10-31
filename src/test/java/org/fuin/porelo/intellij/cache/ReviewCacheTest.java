@@ -107,8 +107,8 @@ class ReviewCacheTest {
         assertThat(changes.files())
                 .as("what the push changes, and nothing the branch did later")
                 .containsExactly(
-                        new Changes.Change("M", "notes.txt"),
-                        new Changes.Change("A", "src/A.java"));
+                        new Changes.Change("M", "notes.txt", "100644", "100644"),
+                        new Changes.Change("A", "src/A.java", "000000", "100644"));
     }
 
     @Test
@@ -127,6 +127,40 @@ class ReviewCacheTest {
         assertThat(cache.file(repository, changes.base(), "src/A.java"))
                 .as("a file the base lacks")
                 .isNull();
+    }
+
+    @Test
+    @DisplayName(
+            "Each side says whether it holds a regular file, so a symbolic link or a removed file is never one a comment's lines are placed on")
+    @DisabledOnOs(OS.WINDOWS)
+    void eachSideSaysWhetherItHoldsARegularFile() throws IOException {
+        git(work, "checkout", "-q", "task");
+        Files.createSymbolicLink(work.resolve("link"), Path.of("notes.txt"));
+        write("run.sh", "#!/bin/sh\n");
+        Files.setPosixFilePermissions(
+                work.resolve("run.sh"), PosixFilePermissions.fromString("rwxr-xr-x"));
+        git(work, "rm", "-q", "build.gradle");
+        git(work, "add", "-A");
+        git(work, "commit", "-q", "-m", "Kinds");
+        final String now = git(work, "rev-parse", "HEAD");
+        git(work, "push", "-q", "-f", mirror.toString(), "HEAD:refs/porelo/incoming/app");
+
+        final Map<String, Changes.Change> changes = new HashMap<>();
+        for (final Changes.Change change :
+                cache.fetch(cache.repository("m", "p", "r"), mirror.toString(), null, "app", now)
+                        .files()) {
+            changes.put(change.path(), change);
+        }
+
+        assertThat(changes.get("link").regular(true)).as("a symbolic link").isFalse();
+        assertThat(changes.get("run.sh").regular(true)).as("an executable file").isTrue();
+        assertThat(changes.get("build.gradle").regular(true)).as("a removed file").isFalse();
+        assertThat(changes.get("build.gradle").regular(false))
+                .as("the removed file at the base")
+                .isTrue();
+        assertThat(changes.get("src/A.java").regular(false))
+                .as("an added file at the base")
+                .isFalse();
     }
 
     @Test

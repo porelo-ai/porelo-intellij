@@ -393,11 +393,16 @@ public final class ReviewCache {
 
     private List<Changes.Change> changes(Path repository, String from, String commit) {
         final List<Changes.Change> files = new ArrayList<>();
+        // Each file as ":<base mode> <pushed mode> <base blob> <pushed blob> <status>" and its
+        // path, so a comment is placed only on a side that holds a regular file.
         final String[] fields =
-                text(repository, "diff", "--no-renames", "--name-status", "-z", from, commit)
-                        .split("\0");
+                text(repository, "diff", "--no-renames", "--raw", "-z", from, commit).split("\0");
         for (int at = 0; at + 1 < fields.length; at += 2) {
-            files.add(new Changes.Change(fields[at], fields[at + 1]));
+            final String[] raw = fields[at].split(" ");
+            if (raw.length != 5 || !raw[0].startsWith(":")) {
+                throw new CacheException("git diff answered '" + fields[at] + "'");
+            }
+            files.add(new Changes.Change(raw[4], fields[at + 1], raw[0].substring(1), raw[1]));
         }
         return files;
     }
