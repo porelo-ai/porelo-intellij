@@ -11,8 +11,10 @@ import org.jspecify.annotations.Nullable;
  * @param files What it changes, in the order to read them.
  * @param asked What the task that pushed it was asked, {@code ""} when nothing, {@code null} when
  *     the task is gone.
+ * @param base The full commit it was diffed against; absent from a daemon that does not name it.
  */
-public record Review(String diff, String log, List<File> files, @Nullable String asked) {
+public record Review(
+        String diff, String log, List<File> files, @Nullable String asked, @Nullable String base) {
 
     /**
      * Copies the list.
@@ -21,9 +23,22 @@ public record Review(String diff, String log, List<File> files, @Nullable String
      * @param log The commit log.
      * @param files What it changes.
      * @param asked What the task was asked.
+     * @param base The commit it was diffed against.
      */
     public Review {
         files = List.copyOf(files);
+    }
+
+    /**
+     * Creates one as a daemon answers it that does not name its base.
+     *
+     * @param diff The unified diff.
+     * @param log The commit log.
+     * @param files What it changes.
+     * @param asked What the task was asked.
+     */
+    public Review(String diff, String log, List<File> files, @Nullable String asked) {
+        this(diff, log, files, asked, null);
     }
 
     /**
@@ -35,9 +50,32 @@ public record Review(String diff, String log, List<File> files, @Nullable String
      * @param removed Lines removed, {@code -1} for a binary file.
      * @param rank {@code DANGEROUS}, {@code ORDINARY}, {@code GENERATED} or {@code REFORMATTING}.
      * @param reason Why it has that rank, {@code ""} for an ordinary file.
+     * @param riskClass {@code C0} to {@code C3}; absent from a daemon that does not name it, and
+     *     then shown as unknown, never as {@code C0}.
      */
     public record File(
-            String path, String status, int added, int removed, String rank, String reason) {
+            String path,
+            String status,
+            int added,
+            int removed,
+            String rank,
+            String reason,
+            @Nullable String riskClass) {
+
+        /**
+         * Creates one as a daemon answers it that names no class.
+         *
+         * @param path Its path.
+         * @param status Its status.
+         * @param added Lines added.
+         * @param removed Lines removed.
+         * @param rank Its rank.
+         * @param reason Why it has that rank.
+         */
+        public File(
+                String path, String status, int added, int removed, String rank, String reason) {
+            this(path, status, added, removed, rank, reason, null);
+        }
 
         /**
          * Tells whether the file is of a kind whose change reaches far: a build or CI definition, a
