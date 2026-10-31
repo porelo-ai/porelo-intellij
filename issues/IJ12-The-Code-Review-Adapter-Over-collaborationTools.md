@@ -1,6 +1,6 @@
 # IJ12 — The Code Review Adapter Over collaborationTools
 
-**Status:** Implementing.
+**Status:** Review.
 **Size:** M - one new package of about eight classes, a diff extension, one key set in `ReviewEditor`, a test task
 of its own with the platform's test framework, and the verification metadata renewed; no contract changes. The
 spike built and ran all of it against stand-in threads.
@@ -52,6 +52,11 @@ A spike built the adapter in pure Java against stand-in threads and ran it headl
   metadata, among them `assertj-core` 4.0.0-M1 and JUnit 5.13.4 beside the build's own. On the `test` task's class
   path its thread-leak check fails `GateTest`, which passes without it, on the JDK's virtual-thread poller. A test
   JVM started from a Gradle daemon that has `WAYLAND_DISPLAY` loads the Wayland toolkit even headless.
+  In `ideTest` the build's JUnit BOM lifts the framework's JUnit 5.13.4 to the build's 5.14.2, while AssertJ is the
+  framework's 4.0.0-M1 over the build's 3.27.7; `test` keeps 3.27.7.
+- **Ranges.** A `LineRange` that ends before it starts is only logged by the IDE and kept, so `CommentThread` and
+  `Lines.toSarif` refuse it themselves; a test cannot build one, as the platform's test logger turns that log into an
+  `AssertionError`. A thread's inlay is kept while the thread is unchanged, so a folded thread stays folded.
 
 ## Plan
 
@@ -79,7 +84,5 @@ A spike built the adapter in pure Java against stand-in threads and ran it headl
 
 ## To be checked
 
-- A range selected in the gutter reaches `requestNewComment(LineRange)` with the lines the person marked: the method
-  is built and verified, but no test drags across lines yet.
-- Whether the platform's JUnit 5 test framework runs in `ideTest` with the build's JUnit and AssertJ versions, or
-  pins its own.
+- A range selected in the gutter reaches `requestNewComment(LineRange)` with the lines the person marked:
+  `EditorModelTest` shows what the method makes of marked lines, but no test drags across lines in the gutter yet.

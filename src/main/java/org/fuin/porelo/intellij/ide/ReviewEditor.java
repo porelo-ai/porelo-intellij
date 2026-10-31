@@ -48,6 +48,7 @@ import java.util.function.Consumer;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import org.fuin.porelo.intellij.gate.Waiting;
+import org.fuin.porelo.intellij.review.ReviewContext;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -275,13 +276,23 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         }
         final String path = side.change().path();
         final ReviewTab.Read read = file.read();
-        diff.setRequest(
+        final SimpleDiffRequest request =
                 new SimpleDiffRequest(
                         path,
                         content(side.base(), path),
                         content(side.pushed(), path),
                         read.changes().branch() + " " + shortId(read.changes().base()),
-                        file.entry().push().name() + " " + shortId(read.changes().commit())));
+                        file.entry().push().name() + " " + shortId(read.changes().commit()));
+        // Threads come in only beside a source of them, which the review does not have yet.
+        request.putUserData(
+                ReviewContext.KEY,
+                new ReviewContext(
+                        file.entry().project(),
+                        file.entry().repository(),
+                        read.changes().base(),
+                        read.changes().commit(),
+                        path));
+        diff.setRequest(request);
     }
 
     private DiffContent content(byte @Nullable [] bytes, String path) {

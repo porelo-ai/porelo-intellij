@@ -1,6 +1,7 @@
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     java
@@ -40,6 +41,15 @@ repositories {
     }
 }
 
+// The tests that start a headless IDE, apart from the unit tests: the platform's test framework on the unit tests'
+// class path counts the JDK's own threads as leaked.
+val ideTest: SourceSet = sourceSets.create("ideTest") {
+    compileClasspath += sourceSets.main.get().output + configurations.testCompileClasspath.get()
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations[ideTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[ideTest.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+
 // porelo-release and porelo-machines from Central, run as Java programs: the checks every Porelo repository runs.
 val poreloTools: Configuration = configurations.create("poreloTools")
 
@@ -52,7 +62,11 @@ dependencies {
         // The Git log a push fetched into a project is shown in.
         bundledModule("intellij.platform.vcs.log")
         bundledModule("intellij.platform.vcs.log.impl")
+        // Comment threads in a review's diff viewers, named only by the package org.fuin.porelo.intellij.review.
+        bundledModule("intellij.platform.collaborationTools")
         pluginVerifier(libs.versions.plugin.verifier)
+        testFramework(TestFrameworkType.Platform, configurationName = ideTest.implementationConfigurationName)
+        testFramework(TestFrameworkType.JUnit5, configurationName = ideTest.implementationConfigurationName)
     }
     // The daemon's contract is spoken with the client that defines it, bundled with the plugin.
     implementation(libs.porelo.wire)
@@ -65,6 +79,8 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj)
     testRuntimeOnly(libs.junit.launcher)
+    // The platform's test framework still loads JUnit 4's classes.
+    "ideTestRuntimeOnly"(libs.junit4)
 }
 
 java {
@@ -109,6 +125,10 @@ tasks.compileTestJava {
     options.errorprone.enabled = false
 }
 
+tasks.named<JavaCompile>(ideTest.compileJavaTaskName) {
+    options.errorprone.enabled = false
+}
+
 // The tests tagged documents read the repository's files as they are; Gradle knows only the test classes as inputs,
 // so without these a changed document would leave the result of the run before standing, or take it from the cache.
 val readDocuments = fileTree(layout.projectDirectory) {
@@ -120,6 +140,24 @@ tasks.test {
         excludeTags("live", "windows-ssh")
     }
     inputs.files(readDocuments).withPropertyName("documents").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+intellijPlatformTesting.testIde.register("ideTest") {
+    task {
+        description = "Runs the tests that start a headless IntelliJ IDEA."
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        testClassesDirs = ideTest.output.classesDirs
+        // Beside the IDE the plugin puts on the task, never in its place.
+        classpath += ideTest.runtimeClasspath
+        useJUnitPlatform()
+        // A display in the environment makes the IDE's JBR load a toolkit for it, headless or not.
+        environment = environment - "WAYLAND_DISPLAY" - "DISPLAY"
+        systemProperty("java.awt.headless", "true")
+    }
+}
+
+tasks.check {
+    dependsOn("ideTest")
 }
 
 // Against a real daemon on a machine somebody keeps, named in the environment; never part of the build.
@@ -259,3 +297,4 @@ tasks.register<JavaExec>("machines") {
     mainClass = "org.fuin.porelo.machines.Main"
     args = providers.gradleProperty("machines.args").orElse("").get().split(' ').filter { it.isNotBlank() }
 }
+

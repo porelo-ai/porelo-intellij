@@ -1,0 +1,2 @@
+title: The review's diff viewers take comment threads, gutter controls and line ranges through one adapter over the IDE's own code-review module, attached only to a review's own diffs; nothing is shown until the daemon carries threads
+type: added

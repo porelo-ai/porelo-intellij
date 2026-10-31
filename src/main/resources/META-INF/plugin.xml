@@ -14,6 +14,7 @@
                     factoryClass="org.fuin.porelo.intellij.ide.PoreloToolWindowFactory"/>
         <notificationGroup id="Porelo" displayType="BALLOON"/>
         <fileEditorProvider implementation="org.fuin.porelo.intellij.ide.ReviewEditorProvider"/>
+        <diff.DiffExtension implementation="org.fuin.porelo.intellij.review.ReviewDiffExtension"/>
     </extensions>
 
     <applicationListeners>

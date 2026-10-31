@@ -13,6 +13,8 @@ errorprone-plugin = "5.1.1"
 errorprone = "2.50.0"
 nullaway = "0.14.2"
 assertj = "3.27.7"
+# What the IntelliJ Platform's test framework still loads; not porelo-parent's.
+junit4 = "4.13.2"
 spotless = "8.10.4"
 # 1.37.0 is not taken: run through Spotless, it fails on every file, while 1.36.0 formats; porelo-parent pins the same.
 google-java-format = "1.36.0"
@@ -28,6 +30,7 @@ junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+junit4 = { module = "junit:junit", version.ref = "junit4" }
 
 [plugins]
 intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-platform" }
