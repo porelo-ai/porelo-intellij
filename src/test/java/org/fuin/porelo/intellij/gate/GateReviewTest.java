@@ -136,7 +136,7 @@ class GateReviewTest {
         final Map<String, Object> level = new HashMap<>(push("app"));
         level.put("sourceLevel", 1);
         final Map<String, Object> approvals = new HashMap<>(push("app"));
-        approvals.put("approvalsNeeded", -1);
+        approvals.put("approvalsNeeded", 0);
         final AtomicInteger call = new AtomicInteger();
         daemon.method(
                 "Pending",
@@ -151,7 +151,7 @@ class GateReviewTest {
         }
         try (Gate gate = new Gate(daemon.socketPath())) {
             assertThatThrownBy(() -> gate.pending("porelo", "core"))
-                    .as("approvals needed of -1")
+                    .as("approvals needed of 0")
                     .isInstanceOf(GateException.class)
                     .hasMessageContaining("'approvalsNeeded'");
         }
@@ -446,7 +446,8 @@ class GateReviewTest {
                             ReviewRefusedException.class,
                             refused ->
                                     assertThat(refused.reason()).as("the reason").isEqualTo(error))
-                    .hasMessageContaining(words);
+                    .hasMessageContaining(words)
+                    .hasMessageContaining("nothing was stored or changed");
         }
     }
 
