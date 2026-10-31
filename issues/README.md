@@ -16,13 +16,8 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
+| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes |
 | <a id="ij09"></a>[IJ09](IJ09-The-Build-Verifies-Every-Dependency.md) | M | | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, the file renewed by hand with every version move; Porelo's snapshots unchecked until released, as Gradle checks no snapshot |
-
-## Backlog
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | [IJ12](README.md#ij12) | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes |
 
 ## Idea
 
