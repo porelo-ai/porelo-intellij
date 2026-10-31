@@ -3,7 +3,7 @@
 **Status:** Analyzed; blocked by [IJ12](README.md#ij12).
 **Size:** L - SARIF 2.1.0 reading and writing in `Gate`, inline diff threads through [IJ12](README.md#ij12)'s adapter, a discussion panel in `ReviewEditor` for file, general and outdated threads, read-only fix previews, and source-level and risk-class badges; the `collaborationTools` adapter ([IJ12](README.md#ij12)) and held or outgoing forge releases ([IJ13](README.md#ij13)) are split out.
 
-**What must be true.** A developer who reviews waiting work in IntelliJ comments and proposes line replacements on its diff, files, or review using IntelliJ's code-review gutter and inlays, and reads in the same place what checking and building agents, linters, and people on a forge said, all carried as SARIF 2.1.0 and marked with their authenticated source level, origin, and the push's risk class.
+**What must be true.** A developer who reviews waiting work in IntelliJ comments and proposes line replacements on its diff, files, or review using IntelliJ's code-review gutter and inlays, and reads in the same place what checking and building agents, linters, and people on a forge said, all carried as SARIF 2.1.0 and marked with their authenticated source level, origin, and the push's risk class. The interface shows only the counts of open findings and threads per push and writes no comment, so the review tab is the one place where a comment is written, answered, resolved and read at its line, file or review.
 
 ## The shape
 

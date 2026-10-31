@@ -2,7 +2,12 @@
 
 **Status:** Idea; blocked by [IJ04](README.md#ij04).
 
-**What must be true.** A person reviewing waiting work in IntelliJ sees held inbound forge comments (`E0`, and `E1` where held by policy) and outgoing comments, replies, suggestions and verdicts waiting to go to a forge, each with its exact destination, operation, commit and content, and releases or drops each one through the daemon; an edit invalidates a prior release.
+**What must be true.** A person reviewing waiting work in IntelliJ sees held inbound forge comments (`E0`, and `E1` where held by policy) and outgoing comments, replies, suggestions and verdicts waiting to go to a forge, each at its anchor in the review - beside its line through [IJ12](README.md#ij12)'s adapter, or in [IJ04](README.md#ij04)'s discussion panel for a file or the review - with its exact destination, operation, commit and content, and releases or drops each one alone through the daemon, never several at once; an edit invalidates a prior release. The interface shows these comments only as a count and releases none of them.
+
+## Open questions
+
+- Whether approving and merging a pull request on the central forge, which the interface no longer offers, moves into
+  the plugin or is left to the forge's own pages.
 
 ## To be checked
 
