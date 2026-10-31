@@ -1,6 +1,6 @@
 # IJ12 — The Code Review Adapter Over collaborationTools
 
-**Status:** Analyzed.
+**Status:** Backlog.
 **Size:** M - one new package of about eight classes, a diff extension, one key set in `ReviewEditor`, a test task
 of its own with the platform's test framework, and the verification metadata renewed; no contract changes. The
 spike built and ran all of it against stand-in threads.
