@@ -22,7 +22,7 @@ checkout's token at hand.
 - **Every release by SHA-256, `porelo-wire` among them.** Gradle does not verify a snapshot at all, by digest or by
   signature ("Gradle does *not* verify changing dependencies", its user guide; measured: a wrong digest written for
   `porelo-release` 0.5.1-SNAPSHOT passes). So `porelo-release` and `porelo-machines` stay unchecked while the build
-  takes `porelo-buildtools` as a snapshot, as the operator decided on 2026-10-18, and are checked like everything else
+  takes `porelo-buildtools` as a snapshot, and are checked like everything else
   once a release is pinned: when `porelo-buildtools` 0.5.1 is released, this issue pins it and renews the file.
   Their own dependencies are releases and are checked now.
 - **Measured on `ae34741` against a local build of 0.5.1**, served from a file repository for the trial only:
@@ -37,7 +37,7 @@ checkout's token at hand.
   Dependabot's last Gradle pull request offered, without its JUnit 6, which `porelo-parent` does not pin. The renewed
   file changes the logchange, slf4j and Jackson entries they pull in, in the same commit, and it was written from an
   empty Gradle home.
-- **A version is moved by hand, never by Dependabot** (the operator's decision of 2026-10-18). Dependabot keeps only
+- **A version is moved by hand, never by Dependabot.** Dependabot keeps only
   the `github-actions` ecosystem, as in every other Porelo repository. A version in `gradle/libs.versions.toml` or
   the Gradle Wrapper is moved like `porelo-parent`'s Maven pins, and the same commit renews the file, with a
   changelog entry and the VM run before the push. Renewing a digest for a new version records what the publisher
