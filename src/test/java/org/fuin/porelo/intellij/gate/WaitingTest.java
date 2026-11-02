@@ -402,8 +402,7 @@ class WaitingTest {
         final Waiting.Entry old = at(one, "old", "2026-10-07T15:00:00Z");
         final Waiting.Entry other = at(two, "other", "2026-10-07T16:00:00Z");
         final String why = "has no ssh configuration from its host card, /x/porelo/ssh/one.conf";
-        final Waiting before =
-                new Waiting(List.of(old, other), List.of(new Waiting.Silent("one", why)));
+        final Waiting before = new Waiting(List.of(old, other), List.of());
         final Machines.Listed listed =
                 new Machines.Listed(List.of(two), List.of(new Machines.Unreachable("one", why)));
         final List<String> connected = new ArrayList<>();
@@ -439,7 +438,10 @@ class WaitingTest {
                 new Waiting(List.of(other), List.of(new Waiting.Silent("one", "did not answer")));
         final Machines.Listed listed = new Machines.Listed(List.of(one, two), List.of());
 
-        final Waiting after = before.readOne(listed, one, machine -> new Gate(machine.socket()));
+        final Machine asTheStreamOpened = new Machine("one", dir.resolve("old.sock"));
+
+        final Waiting after =
+                before.readOne(listed, asTheStreamOpened, machine -> new Gate(machine.socket()));
 
         assertThat(after.pushes())
                 .extracting(entry -> entry.machine().name() + "/" + entry.push().name())
