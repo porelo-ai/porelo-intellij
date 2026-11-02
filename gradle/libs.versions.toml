@@ -5,7 +5,7 @@
 intellij-platform = "2.19.0"
 logchange = "1.20.0"
 plugin-verifier = "1.410"
-porelo-buildtools = "0.5.1-SNAPSHOT"
+porelo-buildtools = "0.5.1"
 junit = "5.14.2"
 porelo-wire = "0.5.0"
 jspecify = "1.0.1"

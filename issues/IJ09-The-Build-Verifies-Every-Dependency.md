@@ -1,7 +1,6 @@
 # IJ09 — The build verifies every dependency
 
-**Status:** Implementing; waits for `porelo-buildtools` 0.5.1 to be released. Until then the file is renewed
-whenever the snapshot's dependencies move.
+**Status:** Review.
 **Size:** M - one generated file, Dependabot reduced to the actions, the way a version is moved and the file renewed,
 and a check that a tampered entry fails; no code of the plugin changes.
 
@@ -31,6 +30,12 @@ checkout's token at hand.
   changed fails `checkActions`, "One artifact failed verification: porelo-release-0.5.1.jar
   (org.fuin.porelo:porelo-release:0.5.1)"; restored, green. The 0.5.1 that reaches Central is built anew, so its
   digests are taken from Central, from an empty Gradle home, when it is pinned; nothing of the trial is committed.
+- **Pinned to 0.5.1 from Central:** the file, renewed from an empty Gradle home, gains `porelo-release`,
+  `porelo-machines` and `porelo-json` 0.5.1 and drops `marketplace-zip-signer` 0.1.43, which 0.1.45 replaced. Each of
+  their jars and poms matches Central's SHA-1 and the file's SHA-256. Seen red: one digest of
+  `porelo-release-0.5.1.jar` changed fails `checkActions`, "One artifact failed verification: porelo-release-0.5.1.jar
+  (org.fuin.porelo:porelo-release:0.5.1)"; restored, `build`, `verifyPlugin` and `documents` are green from a second
+  empty Gradle home.
 - **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
   does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
 - **Shown on the first move:** Gradle 9.8.1, logchange 1.20.0 and JSpecify 1.0.1, taken by hand from what
