@@ -18,6 +18,12 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes |
 
+## Accepted
+
+| # | size | blocked by | what it covers |
+|---|---|---|---|
+| <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | | | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
+
 ## Idea
 
 | # | size | blocked by | what it covers |
