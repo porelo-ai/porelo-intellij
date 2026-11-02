@@ -71,7 +71,7 @@ A spike built the adapter in pure Java against stand-in threads and ran it headl
 - `ReviewEditor.showSelected` puts the `ReviewContext` on every request.
 - Red first: `LinesTest`, then `ReviewDiffExtensionTest` in `ideTest` (another diff gets nothing; a switch, a close
   and a dispose leave no follower and no editor), each broken on purpose once.
-- `gradle/verification-metadata.xml` renewed from an empty Gradle home, as [IJ09](README.md#ij09) does it.
+- `gradle/verification-metadata.xml` renewed from an empty Gradle home, as `AGENTS.md` says.
 
 ## Acceptance
 
