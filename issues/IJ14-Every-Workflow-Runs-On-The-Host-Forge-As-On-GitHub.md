@@ -31,8 +31,8 @@ The forge's runner gives every job the labels `ubuntu-24.04` and `ubuntu-26.04` 
 - **`workflows.yml`:** installs `python3-yaml` where `import yaml` fails, with `sudo` only when not root.
 - **`shared-rules.yml`:** already reads the forge's pull requests as from inside (`github.server_url`); unchanged
   unless the first run says otherwise.
-- **Porelo's snapshots:** the build resolves `porelo-release` and `porelo-machines` (`porelo-buildtools`
-  `0.5.1-SNAPSHOT`) from Sonatype; `porelo-wire` is a release, from Central. `build.gradle.kts` takes the snapshot
+- **Porelo's snapshots:** the build takes `porelo-buildtools` and `porelo-wire` as releases, from Central, and a
+  handover names a snapshot for a while. `build.gradle.kts` takes the snapshot
   repository from `MAVEN_SNAPSHOTS_URL` when the environment names it, before `-PporeloSnapshots` and Sonatype, with
   `porelo-publisher` and `PORELO_PUBLISHER_TOKEN` as its credentials when the token is set, sent only when the server
   asks. Every workflow passes both from `vars` and `secrets`; Gradle never checks a snapshot's digest, so this changes
@@ -49,7 +49,7 @@ is the forge's own red and green.
   `documents` passing and Publish skipped; `windows.yml` and `delete-runs.yml` start no job there.
 - On GitHub a push to `main` runs the same files as today: Build, Publish with its read-back, and Windows.
 - A Build with `PORELO_PUBLISH` unset or misspelt fails naming the variable.
-- The forge's build resolves `porelo-buildtools`' snapshot from the forge's registry, seen in its log, and a wrong
+- A build naming a Porelo snapshot on the forge resolves it from the forge's registry, seen in its log, and a wrong
   `PORELO_PUBLISHER_TOKEN` fails it naming the repository.
 
 ## To be checked

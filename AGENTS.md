@@ -16,7 +16,7 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   `porelo-buildtools` in `gradle/libs.versions.toml`, where every version the build names is kept.
 - **Gradle checks every plugin, library and IDE the build resolves against its SHA-256 in
   `gradle/verification-metadata.xml` before using it**, and fails naming the artifact that differs. Gradle never checks
-  a snapshot, so the build names only releases of Porelo's artifacts. Dependabot moves only the actions:
+  a snapshot, so Porelo's snapshots run unchecked until a release replaces them. Dependabot moves only the actions:
   a version in `gradle/libs.versions.toml` or the Gradle Wrapper is moved by hand, and the same commit renews the file
   from an empty Gradle home, with `rm gradle/verification-metadata.xml && ./gradlew -g <empty directory>
   --no-configuration-cache --no-build-cache --write-verification-metadata sha256 clean build verifyPlugin documents`.

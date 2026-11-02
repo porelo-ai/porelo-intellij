@@ -65,6 +65,8 @@ dependencies {
         // Comment threads in a review's diff viewers, named only by the package org.fuin.porelo.intellij.review.
         bundledModule("intellij.platform.collaborationTools")
         pluginVerifier(libs.versions.plugin.verifier)
+        // Left unnamed it is "+", whatever was published last, which the verification file then refuses.
+        zipSigner(libs.versions.marketplace.zip.signer)
         testFramework(TestFrameworkType.Platform, configurationName = ideTest.implementationConfigurationName)
         testFramework(TestFrameworkType.JUnit5, configurationName = ideTest.implementationConfigurationName)
     }

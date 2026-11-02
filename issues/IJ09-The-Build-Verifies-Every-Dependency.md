@@ -20,22 +20,15 @@ checkout's token at hand.
   verification: jspecify-1.0.0.jar (org.jspecify:jspecify:1.0.0)".
 - **Every release by SHA-256, `porelo-wire` among them.** Gradle does not verify a snapshot at all, by digest or by
   signature ("Gradle does *not* verify changing dependencies", its user guide; measured: a wrong digest written for
-  `porelo-release` 0.5.1-SNAPSHOT passes). So `porelo-release` and `porelo-machines` stay unchecked while the build
-  takes `porelo-buildtools` as a snapshot, and are checked like everything else
-  once a release is pinned: when `porelo-buildtools` 0.5.1 is released, this issue pins it and renews the file.
-  Their own dependencies are releases and are checked now.
-- **Measured on `ae34741` against a local build of 0.5.1**, served from a file repository for the trial only:
-  pinned, the file gains `porelo-release`, `porelo-machines` and `porelo-json` 0.5.1, and `build` and `documents`
-  pass with the shared checks run by that `porelo-release`. Seen red: one digest of `porelo-release-0.5.1.jar`
-  changed fails `checkActions`, "One artifact failed verification: porelo-release-0.5.1.jar
-  (org.fuin.porelo:porelo-release:0.5.1)"; restored, green. The 0.5.1 that reaches Central is built anew, so its
-  digests are taken from Central, from an empty Gradle home, when it is pinned; nothing of the trial is committed.
+  `porelo-release` 0.5.1-SNAPSHOT passes). So the build takes `porelo-buildtools` as a release.
 - **Pinned to 0.5.1 from Central:** the file, renewed from an empty Gradle home, gains `porelo-release`,
-  `porelo-machines` and `porelo-json` 0.5.1 and drops `marketplace-zip-signer` 0.1.43, which 0.1.45 replaced. Each of
-  their jars and poms matches Central's SHA-1 and the file's SHA-256. Seen red: one digest of
-  `porelo-release-0.5.1.jar` changed fails `checkActions`, "One artifact failed verification: porelo-release-0.5.1.jar
-  (org.fuin.porelo:porelo-release:0.5.1)"; restored, `build`, `verifyPlugin` and `documents` are green from a second
-  empty Gradle home.
+  `porelo-machines` and `porelo-json` 0.5.1. Each of their jars and poms matches Central's SHA-1 and the file's
+  SHA-256. Seen red: one digest of `porelo-release-0.5.1.jar` changed fails `checkActions`, "One artifact failed
+  verification: porelo-release-0.5.1.jar (org.fuin.porelo:porelo-release:0.5.1)"; restored, `build`, `verifyPlugin` and
+  `documents` are green from a second empty Gradle home.
+- **Nothing floats:** the IntelliJ Platform's plugin takes `marketplace-zip-signer` as `+` when it is not named, which
+  moved it from 0.1.43 to 0.1.45 unasked and would fail the build on the next one published. Seen in `dependencies`:
+  `{prefer +} -> 0.1.45`; it is now named in `gradle/libs.versions.toml`, and the file drops 0.1.43.
 - **The file is renewed from an empty Gradle home.** A Gradle home that already holds the downloads skips metadata it
   does not fetch again, such as the boms the plugins' poms name. A file written there then fails on a fresh machine.
 - **Shown on the first move:** Gradle 9.8.1, logchange 1.20.0 and JSpecify 1.0.1, taken by hand from what
@@ -50,8 +43,11 @@ checkout's token at hand.
   changes little, so the path that matches the rest of the project is taken. No workflow writes, and no token
   that writes is added.
 - **Red first:** one entry's digest changed by hand fails `build`, naming the artifact. The change is not committed.
-- **What else changes:** `AGENTS.md`'s repository part names the command that renews the file. There is no changelog
-  entry: the plugin the build produces stays the same.
+- **What else changes:** `AGENTS.md`'s repository part names the command that renews the file.
+- **The reading's findings not fixed, and why:** the snapshot repository in `build.gradle.kts` stays, since a handover
+  is built against a Porelo snapshot before it is released, and such a build says so in the version it names; the
+  comment "the CI snapshots" in `.github/actions/pinned-jdk/action.yml` means the plugin's own snapshots, which CI still
+  publishes.
 
 ## Acceptance
 
@@ -61,8 +57,3 @@ checkout's token at hand.
 - A version move shown renewing the file in the same commit.
 - `porelo-buildtools` 0.5.1 pinned once it is released, and `porelo-release` and `porelo-machines` then checked by
   digest like every other dependency.
-
-## To be checked
-
-- Whether the Maven repositories carry the same risk without a check of their own, so that one answer holds for
-  all of them. That is a question for `porelo-project`, not built here.
