@@ -108,6 +108,32 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
     }
 
     /**
+     * Returns what waits once one machine was read again, as the interface's file lists the
+     * machines now: a machine it no longer reaches - its host card's ssh configuration gone, say -
+     * is not connected to, though a connection made before may still stand, and keeps why.
+     *
+     * @param listed The machines, as the interface's file names them now.
+     * @param machine The machine to read again.
+     * @param connect Opens a gate to a machine.
+     * @return What waits now, newest first.
+     */
+    public Waiting readOne(
+            Machines.Listed listed, Machine machine, Function<Machine, Gate> connect) {
+        final String name = machine.name();
+        final List<Machine> now =
+                listed.machines().stream().filter(one -> one.name().equals(name)).toList();
+        if (!now.isEmpty()) {
+            return withMachine(name, read(now, connect, this));
+        }
+        final List<Silent> why =
+                listed.unreachable().stream()
+                        .filter(entry -> entry.name().equals(name))
+                        .map(entry -> new Silent(entry.name(), entry.why()))
+                        .toList();
+        return withMachine(name, new Waiting(List.of(), why));
+    }
+
+    /**
      * Says what the push an open review shows is in this read: the same, moved to another commit,
      * gone from a machine that answered, or unknown because its machine did not answer.
      *

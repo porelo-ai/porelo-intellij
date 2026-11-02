@@ -393,6 +393,61 @@ class WaitingTest {
                 .containsExactly("three", "one");
     }
 
+    @Test
+    @DisplayName(
+            "A machine read again on its own is not connected to once the interface no longer reaches it, and keeps why")
+    void aMachineNoLongerReachedIsNotReadThroughAnOldConnection() {
+        final Machine one = new Machine("one", dir.resolve("1.sock"));
+        final Machine two = new Machine("two", dir.resolve("2.sock"));
+        final Waiting.Entry old = at(one, "old", "2026-10-07T15:00:00Z");
+        final Waiting.Entry other = at(two, "other", "2026-10-07T16:00:00Z");
+        final String why = "has no ssh configuration from its host card, /x/porelo/ssh/one.conf";
+        final Waiting before =
+                new Waiting(List.of(old, other), List.of(new Waiting.Silent("one", why)));
+        final Machines.Listed listed =
+                new Machines.Listed(List.of(two), List.of(new Machines.Unreachable("one", why)));
+        final List<String> connected = new ArrayList<>();
+
+        final Waiting after =
+                before.readOne(
+                        listed,
+                        one,
+                        machine -> {
+                            connected.add(machine.name());
+                            throw new IllegalStateException("must not be connected");
+                        });
+
+        assertThat(connected)
+                .as("machines connected to though the interface no longer reaches them")
+                .isEmpty();
+        assertThat(after.pushes())
+                .as("what waits: nothing of the machine no longer reached")
+                .containsExactly(other);
+        assertThat(after.silent())
+                .extracting(silent -> silent.machine() + ": " + silent.why())
+                .as("why it is not reached, as the interface's file says now")
+                .containsExactly("one: " + why);
+    }
+
+    @Test
+    @DisplayName("A machine the interface still reaches is read again as it lists it now")
+    void aMachineStillReachedIsReadAgain() {
+        final Machine one = machine("one", "2026-10-07T16:00:00Z");
+        final Machine two = new Machine("two", dir.resolve("2.sock"));
+        final Waiting.Entry other = at(two, "other", "2026-10-07T15:00:00Z");
+        final Waiting before =
+                new Waiting(List.of(other), List.of(new Waiting.Silent("one", "did not answer")));
+        final Machines.Listed listed = new Machines.Listed(List.of(one, two), List.of());
+
+        final Waiting after = before.readOne(listed, one, machine -> new Gate(machine.socket()));
+
+        assertThat(after.pushes())
+                .extracting(entry -> entry.machine().name() + "/" + entry.push().name())
+                .as("what waits once one is read again, newest first")
+                .containsExactly("one/task-one", "two/other");
+        assertThat(after.silent()).as("who is silent once one answered").isEmpty();
+    }
+
     private static Waiting.Entry at(Machine machine, String name, String at) {
         return new Waiting.Entry(
                 machine,

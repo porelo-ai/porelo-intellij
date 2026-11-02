@@ -1,0 +1,2 @@
+title: A machine whose host card's ssh configuration is gone is no longer read through a tunnel opened before, when its stream of projects asks for a read, and keeps its warning line
+type: fixed

@@ -247,21 +247,17 @@ public final class PoreloWatch implements Disposable {
         follow();
     }
 
-    /** Reads one machine again, keeping what the others said. */
+    /**
+     * Reads one machine again, keeping what the others said, as the interface's file lists it now,
+     * so a stream opened before its configuration went cannot read it.
+     */
     private synchronized void read(Machine machine) {
         final Snapshot before = last;
         publish(
                 before,
                 Snapshot.after(
                         before,
-                        () ->
-                                before.waiting()
-                                        .withMachine(
-                                                machine.name(),
-                                                Waiting.read(
-                                                        List.of(machine),
-                                                        this::gate,
-                                                        before.waiting()))));
+                        () -> before.waiting().readOne(machines().read(), machine, this::gate)));
     }
 
     /**
