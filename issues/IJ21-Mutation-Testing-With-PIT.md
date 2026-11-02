@@ -12,5 +12,5 @@ tests' gaps are real: a report sorts the surviving mutants into real gaps and ha
 - PIT and its JUnit 5 plugin pinned, in `gradle/libs.versions.toml`, renewing `gradle/verification-metadata.xml` in the
   same commit.
 - Run on a VM where tests call real tools.
-- The model is the try in `porelo-message-matrix`: its report
-  `~/.porelo/handover/porelo-message-matrix/pit-014d86a/report.md` and its branch `pit-try`, later its pushed profile.
+- The model is the try in `porelo-message-matrix`: its branch `pit-try`, later its
+  pushed profile.

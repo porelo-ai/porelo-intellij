@@ -72,7 +72,7 @@ in it alone.
 ## Checked
 
 On a test VM against its daemon, in `runIde` on a private Xvfb display reached through an ssh tunnel to the
-daemon's socket; screenshots in `~/.porelo/handover/porelo-intellij/ij16/`.
+daemon's socket; screenshots kept with the handover.
 
 - **Moved:** a task pushed again while its review was open. The tab named the new commit and disabled *Approve*
   and *Reject* 33 s and 52 s after the push, in two tries. *Read Again* opened the new commit, with both decisions

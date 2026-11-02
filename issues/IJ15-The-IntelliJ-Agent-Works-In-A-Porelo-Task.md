@@ -18,8 +18,8 @@ is taken from start to Review inside the task, with the forge's build green.
   GraalVM is set to the pin `porelo-machines` gives at the move, and the image gains what the agent's harness needs
   that the procedure does not bring itself, read from the agent's definition before the move.
 - **Gradle's downloads:** the wrapper's distribution, the libraries and an IntelliJ IDEA for each of the three
-  versions (`platformVersion` and `verifyIdeVersions`), some 17 GB, come at build time into `~/.gradle`, checked
-  against `gradle/verification-metadata.xml`. The task keeps `~/.gradle` in its workspace, so a second build
+  versions (`platformVersion` and `verifyIdeVersions`), some 17 GB, come at build time into Gradle's user home, checked
+  against `gradle/verification-metadata.xml`. The task keeps Gradle's user home in its workspace, so a second build
   downloads nothing; measured before the move. Where the task lacks the disk for the three IDEs, the forge's
   `verifyPlugin` stands in for the local one, and the hand-over names that green run.
 - **The move's own change:** this issue's move to Review, through the gate to `porelo/<task>`, with the pull request
@@ -43,7 +43,7 @@ runs); after the move each line passes.
 
 ## To be checked
 
-- The task's free disk and whether `~/.gradle` survives a restart of the task, measured in the task.
+- The task's free disk and whether Gradle's user home survives a restart of the task, measured in the task.
 - Which tools the agent's harness needs in the image beyond `porelo.yml`'s, and that the skills this repository
   names reach the task checked against their digests.
 - That the task's egress reaches JetBrains' IDE downloads, the Gradle distribution, Central, Sonatype and the

@@ -11,7 +11,7 @@ tooltips say *Approve* and *Reject*.
 ## Why
 
 A walk through the plugin found that the two decisions show as icons only, beside the tab's other actions.
-`doc/operator-test.md` now names the icons; the tab itself does not.
+The walk's guide now names the icons; the tab itself does not.
 
 ## Plan
 
@@ -21,7 +21,7 @@ into one `ActionToolbar`, which shows an action's icon and its text only as a to
 1. **`ReviewEditor`:** *Approve* and *Reject* show their text beside their icon, through the template presentation's
    `ActionUtil.SHOW_TEXT_IN_TOOLBAR`, a public key of the platform; *Open in …* and *Read Again* stay icons with
    tooltips.
-2. **`doc/operator-test.md`:** the steps that name the check mark and the cross name the buttons *Approve* and *Reject*
+2. **The walk's guide:** the steps that name the check mark and the cross name the buttons *Approve* and *Reject*
    again.
 3. **Changelog:** one entry under `changelog/unreleased/`, type *changed*.
 

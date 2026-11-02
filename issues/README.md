@@ -39,14 +39,14 @@ is `IJ`.
 | # | size | blocked by | what it covers |
 |---|---|---|---|
 | <a id="ij14"></a>[IJ14](IJ14-Every-Workflow-Runs-On-The-Host-Forge-As-On-GitHub.md) | M | | The workflows run unchanged on the move's host's Forgejo and on GitHub: the IDEs' room made by what the runner has, Publish, the Windows job and run deletion switched by `PORELO_PUBLISH`, Porelo's snapshots from `MAVEN_SNAPSHOTS_URL`; rehearsed first in the forge's act image under podman |
-| <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | [IJ14](README.md#ij14) | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, `~/.gradle` kept in the task, the move's own change through the gate with the forge's build green |
+| <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | [IJ14](README.md#ij14) | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
 
 ## Finished
 
 | # | Title | What was built |
 |---|---|---|
 | <a id="ij01"></a>[IJ01](README.md#ij01) | Work is reviewed in IntelliJ | A tool window of every waiting push, its diff read in IntelliJ's own diff windows from a bare cache with nothing checked out, approved with the commit shown or rejected with a reason through the daemon's contract, and the plugin published to a custom plugin repository. |
-| <a id="ij02"></a>[IJ02](README.md#ij02) | Live notices and a guide | A waiting push announced within seconds through the daemon's stream of projects, measured at 3 s on a VM, and `doc/` saying how to install and use the plugin, with the operator's walk in `doc/operator-test.md`. |
+| <a id="ij02"></a>[IJ02](README.md#ij02) | Live notices and a guide | A waiting push announced within seconds through the daemon's stream of projects, measured at 3 s on a VM, and `doc/` saying how to install and use the plugin. |
 | <a id="ij07"></a>[IJ07](README.md#ij07) | Sokar is renamed Porelo | The plugin, its id `org.fuin.porelo`, packages, build and documents named Porelo, speaking to a Porelo daemon and installed afresh; a test of the documents refuses the old name. |
 | <a id="ij08"></a>[IJ08](README.md#ij08) | Reformatted to the shared style | Google Java Style in its AOSP variant checked by Spotless in `build`, the shared `.editorconfig` checked by `checkShared`, and one commit that only reformats, which `git blame` skips. |
 | <a id="ij06"></a>[IJ06](README.md#ij06) | The code read against its skills | All of the plugin's code, tests and build read against the five skills `AGENTS.md` names; 31 defects fixed, 17 of them with a test of their own seen red first. |
