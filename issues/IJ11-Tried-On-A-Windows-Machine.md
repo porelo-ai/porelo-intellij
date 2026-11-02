@@ -6,6 +6,9 @@
 the WSL way, which no Windows machine has run yet, and the ssh way, which only GitHub's Windows runner checks. What
 failed is known, and what passed is said in `doc/` with the plugin's version.
 
+The WSL way stays whatever this trial finds: on a Windows machine it is the local way, deliberately not ssh, and what
+fails is fixed, not removed.
+
 ## The shape
 
 What to install:

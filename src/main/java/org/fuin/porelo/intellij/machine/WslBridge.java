@@ -15,6 +15,8 @@ import java.util.Objects;
  * and no port is opened. {@code porelo daemon connect} finds the account's socket under {@code
  * /run/user/<uid>} without a login's environment. A distribution that is not running is never
  * started: it is refused with what {@code wsl.exe -l -v} says of it.
+ *
+ * <p>WSL is the local way on a Windows machine, deliberately not ssh; see {@code doc/decisions.md}.
  */
 public final class WslBridge implements AutoCloseable {
 
