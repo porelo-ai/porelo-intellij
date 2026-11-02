@@ -4,6 +4,7 @@ strict: true
 nav:
     - Overview: index.md
     - "The operator's test": operator-test.md
+    - Decisions: decisions.md
 validation:
     links:
         anchors: warn

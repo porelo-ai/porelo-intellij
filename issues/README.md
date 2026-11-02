@@ -7,7 +7,6 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
-| <a id="ij18"></a>[IJ18](IJ18-A-Host-Is-Reached-As-Its-Card-Says.md) | M | | Every ssh the plugin starts for a host - tunnel, Windows relay, review fetch - runs with the interface's per-host ssh file from the host card, so the card's host key is enforced and the person's own ssh configuration cannot redirect it |
 | <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves |
 | <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
@@ -46,3 +45,4 @@ is `IJ`.
 | <a id="ij06"></a>[IJ06](README.md#ij06) | The code read against its skills | All of the plugin's code, tests and build read against the five skills `AGENTS.md` names; 31 defects fixed, 17 of them with a test of their own seen red first. |
 | <a id="ij05"></a>[IJ05](README.md#ij05) | A waiting push opened in its project | *Open in* the IntelliJ window whose repository holds the gate's upstream fetches the push there as `porelo/<push>`, leaving the working tree, index and branch as they were; the ref is deleted once decided, and that remote fetched after approving. |
 | <a id="ij03"></a>[IJ03](README.md#ij03) | Porelo reached from IntelliJ on Windows | A Porelo in a WSL 2 distribution reached through `wsl.exe` and `porelo daemon connect`, and a machine over ssh through Windows' own `ssh.exe`; the ssh way checked on GitHub's Windows runner on every change, the WSL way against stand-ins on Linux only. |
+| <a id="ij18"></a>[IJ18](README.md#ij18) | A host is reached as its card says | Every ssh the plugin starts for a host - tunnel, Windows relay, review fetch - runs with the ssh configuration the interface writes from the host card, so the card's host key is enforced and the person's own ssh configuration cannot redirect it; tested in sprint 6m: passed. |
