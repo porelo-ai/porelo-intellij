@@ -12,18 +12,18 @@ import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.DumbAwareToggleAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.ColoredTreeCellRenderer;
 import com.intellij.ui.SimpleTextAttributes;
-import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
+import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.tree.TreeUtil;
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JTree;
@@ -51,7 +51,9 @@ final class WaitingTree extends SimpleToolWindowPanel {
 
     private final Tree tree = new Tree(model);
 
-    private final JBLabel state = new JBLabel();
+    // Not an HTML label: Swing's HTML breaks a line only between words, so ssh's row of '@', a
+    // path or a key wider than the tool window would be cut at its edge; this breaks inside them.
+    private final JBTextArea state = new JBTextArea();
 
     private transient Snapshot shown = Snapshot.NONE;
 
@@ -77,6 +79,10 @@ final class WaitingTree extends SimpleToolWindowPanel {
                         }
                     }
                 });
+        state.setEditable(false);
+        state.setOpaque(false);
+        state.setLineWrap(true);
+        state.setWrapStyleWord(true);
         state.setBorder(JBUI.Borders.empty(6, 8));
         final JPanel content = new JPanel(new BorderLayout());
         content.add(new JBScrollPane(tree), BorderLayout.CENTER);
@@ -168,36 +174,23 @@ final class WaitingTree extends SimpleToolWindowPanel {
         }
         model.reload();
         TreeUtil.expandAll(tree);
-        final StringBuilder said = new StringBuilder("<html>");
+        final List<String> said = new ArrayList<>();
         if (snapshot.at() == null) {
-            said.append("Reading what waits...");
+            said.add("Reading what waits...");
         } else if (snapshot.unreadable() != null) {
-            said.append("The machines cannot be read: ").append(escape(snapshot.unreadable()));
+            said.add("The machines cannot be read: " + snapshot.unreadable());
         }
-        if (!snapshot.waiting().silent().isEmpty()) {
-            said.append(said.length() > "<html>".length() ? "<br>" : "")
-                    .append(
-                            snapshot.waiting().silent().stream()
-                                    .map(
-                                            silent ->
-                                                    "⚠ <b>"
-                                                            + escape(silent.machine())
-                                                            + "</b> "
-                                                            + escape(silent.why()))
-                                    .collect(Collectors.joining("<br>")));
-        }
-        state.setText(said.append("</html>").toString());
-        state.setVisible(said.length() > "<html></html>".length());
+        snapshot.waiting().silent().stream()
+                .map(silent -> "⚠ " + silent.machine() + " " + silent.why())
+                .forEach(said::add);
+        state.setText(String.join("\n", said));
+        state.setVisible(!said.isEmpty());
     }
 
     private static DefaultMutableTreeNode groupNode(Waiting.Group group) {
         final DefaultMutableTreeNode node = new DefaultMutableTreeNode(group);
         group.pushes().forEach(entry -> node.add(new DefaultMutableTreeNode(entry)));
         return node;
-    }
-
-    private static String escape(@Nullable String text) {
-        return StringUtil.escapeXmlEntities(String.valueOf(text));
     }
 
     /** A group as its label and count, a push as its task, change, age and far-reaching files. */

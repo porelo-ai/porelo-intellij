@@ -1,0 +1,2 @@
+title: A long warning line in the tool window, such as ssh's whole host-key warning, wraps at the window's edge instead of being cut
+type: fixed
