@@ -15,7 +15,9 @@ checkout's token at hand.
 - **Measured on `1169e03`:** the command `AGENTS.md` names, run from an empty Gradle home, writes
   `gradle/verification-metadata.xml` of 295 KB, 569 components and 1,145 artifacts. The three IntelliJ IDEAs the
   plugin compiles and is verified against are among them, as group `idea`. Gradle then checks each one before use and
-  fails naming the artifact whose digest differs. Nothing the IntelliJ Platform's plugin downloads escapes it. Seen
+  fails naming the artifact whose digest differs. Of what the IntelliJ Platform's plugin downloads, only three poms
+  escape it: Gradle reads those of `261.22158-EAP-CANDIDATE-SNAPSHOT` inside a version range and picks the release
+  261.22158.277, whose jars and poms have entries (measured from an empty Gradle home on `b7f3248`). Seen
   red: one digest of `jspecify-1.0.0.jar` changed fails the build in its configuration, "One artifact failed
   verification: jspecify-1.0.0.jar (org.jspecify:jspecify:1.0.0)".
 - **Every release by SHA-256, `porelo-wire` among them.** Gradle does not verify a snapshot at all, by digest or by
