@@ -11,6 +11,12 @@ is `IJ`.
 | <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
+## Implementing
+
+| # | size | blocked by | what it covers |
+|---|---|---|---|
+| <a id="ij14"></a>[IJ14](IJ14-Every-Workflow-Runs-On-The-Host-Forge-As-On-GitHub.md) | M | | The workflows run unchanged on the move's host's Forgejo and on GitHub: the IDEs' room made by what the runner has, Publish, the Windows job and run deletion switched by `PORELO_PUBLISH`, Porelo's snapshots from `MAVEN_SNAPSHOTS_URL`; rehearsed first in the forge's act image under podman |
+
 ## Backlog
 
 | # | size | blocked by | what it covers |
@@ -38,7 +44,6 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
-| <a id="ij14"></a>[IJ14](IJ14-Every-Workflow-Runs-On-The-Host-Forge-As-On-GitHub.md) | M | | The workflows run unchanged on the move's host's Forgejo and on GitHub: the IDEs' room made by what the runner has, Publish, the Windows job and run deletion switched by `PORELO_PUBLISH`, Porelo's snapshots from `MAVEN_SNAPSHOTS_URL`; rehearsed first in the forge's act image under podman |
 | <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | [IJ14](README.md#ij14) | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
 
 ## Finished
