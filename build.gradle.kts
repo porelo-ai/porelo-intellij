@@ -24,14 +24,34 @@ version = providers.gradleProperty("pluginVersion").get().let { line ->
     }
 }
 
+val forgeSnapshots: Provider<String> = providers.environmentVariable("MAVEN_SNAPSHOTS_URL").filter { it.isNotEmpty() }
+val forgeToken: Provider<String> = providers.environmentVariable("PORELO_PACKAGES_READ_TOKEN").filter { it.isNotEmpty() }
+
+fun isLoopback(url: String): Boolean {
+    val host = uri(url).host.orEmpty()
+    return host == "localhost" || host.endsWith(".localhost") || host == "127.0.0.1"
+}
+
 repositories {
     mavenCentral()
     // Porelo's own artifacts are built against while they are developed; this serves those snapshots and nothing else.
-    // -PporeloSnapshots names another such repository, as a handover's local Maven repository is before it is published.
+    // A forge names its registry in MAVEN_SNAPSHOTS_URL. -PporeloSnapshots names another such repository, as a handover's
+    // local Maven repository is before it is published.
     exclusiveContent {
         forRepository {
-            maven(providers.gradleProperty("poreloSnapshots").orElse("https://central.sonatype.com/repository/maven-snapshots/")) {
+            maven(forgeSnapshots.orElse(providers.gradleProperty("poreloSnapshots"))
+                .orElse("https://central.sonatype.com/repository/maven-snapshots/")) {
+                name = "PoreloSnapshots"
                 mavenContent { snapshotsOnly() }
+                // The host's registry answers on loopback over http, and a token goes over http nowhere else.
+                isAllowInsecureProtocol = forgeSnapshots.map { it.startsWith("http:") && isLoopback(it) }.getOrElse(false)
+                // The forge's own token goes to the forge's own address alone, and Gradle sends it only when asked.
+                if (forgeSnapshots.getOrElse("").startsWith("http") && forgeToken.isPresent) {
+                    credentials {
+                        username = "porelo-publisher"
+                        password = forgeToken.get()
+                    }
+                }
             }
         }
         filter { includeVersionByRegex("org\\.fuin\\.porelo", ".*", ".*-SNAPSHOT") }

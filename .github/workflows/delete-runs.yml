@@ -21,6 +21,8 @@ jobs:
         # The only permission this needs, and it is the one that lets it delete.
         permissions:
             actions: write
+        # GitHub's API is what it calls.
+        if: vars.PORELO_PUBLISH != 'false'
         runs-on: ubuntu-26.04
         timeout-minutes: 10
         steps:

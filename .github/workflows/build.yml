@@ -21,7 +21,27 @@ jobs:
     build:
         runs-on: ubuntu-26.04
         timeout-minutes: 45
+        # Where Porelo's snapshots come from: only this forge's own values differ, and the pinned-JDK action checks them.
+        env:
+            MAVEN_SNAPSHOTS_URL: ${{ vars.MAVEN_SNAPSHOTS_URL }}
+            PORELO_PACKAGES_READ_TOKEN: ${{ secrets.PORELO_PACKAGES_READ_TOKEN }}
         steps:
+            # Publishing is switched by this variable on every forge. Misspelt, or missing on a forge that is not GitHub, it
+            # would leave the plugin unpublished without a word; missing on GitHub, the Build publishes as it always has.
+            - name: Whether this forge publishes
+              env:
+                  PORELO_PUBLISH: ${{ vars.PORELO_PUBLISH }}
+                  SERVER: ${{ github.server_url }}
+              run: |
+                  case "$PORELO_PUBLISH" in
+                      true | false) echo "PORELO_PUBLISH=$PORELO_PUBLISH" ;;
+                      '') if [ "$SERVER" != 'https://github.com' ]; then
+                              echo "::error::vars.PORELO_PUBLISH is not set on $SERVER; it must be true or false"
+                              exit 1
+                          fi ;;
+                      *) echo "::error::vars.PORELO_PUBLISH is '$PORELO_PUBLISH', neither true nor false"; exit 1 ;;
+                  esac
+
             # Every commit, so a push's range is read without a second fetch.
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               # No step pushes with git, so the job's token is not kept in .git/config for the build's code to read.
@@ -31,14 +51,25 @@ jobs:
 
             # The verifier fetches and unpacks a whole IntelliJ IDEA for every version gradle.properties names, which fills
             # the hosted runner's disk; the toolchains the image carries and this job never uses make room for them,
-            # first, before anything is restored or downloaded.
+            # first, before anything is restored or downloaded. What a runner cannot do is left out by what it has - root
+            # needs no sudo, no daemon has no images - and too little room stops the job here, not in the verifier's middle.
             - name: Room for the IDEs the verifier checks against
               run: |
                   set -eu
                   df -h /
-                  sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
-                  docker image prune --all --force > /dev/null
+                  sudo=
+                  [ "$(id -u)" -eq 0 ] || sudo=sudo
+                  $sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+                  if docker info > /dev/null 2>&1; then
+                      docker image prune --all --force > /dev/null
+                  fi
                   df -h /
+                  needed=30
+                  free="$(df --output=avail -BG / | tail -n 1 | tr -dc 0-9)"
+                  if [ "$free" -lt "$needed" ]; then
+                      echo "::error::the IDEs need ${needed} GiB free on /, and this runner has ${free} GiB"
+                      exit 1
+                  fi
 
             - name: The pinned GraalVM
               uses: ./.github/actions/pinned-jdk
@@ -84,7 +115,7 @@ jobs:
             # beside it and as the channel's latest, which a person adds in the IDE once.
             - name: Publish the plugin
               timeout-minutes: 5
-              if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+              if: vars.PORELO_PUBLISH != 'false' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
               env:
                   JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
               run: |

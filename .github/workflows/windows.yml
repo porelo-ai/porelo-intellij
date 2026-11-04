@@ -20,6 +20,8 @@ permissions:
 jobs:
     windows:
         name: Tests and ssh on Windows
+        # Without it the job would wait on a forge with no Windows runner for one that never comes.
+        if: vars.PORELO_PUBLISH != 'false'
         runs-on: windows-2025
         timeout-minutes: 45
         steps:

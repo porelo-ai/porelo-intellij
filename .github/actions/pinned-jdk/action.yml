@@ -10,6 +10,22 @@ description: Installs the GraalVM porelo-machines pins, checked against its dige
 runs:
     using: composite
     steps:
+        # GitHub reads Sonatype when it names no snapshot repository. Any other forge reads its own registry, which is
+        # private, so a value it lacks would quietly build against something else, or not see what the host built.
+        - name: This forge's snapshot repository
+          shell: bash
+          env:
+              SERVER: ${{ github.server_url }}
+          run: |
+              if [ "$SERVER" != 'https://github.com' ]; then
+                  for name in MAVEN_SNAPSHOTS_URL PORELO_PACKAGES_READ_TOKEN; do
+                      if [ -z "${!name:-}" ]; then
+                          echo "::error::$name is not set on $SERVER"
+                          exit 1
+                      fi
+                  done
+              fi
+
         # Gradle's distribution and the libraries, between runs. Never the IDEs: three of them, zipped and unpacked, are
         # some 17 GB, and restoring them filled the runner's disk before the job could make room. An exclusion only
         # removes a path the patterns matched, never one inside a matched directory, so each group is matched alone.

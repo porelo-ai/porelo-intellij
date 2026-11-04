@@ -16,6 +16,10 @@ jobs:
         name: Workflow check
         runs-on: ubuntu-26.04
         timeout-minutes: 10
+        # Where Porelo's snapshots come from: only this forge's own values differ, and the pinned-JDK action checks them.
+        env:
+            MAVEN_SNAPSHOTS_URL: ${{ vars.MAVEN_SNAPSHOTS_URL }}
+            PORELO_PACKAGES_READ_TOKEN: ${{ secrets.PORELO_PACKAGES_READ_TOKEN }}
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
@@ -27,6 +31,17 @@ jobs:
             # The same check the Build's 'build' runs among the shared checks.
             - name: Every step pinned to a commit
               run: ./gradlew --no-daemon checkActions
+
+            # The forge's job image has no PyYAML; GitHub's has.
+            - name: PyYAML, where the runner has none
+              run: |
+                  set -eu
+                  if ! python3 -c 'import yaml' 2> /dev/null; then
+                      sudo=
+                      [ "$(id -u)" -eq 0 ] || sudo=sudo
+                      $sudo apt-get update -qq
+                      $sudo apt-get install -y -qq --no-install-recommends python3-yaml
+                  fi
 
             # A file that does not load, or names no trigger or no job, is a workflow GitHub would not run.
             - name: Every workflow loads, with its triggers and jobs
