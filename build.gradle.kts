@@ -34,26 +34,32 @@ fun isLoopback(url: String): Boolean {
 
 repositories {
     mavenCentral()
-    // Porelo's own artifacts are built against while they are developed; this serves those snapshots and nothing else.
-    // A forge names its registry in MAVEN_SNAPSHOTS_URL. -PporeloSnapshots names another such repository, as a handover's
-    // local Maven repository is before it is published.
-    exclusiveContent {
-        forRepository {
-            maven(forgeSnapshots.orElse(providers.gradleProperty("poreloSnapshots"))
-                .orElse("https://central.sonatype.com/repository/maven-snapshots/")) {
-                name = "PoreloSnapshots"
-                mavenContent { snapshotsOnly() }
-                // The host's registry answers on loopback over http, and a token goes over http nowhere else.
-                isAllowInsecureProtocol = forgeSnapshots.map { it.startsWith("http:") && isLoopback(it) }.getOrElse(false)
-                // The forge's own token goes to the forge's own address alone, and Gradle sends it only when asked.
-                if (forgeSnapshots.getOrElse("").startsWith("http") && forgeToken.isPresent) {
-                    credentials {
-                        username = "porelo-publisher"
-                        password = forgeToken.get()
-                    }
+    // Porelo's own artifacts are built against while they are developed; these serve those snapshots and nothing else, so
+    // no other name is ever asked of them. A forge names its registry in MAVEN_SNAPSHOTS_URL, which holds only what was
+    // built on that host, so it comes first and the central source still serves the rest. -PporeloSnapshots names another
+    // central source, as a handover's local Maven repository is before it is published.
+    val hostSnapshots = forgeSnapshots.orNull?.let { url ->
+        maven(url) {
+            name = "HostSnapshots"
+            mavenContent { snapshotsOnly() }
+            // The host's registry answers on loopback over http, and a token goes over http nowhere else.
+            isAllowInsecureProtocol = url.startsWith("http:") && isLoopback(url)
+            // The forge's own token goes to the forge's own address alone, and Gradle sends it only when asked.
+            if (url.startsWith("http") && forgeToken.isPresent) {
+                credentials {
+                    username = "porelo-publisher"
+                    password = forgeToken.get()
                 }
             }
         }
+    }
+    val centralSnapshots = maven(providers.gradleProperty("poreloSnapshots")
+        .orElse("https://central.sonatype.com/repository/maven-snapshots/")) {
+        name = "CentralSnapshots"
+        mavenContent { snapshotsOnly() }
+    }
+    exclusiveContent {
+        forRepositories(*listOfNotNull(hostSnapshots, centralSnapshots).toTypedArray())
         filter { includeVersionByRegex("org\\.fuin\\.porelo", ".*", ".*-SNAPSHOT") }
     }
     intellijPlatform {

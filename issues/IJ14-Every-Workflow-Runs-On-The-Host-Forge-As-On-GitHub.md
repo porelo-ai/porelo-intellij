@@ -34,8 +34,11 @@ server for `actions/cache`. Against that, today's workflows:
 - **`shared-rules.yml`:** already reads the forge's pull requests as from inside (`github.server_url`); unchanged
   unless the first run says otherwise.
 - **Porelo's snapshots:** the build takes `porelo-buildtools` and `porelo-wire` as releases, from Central, and a
-  handover names a snapshot for a while. `build.gradle.kts` takes the snapshot
-  repository from `MAVEN_SNAPSHOTS_URL` when the environment names it, before `-PporeloSnapshots` and Sonatype, with
+  handover names a snapshot for a while. `build.gradle.kts` reads the repository
+  `MAVEN_SNAPSHOTS_URL` names when the environment names it, then `-PporeloSnapshots` or Sonatype, Porelo's snapshots
+  alone from each, so an empty registry on a fresh host builds. Gradle takes the first that holds the snapshot, not the
+  newest as Maven does: measured, a host's older snapshot beats a newer central one, and a wrong token fails the build
+  rather than falling through. The remedy for a stale one is the usual: a newer Build on the host. The host's repository has
   `porelo-publisher` and `PORELO_PACKAGES_READ_TOKEN`, which can only read, as its credentials when the token is set,
   sent only to that address and only when the server asks. Plain http is allowed only to a loopback name. On a forge that is
   not GitHub the pinned-JDK action fails naming whichever of the two is missing. Every workflow that runs on the forge
@@ -53,7 +56,8 @@ is the forge's own red and green.
   passing and Publish skipped, and `shared-rules.yml` green with `documents`; `windows.yml` and `delete-runs.yml` start no job there.
 - On GitHub a push to `main` runs the same files as today: Build, Publish with its read-back, and Windows.
 - A Build with `PORELO_PUBLISH` misspelt, or unset on a forge that is not GitHub, fails naming the variable.
-- A build naming a Porelo snapshot on the forge resolves it from the forge's registry, seen in its log, and a wrong
+- A build naming a Porelo snapshot on the forge resolves it from the forge's registry when that holds it and from the
+  central source when not, seen in its log, and a wrong
   `PORELO_PACKAGES_READ_TOKEN` fails it naming the repository.
 
 ## To be checked
@@ -64,5 +68,3 @@ and limits:
 - The first pull request from `porelo/<task>` on the host's forge, its own red and green.
 - That the disk the host gives the runner's containers holds 30 GiB free; the role sets no limit of its own.
 - That the job's egress reaches JetBrains' IDE downloads, the Gradle distribution and Central from the host.
-- That a snapshot the host's registry does not hold fails the Build, since this build reads one snapshot repository: the
-  Porelo versions it names today are releases, so nothing asks.
