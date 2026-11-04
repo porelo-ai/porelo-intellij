@@ -10,9 +10,13 @@ interface. The plugin still lists that machine, and says why it does not reach i
 
 What was read in the code; nothing is built or run.
 
-- **The mark:** a machine's entry in the interface's `frontend.json` gains `"disconnected": true`. Absent, or anything
-  but `true`, means connected. The entry stays otherwise as it is. The file is a contract with the interface, changed
-  only by agreement in both repositories.
+- **The mark:** the interface already writes and reads `"disconnected": true` on a machine's entry in `frontend.json`.
+  Absent, or anything but `true`, means connected. The entry stays otherwise as it is. This computer's own entry never
+  carries it, as the plugin would add its own beside it. The file is a contract with the interface, changed only by
+  agreement in both repositories.
+- **The promise this breaks today:** the interface's design says that nothing connects to a disconnected machine until
+  the person connects it again, also after a restart. The plugin does not read the mark: it goes on raising its ssh to
+  that machine, reading it each minute and holding its stream.
 - **Reading it:** `Machines` keeps a marked entry as one it does not reach, with a reason, so that neither a read nor
   the stream of projects raises an ssh for it. *Connect* needs nothing more: the file is read again on each read.
 - **Ending what is open:** an open stream and tunnel do not end when an entry leaves the list. `PoreloWatch` checks the
@@ -27,8 +31,6 @@ What was read in the code; nothing is built or run.
 
 ## To be checked
 
-- Whether the local machine's entry can carry the mark: the plugin would add its own "This computer" beside it, and the
-  interface offers no *Disconnect* there.
 - How soon the plugin should notice a mark with no read due, as it reads each minute: whether it watches the file.
 - Whether a login by the plugin's ssh can affect a host's vault. The plugin holds no vault call, by reading; it is not
   measured.

@@ -2,7 +2,7 @@
 
 **Status:** Estimated.
 **Size:** M - five workflow files, the JDK action and the build script's snapshot repository change, with no contract
-of another repository changed; the first runs on a forge runner with 8 GiB and the IDEs' 17 GB are the risk.
+of another repository changed; the first runs on a forge runner with at most 8 GiB and the IDEs' 17 GB are the risk.
 
 **What must be true.** This repository's workflows run unchanged on the move's host's Forgejo and on GitHub, with
 only the values of variables and secrets differing, as porelo-host's
@@ -13,7 +13,7 @@ GitHub alone, each switched by a variable present on both forges, never by a bra
 ## Plan
 
 The forge's runner gives every job the labels `ubuntu-24.04` and `ubuntu-26.04` as one pinned Ubuntu 24.04 act image,
-4 CPUs, 8 GiB, no container socket, the host's CA through `JAVA_TOOL_OPTIONS` and the bundle, a Java 25 as
+up to 4 CPUs and 8 GiB as the host's size allows, no container socket, the host's CA through `JAVA_TOOL_OPTIONS` and the bundle, a Java 25 as
 `JAVA_HOME_25_X64` and a cache server for `actions/cache`. Against that, today's workflows:
 
 - **`build.yml`, the room for the IDEs:** `docker image prune` fails where there is no socket, and `sudo` may be
@@ -45,8 +45,8 @@ is the forge's own red and green.
 
 ## Acceptance
 
-- On the host's Forgejo a pull request from `porelo/<task>` runs `build.yml` green, with `build`, `verifyPlugin` and
-  `documents` passing and Publish skipped; `windows.yml` and `delete-runs.yml` start no job there.
+- On the host's Forgejo a pull request from `porelo/<task>` runs `build.yml` green, with `build` and `verifyPlugin`
+  passing and Publish skipped, and `shared-rules.yml` green with `documents`; `windows.yml` and `delete-runs.yml` start no job there.
 - On GitHub a push to `main` runs the same files as today: Build, Publish with its read-back, and Windows.
 - A Build with `PORELO_PUBLISH` unset or misspelt fails naming the variable.
 - A build naming a Porelo snapshot on the forge resolves it from the forge's registry, seen in its log, and a wrong

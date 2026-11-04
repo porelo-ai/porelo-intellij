@@ -20,7 +20,10 @@ What to install:
    Repositories*, with the URL of `snapshots/latest/updatePlugins.xml`).
 4. `%APPDATA%\porelo\frontend.json` with `{"machines": [{"name": "wsl", "kind": "wsl", "distribution": "<name>"}]}`
    and, for the ssh way, an entry `{"name", "host", "socket", "remoteSocket"}` as the interface writes it, for a
-   machine with Porelo that Windows' ssh reaches with the key in the OpenSSH Authentication Agent.
+   machine with Porelo that Windows' ssh reaches with the key in the OpenSSH Authentication Agent. Its `host` is one
+   lower-case DNS label.
+5. For the ssh entry, `%APPDATA%\porelo\ssh\<host>.conf` beside that file, the ssh configuration the interface writes
+   from the host's card; without it the plugin lists the machine as one it does not reach.
 
 What to try, each for the WSL entry and the ssh entry:
 

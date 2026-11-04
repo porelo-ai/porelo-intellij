@@ -15,7 +15,7 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
-| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes |
+| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
 
 ## Accepted
 

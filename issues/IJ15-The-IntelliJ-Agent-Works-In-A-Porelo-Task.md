@@ -7,7 +7,7 @@ task, with the forge's build from [IJ14](README.md#ij14).
 **What must be true.** This repository's agent works in a Porelo task of the project `porelo` on the move's host, as
 the project's procedure for an agent's move lays out. The task follows this repository through the gate and pushes to
 the host's Forgejo, whose build is read through the `forgejo` reader. The agent is reached in the project's room as
-`Agent IntelliJ`, from the nickname `IntelliJ` that porelo-project's `project.yml` gives this repository. This issue
+`Agent IntelliJ`, after this repository's entry `intellij` in porelo-project's `project.yml`. This issue
 is taken from start to Review inside the task, with the forge's build green.
 
 ## Plan
@@ -28,7 +28,7 @@ is taken from start to Review inside the task, with the forge's build green.
   move, a change to how it does runs them on a machine from the host's VM pool; until that pool exists, on the
   development machine's VM.
 - **The host's forge:** the move host's inventory names `porelo-intellij` in `forge_repositories`, and its registry
-  holds the `porelo-buildtools` snapshot `gradle/libs.versions.toml` names.
+  holds any Porelo snapshot `gradle/libs.versions.toml` names at the move; at present the file names only releases.
 - **The way back:** the one the move's procedure gives every agent; this repository adds nothing to it.
 
 **Red first:** the procedure's check, read on the host before the task starts, fails on its first line (no task
