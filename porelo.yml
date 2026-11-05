@@ -7,8 +7,8 @@
 # Gradle itself, the IntelliJ IDEAs the plugin is built and verified against and every library come at build time,
 # through the Gradle Wrapper and gradle/verification-metadata.xml, not from the image.
 image:
-    base_image: "docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac"
-    snippet: |
+    from: "docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac"
+    run: |
         # From Ubuntu: curl for the GraalVM below, git for the test that reads the tracked files.
         RUN apt-get update \
             && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl git \
