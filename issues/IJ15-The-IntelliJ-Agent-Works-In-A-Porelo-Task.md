@@ -1,6 +1,6 @@
 # IJ15 — The IntelliJ Agent Works In A Porelo Task
 
-**Status:** Estimated; blocked by [IJ14](README.md#ij14).
+**Status:** Backlog; blocked by [IJ14](README.md#ij14).
 **Size:** S - `porelo.yml` and one small change taken through the gate; the rest is reading and measuring in the
 task, with the forge's build from [IJ14](README.md#ij14).
 
