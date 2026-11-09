@@ -5,6 +5,7 @@
 | A host's daemon socket | The socket's directory, readable by its account alone, is the forward's whole guard | [A host's daemon socket](#a-hosts-daemon-socket) |
 | The WSL way on Windows | WSL is the local way on a Windows machine, deliberately not ssh, so `WslBridge` stays though no Windows machine has run it yet | [The WSL way on Windows](#the-wsl-way-on-windows) |
 | Three poms the digest check leaves out | Gradle reads them unchecked as version candidates and takes the release, whose files are checked | [Three poms the digest check leaves out](#three-poms-the-digest-check-leaves-out) |
+| Which repository's snapshot wins | The first repository that holds a Porelo snapshot serves it - the host's registry before the central source - not the newest | [Which repository's snapshot wins](#which-repositorys-snapshot-wins) |
 
 ## A host's daemon socket
 
@@ -29,3 +30,11 @@ On a Windows machine, Porelo running in WSL is local: the plugin reaches its dae
 port and no key. That is deliberately not ssh, which is for a host elsewhere. So `WslBridge` and a machine's `kind` stay,
 though GitHub's Windows runner checks only the ssh way and no Windows machine has run the WSL way yet: that gap calls
 for a trial on a real Windows machine, and is never a reason to remove the way.
+
+## Which repository's snapshot wins
+
+The build reads Porelo's snapshots from the host's registry, `MAVEN_SNAPSHOTS_URL`, before the central source, and
+Gradle takes a snapshot from the first repository that holds it, not the newest as Maven does: a host's older snapshot
+beats a newer central one. That stays because the host's registry holds what was built on that host, which a build there
+is meant to use; a stale one is replaced by a newer Build on the host. A wrong `PORELO_PACKAGES_READ_TOKEN` fails the
+build rather than falling through to the central source.
