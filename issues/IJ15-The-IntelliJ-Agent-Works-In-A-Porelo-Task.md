@@ -1,8 +1,8 @@
 # IJ15 — The IntelliJ Agent Works In A Porelo Task
 
-**Status:** Backlog; blocked by [IJ14](README.md#ij14).
+**Status:** Backlog.
 **Size:** S - `porelo.yml` and one small change taken through the gate; the rest is reading and measuring in the
-task, with the forge's build from [IJ14](README.md#ij14).
+task, with the workflows as they already run on a forge.
 
 **What must be true.** This repository's agent works in a Porelo task of the project `porelo` on the move's host, as
 the project's procedure for an agent's move lays out. The task follows this repository through the gate and pushes to
@@ -47,4 +47,6 @@ runs); after the move each line passes.
 - Which tools the agent's harness needs in the image beyond `porelo.yml`'s, and that the skills this repository
   names reach the task checked against their digests.
 - That the task's egress reaches JetBrains' IDE downloads, the Gradle distribution, Central, Sonatype and the
-  skills' store.
+  skills' store, and the forge runner's job reaches the first three.
+- That the forge's first Build of the move's pull request goes red where the host lacks something and green once
+  fixed, and that the disk the host gives the runner's containers holds the 30 GiB free the Build's room step asks.

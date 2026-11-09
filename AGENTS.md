@@ -44,6 +44,10 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   through Windows' own `ssh.exe` and an OpenSSH server on the same runner. That job runs on the runner's own Java 25
   (`JAVA_HOME_25_X64`), the one exception to the pinned GraalVM: `porelo-machines` pins one for Linux only, and the
   job publishes nothing.
+- **Every workflow runs unchanged on a host's Forgejo and on GitHub; only variables and secrets differ.** A job that
+  only GitHub can run (Publish, Windows, run deletion) runs `if: vars.PORELO_PUBLISH != 'false'`, never by a branch
+  in the workflow, and Porelo's snapshots come from `MAVEN_SNAPSHOTS_URL` first, read with
+  `PORELO_PACKAGES_READ_TOKEN`, then from the central source.
 - **A changelog entry is one YAML file under `changelog/unreleased/`** with a one-sentence `title` and a `type`.
 - **Issue prefix: `IJ`**, in `issues/`.
 - **Skills used:** `java-code-review`, `concurrency-review`, `test-quality`, `security-audit`, `clean-code`.

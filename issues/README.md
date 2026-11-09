@@ -11,18 +11,12 @@ is `IJ`.
 | <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
-## Implementing
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij14"></a>[IJ14](IJ14-Every-Workflow-Runs-On-The-Host-Forge-As-On-GitHub.md) | M | | The workflows run unchanged on the move's host's Forgejo and on GitHub: the IDEs' room made by what the runner has, Publish, the Windows job and run deletion switched by `PORELO_PUBLISH`, Porelo's snapshots from `MAVEN_SNAPSHOTS_URL`; green on a throwaway Forgejo with the forge's image and limits; what only the host can show is named in the issue |
-
 ## Backlog
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
-| <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | [IJ14](README.md#ij14) | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
+| <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
 
 ## Accepted
 
@@ -54,3 +48,4 @@ is `IJ`.
 | <a id="ij03"></a>[IJ03](README.md#ij03) | Porelo reached from IntelliJ on Windows | A Porelo in a WSL 2 distribution reached through `wsl.exe` and `porelo daemon connect`, and a machine over ssh through Windows' own `ssh.exe`; the ssh way checked on GitHub's Windows runner on every change, the WSL way against stand-ins on Linux only. |
 | <a id="ij18"></a>[IJ18](README.md#ij18) | A host is reached as its card says | Every ssh the plugin starts for a host - tunnel, Windows relay, review fetch - runs with the ssh configuration the interface writes from the host card, so the card's host key is enforced and the person's own ssh configuration cannot redirect it; tested in sprint 6m: passed. |
 | <a id="ij09"></a>[IJ09](README.md#ij09) | The build verifies every dependency | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, a changed digest failing the build by the artifact's name, the file renewed by hand with every version move, and `porelo-buildtools` pinned to a release from Central. |
+| <a id="ij14"></a>[IJ14](README.md#ij14) | Every workflow runs on the host's forge as on GitHub | The workflows run unchanged on a host's Forgejo and on GitHub, Publish, the Windows job and run deletion switched by `PORELO_PUBLISH`, Porelo's snapshots read from `MAVEN_SNAPSHOTS_URL` first; green on a throwaway Forgejo with the forge's image and limits, what only a host shows checked with the agent's move. |
