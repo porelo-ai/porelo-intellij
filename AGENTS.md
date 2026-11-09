@@ -50,7 +50,7 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
 
 ## Shared across the Porelo repositories
 
-> **BEGIN Shared Area** · sha256 `34413dbf083b9fc7` · changed 2026-11-08T10:45Z
+> **BEGIN Shared Area** · sha256 `d14b704dac9e3353` · changed 2026-11-09T07:07Z
 
 Identical in every repository `project.yml` names but `porelo-parent`, which holds only the parent pom
 and no `AGENTS.md`. The markers carry the SHA-256 of the lines between them (the first 16 hex digits)
@@ -82,6 +82,9 @@ and the UTC time that text last changed; change it in the channel first, never i
 - **Only `AGENTS.md` and `.AGENTS.md` survive a session; the harness's own memory is never used.** A
   rule, an operator decision about how to work or an open point worth keeping goes into one of them
   at once.
+- **Only the coordinating agent writes to the operator; while the operator sits at the console, only
+  there.** Other agents say what the operator should know in the channel, to the coordinator.
+- **To the operator, plain technical terms, never coined words** - "merge", not a word of one's own.
 
 ### Commits and pushes
 
@@ -249,7 +252,7 @@ and the UTC time that text last changed; change it in the channel first, never i
   required individual red run. The handover names every issue, the tested top commit, and which checks
   ran where with what result.
 - **After a failed run, rerun the failed step and the tests of the area the fix changes; the unit
-  suite still runs whole.** The handover names the final commit, what was rerun and why that covers
+  suite still runs whole once before the handover.** The handover names the final commit, what was rerun and why that covers
   the fix, and keeps checks passed earlier apart from those rerun on it.
 - **A small change is tried on a local VM only as far as the change needs, not by a full run of
   the whole flow.** The complete run is the workflow's on GitHub afterwards.
@@ -295,8 +298,9 @@ and the UTC time that text last changed; change it in the channel first, never i
   git runs with `GIT_CONFIG_GLOBAL=/dev/null`), not on wall-clock time, and not on a pinned version
   written into it - it reads the version from the build. A test that calls git runs from a clone of
   the tested commit, never an archive; transfer a git bundle when needed.
-- **Before a commit, the full suite runs as its own step and its result is read.** A commit is gated
-  on the exit code, never on grepped output, and never chained onto the test run.
+- **During the work, a commit runs the tests it changed and those of the modules built on what it
+  changed; the full suite runs once before a hand-over, as its own step, and its result is read.**
+  Both are gated on the exit code, never on grepped output, and never chained onto the test run.
 - **A change handed over says which test levels actually ran** - unit tests, local VM, rented
   machine - never which ought to have. A change to documents or issues only needs the tests tagged
   `documents`, which run alone; every test that reads a document carries that tag, and a test fails
@@ -305,6 +309,11 @@ and the UTC time that text last changed; change it in the channel first, never i
   there is a documentation chapter, `check-doc-site`, with the tests tagged `documents`, on every
   push and pull request**, on a GitHub runner; the build skips a change to documents only.
 - **A test result names every skipped test**, never just a count.
+- **An obviously flaky test that blocks a delivery is disabled for the time being, and an issue for it
+  is filed in Backlog as the first row of its index (Highest).** The agent sets that state itself, the one
+  exception to the operator's states, and fixes the test right after. When two or three tries at the fix
+  have failed, it says so in the channel and stops; the coordinator tells the operator. A real fault is
+  fixed, never disabled.
 - **A failing check prints what it asked and what it got, never a guessed cause**, and its failure
   path has been made to happen once and read.
 - **An operator test starts with one complete guide assembled from each repository’s checked
@@ -343,6 +352,10 @@ and the UTC time that text last changed; change it in the channel first, never i
 - **An assigned isolated test environment’s test-only vault may be unlocked, reset, or recreated
   without another approval once the test is agreed.** Consume its passphrase in that environment
   through a passphrase command, without reading or printing it into the session.
+- **The operator's test is the acceptance of a story, its goal, never a blockade** - nothing lists it
+  as something work waits on; built issues are ready for it.
+- **Porelo's own host is rented for a few hours at a time**, so local work never needs a running host;
+  a product decision still allows hosts that stay.
 
 ### Claims and writing
 
@@ -405,6 +418,9 @@ and the UTC time that text last changed; change it in the channel first, never i
 - **Provider credentials for development and CI are deliberately separate.** Never synchronize or
   copy them between environments; check an authentication or quota failure against the credential
   used in the failing environment.
+- **Porelo protects the person from the agents and from threats from outside, not from their own
+  rights or deliberate choices**; what a person builds into a task's image is their own risk. Every
+  new guard and every reading's finding is judged by this.
 
 ### Skills
 
@@ -438,7 +454,14 @@ and the UTC time that text last changed; change it in the channel first, never i
   issue gets this reading once, and the result of a reading is never read again: its findings are fixed,
   each with a test seen to fail first, and the issue is handed over. A grave finding the fix does not
   settle becomes an issue of its own, without a reading of its own; smaller ones gather in one issue of
-  the repository.
+  the repository. The reading starts as soon as the code it reads stands, beside other work, never
+  after another part's fixes.
+- **An issue of size M or larger, or one that touches a trust boundary, has its plan read before it
+  is built**: a reviewer of another model reads the issue and the files it names, asking only what a
+  caller could do that the plan does not forbid, and the build takes the answers. This reading of the
+  plan is not the reading of the code, which still follows once.
+- **What a repository's readings keep finding goes into its build briefs as a checklist**, so the
+  builder checks it before handing over.
 - **Fail closed and loud**: when a dependency is unreachable, a key is unknown or a check cannot run,
   stop with a non-zero exit code and say why; inside a program, an exception that says why does the
   same. Never silently do less.
@@ -454,6 +477,9 @@ and the UTC time that text last changed; change it in the channel first, never i
   plugin, since JetBrains supports only Gradle - named with the reason in its repository's own part. A
   file that cannot be Java - `mvnw`, or a script that runs where there is no Java yet - is named in its
   repository's own part with the reason, and no repository keeps a copy of a helper another one has.
+  The one exception is `.github/actions/pinned-jdk/pinned.sh`, the rule for pinned downloads, which a
+  repository's `pinned-jdk` action copies unchanged from porelo-buildtools, since that step runs before
+  there is Java; `check-shared` refuses a copy that differs.
 - **Maven modules that belong together - the layers of one program, its packages - are submodules of
   one module of packaging `pom` named for what they share**, so the root lists parts, not pieces.
   Grouping changes only `parent` and `relativePath`, never a `groupId` or `artifactId`.
@@ -505,6 +531,9 @@ and the UTC time that text last changed; change it in the channel first, never i
 - **A new Java library uses `LGPL-3.0-or-later`; an API that others build their own extensions
   against (such as an adapter's or a plugin's interface library) uses `Apache-2.0`.** Keep existing
   product licenses unless a license change is explicitly agreed.
+- **An ecosystem adapter or build-tool plugin only helps a project start**: it is judged by whether its
+  answer matches the real build, secures nothing, and once `project.yml` exists Porelo never watches,
+  compares or updates what stands in it.
 
 ### Estimates and handovers
 
@@ -522,4 +551,4 @@ and the UTC time that text last changed; change it in the channel first, never i
   with `+`: estimates summed, the earliest start and the stack's readiness, VM time and tokens counted
   once.
 
-> **END Shared Area** · sha256 `34413dbf083b9fc7`
+> **END Shared Area** · sha256 `d14b704dac9e3353`
