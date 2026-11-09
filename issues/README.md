@@ -22,6 +22,7 @@ is `IJ`.
 
 | # | size | blocked by | what it covers |
 |---|---|---|---|
+| <a id="ij23"></a>[IJ23](IJ23-The-Tests-Follow-The-Pyramid.md) | | | Every flow proven by unit tests over fakes and the unit suite under a minute: today 20 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject and the WSL choice moved into plain logic, among six sized fixes |
 | <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | | | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
 
 ## Idea
