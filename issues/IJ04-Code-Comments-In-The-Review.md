@@ -1,7 +1,20 @@
 # IJ04 — Code comments in the review
 
-**Status:** Backlog.
-**Size:** L - SARIF 2.1.0 through Porelo's hardened profile reader, the comment calls and the push's level, class and review summary in `Gate`, inline diff threads through [IJ12](README.md#ij12)'s adapter, a discussion panel in `ReviewEditor` for file, general and outdated threads, read-only fix previews, and source-level, risk-class and completeness badges; the `collaborationTools` adapter ([IJ12](README.md#ij12)) and held or outgoing forge comments, `toForge` included ([IJ13](README.md#ij13)), are split out.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ04",
+  "title": "Code comments in the review",
+  "state": "Backlog",
+  "size": "L",
+  "priority": "Medium",
+  "rank": 1,
+  "blockedBy": [],
+  "covers": "Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet"
+}
+```
+
+**Why this size.** SARIF 2.1.0 through Porelo's hardened profile reader, the comment calls and the push's level, class and review summary in `Gate`, inline diff threads through [IJ12](README.md#ij12)'s adapter, a discussion panel in `ReviewEditor` for file, general and outdated threads, read-only fix previews, and source-level, risk-class and completeness badges; the `collaborationTools` adapter ([IJ12](README.md#ij12)) and held or outgoing forge comments, `toForge` included ([IJ13](README.md#ij13)), are split out.
 
 **What must be true.** A developer who reviews waiting work in IntelliJ comments and proposes line replacements on its diff, files, or review using IntelliJ's code-review gutter and inlays, and reads in the same place what checking and building agents, linters, and people on a forge said, all carried as SARIF 2.1.0 and marked with their authenticated source level, origin, and the push's risk class. The interface shows only the counts of open findings and threads per push and writes no comment, so the review tab is the one place where a comment is written, answered, resolved and read at its line, file or review.
 

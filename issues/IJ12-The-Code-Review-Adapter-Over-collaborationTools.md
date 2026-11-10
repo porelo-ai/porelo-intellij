@@ -1,9 +1,20 @@
 # IJ12 — The Code Review Adapter Over collaborationTools
 
-**Status:** Review.
-**Size:** M - one new package of about eight classes, a diff extension, one key set in `ReviewEditor`, a test task
-of its own with the platform's test framework, and the verification metadata renewed; no contract changes. The
-spike built and ran all of it against stand-in threads.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ12",
+  "title": "The Code Review Adapter Over collaborationTools",
+  "state": "Review",
+  "size": "M",
+  "priority": "Medium",
+  "rank": 3,
+  "blockedBy": [],
+  "covers": "One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads"
+}
+```
+
+**Why this size.** one new package of about eight classes, a diff extension, one key set in `ReviewEditor`, a test task of its own with the platform's test framework, and the verification metadata renewed; no contract changes. The spike built and ran all of it against stand-in threads.
 
 **What must be true.** The IntelliJ plugin attaches inline comment threads, gutter controls, and multi-line range
 commenting to Porelo's diff viewers through one narrow, replaceable pure-Java adapter package over the platform's

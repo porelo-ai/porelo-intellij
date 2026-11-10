@@ -1,6 +1,18 @@
 # IJ11 — Tried on a Windows machine
 
-**Status:** Idea.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ11",
+  "title": "Tried on a Windows machine",
+  "state": "Idea",
+  "size": "-",
+  "priority": "Medium",
+  "rank": 5,
+  "blockedBy": [],
+  "covers": "The WSL way and the ssh way tried once on a real Windows machine, with what to install and what to try; what failed goes to the channel, what passed into `doc/` with the plugin's version"
+}
+```
 
 **What must be true.** The ways the plugin reaches Porelo from Windows have been tried once on a real Windows machine:
 the WSL way, which no Windows machine has run yet, and the ssh way, which only GitHub's Windows runner checks. What

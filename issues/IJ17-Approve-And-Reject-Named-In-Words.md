@@ -1,8 +1,20 @@
 # IJ17 — Approve and Reject named in words
 
-**Status:** Review.
-**Size:** XS - one file of the plugin, its guide and a changelog entry; no contract, and no test, since it changes only
-what reads wrong.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ17",
+  "title": "Approve and Reject named in words",
+  "state": "Review",
+  "size": "XS",
+  "priority": "Medium",
+  "rank": 2,
+  "blockedBy": [],
+  "covers": "*Approve* and *Reject* named in words beside their icons at the top of the review tab"
+}
+```
+
+**Why this size.** one file of the plugin, its guide and a changelog entry; no contract, and no test, since it changes only what reads wrong.
 
 **What must be true.** A person reading a review tab for the first time finds *Approve* and *Reject* without
 hovering: the two decisions are named in words at the top of the tab, not only as a check mark and a cross whose

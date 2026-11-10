@@ -1,6 +1,18 @@
 # IJ22 — A disconnected machine stays unconnected
 
-**Status:** Idea.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ22",
+  "title": "A disconnected machine stays unconnected",
+  "state": "Idea",
+  "size": "-",
+  "priority": "Medium",
+  "rank": 1,
+  "blockedBy": [],
+  "covers": "A machine the person disconnected in the interface stays listed and unconnected until *Connect*: the `disconnected` mark of `frontend.json` read, and one machine's open stream and tunnel closed when its entry leaves or gains the mark"
+}
+```
 
 **What must be true.** A person who ended the connection to a machine in the interface finds the plugin no longer
 connected to it, at once if the IDE is open, and it stays so over a restart of either until they press *Connect* in the

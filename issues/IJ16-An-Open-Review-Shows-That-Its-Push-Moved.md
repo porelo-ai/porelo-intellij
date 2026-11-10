@@ -1,8 +1,20 @@
 # IJ16 — An open review shows that its push moved
 
-**Status:** Review.
-**Size:** S - one pure function in `gate` with its tests, the review tab listening to the watch, one paragraph of
-`doc/index.md`; no contract changes, and the faster half waits for the daemon.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ16",
+  "title": "An open review shows that its push moved",
+  "state": "Review",
+  "size": "S",
+  "priority": "Medium",
+  "rank": 1,
+  "blockedBy": [],
+  "covers": "A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves"
+}
+```
+
+**Why this size.** one pure function in `gate` with its tests, the review tab listening to the watch, one paragraph of `doc/index.md`; no contract changes, and the faster half waits for the daemon.
 
 **What must be true.** A review tab that is open while its push moves to another commit says so, as soon as the
 plugin knows it: the tab is marked as showing a commit that no longer waits, and offers to read the push again.

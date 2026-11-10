@@ -1,6 +1,18 @@
 # IJ20 — A review opens with its first file shown
 
-**Status:** Idea.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ20",
+  "title": "A review opens with its first file shown",
+  "state": "Idea",
+  "size": "-",
+  "priority": "Medium",
+  "rank": 2,
+  "blockedBy": [],
+  "covers": "A review tab always opens with its first file selected and its diff shown; twice in eleven it opened with the file unselected and the diff empty"
+}
+```
 
 **What must be true.** A review tab always opens with its first file, the most far-reaching, selected and its diff shown,
 so a person never faces an empty diff and has to click a file to start reading.

@@ -1,7 +1,20 @@
 # IJ19 — A Fixed Plugin Loads Without A Restart
 
-**Status:** Idea.
-**Severity:** medium.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ19",
+  "title": "A Fixed Plugin Loads Without A Restart",
+  "state": "Idea",
+  "size": "-",
+  "priority": "Medium",
+  "rank": 3,
+  "blockedBy": [],
+  "covers": "A fixed plugin unloads and loads into the running IDE without a restart; today the IDE refuses it as not unload-safe and is left without Porelo"
+}
+```
+
+**Severity.** Medium.
 
 **What must be true.** A fixed Porelo plugin loads into the running IntelliJ IDEA without a restart: the old one
 unloads, the new one loads and reads again, and nothing open in the IDE has to be closed. A small fix during an

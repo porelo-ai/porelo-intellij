@@ -1,8 +1,20 @@
 # IJ15 — The IntelliJ Agent Works In A Porelo Task
 
-**Status:** Backlog.
-**Size:** S - `porelo.yml` and one small change taken through the gate; the rest is reading and measuring in the
-task, with the workflows as they already run on a forge.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ15",
+  "title": "The IntelliJ Agent Works In A Porelo Task",
+  "state": "Backlog",
+  "size": "S",
+  "priority": "Medium",
+  "rank": 2,
+  "blockedBy": [],
+  "covers": "This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green"
+}
+```
+
+**Why this size.** `porelo.yml` and one small change taken through the gate; the rest is reading and measuring in the task, with the workflows as they already run on a forge.
 
 **What must be true.** This repository's agent works in a Porelo task of the project `porelo` on the move's host, as
 the project's procedure for an agent's move lays out. The task follows this repository through the gate and pushes to

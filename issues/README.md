@@ -3,38 +3,38 @@
 The open tasks of `porelo-intellij`, grouped by state; the rules for an issue are in [AGENTS.md](../AGENTS.md). Its prefix
 is `IJ`.
 
-## Review
+## Idea
 
-| # | size | blocked by | what it covers |
+| # | Size | Blocked by | What it covers |
 |---|---|---|---|
-| <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves |
-| <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
-| <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
-
-## Backlog
-
-| # | size | blocked by | what it covers |
-|---|---|---|---|
-| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
-| <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
+| <a id="ij22"></a>[IJ22](IJ22-A-Disconnected-Machine-Stays-Unconnected.md) | - | - | A machine the person disconnected in the interface stays listed and unconnected until *Connect*: the `disconnected` mark of `frontend.json` read, and one machine's open stream and tunnel closed when its entry leaves or gains the mark |
+| <a id="ij20"></a>[IJ20](IJ20-A-Review-Opens-With-Its-First-File-Shown.md) | - | - | A review tab always opens with its first file selected and its diff shown; twice in eleven it opened with the file unselected and the diff empty |
+| <a id="ij19"></a>[IJ19](IJ19-A-Fixed-Plugin-Loads-Without-A-Restart.md) | - | - | A fixed plugin unloads and loads into the running IDE without a restart; today the IDE refuses it as not unload-safe and is left without Porelo |
+| <a id="ij13"></a>[IJ13](IJ13-Held-And-Outgoing-Forge-Comments-Released-In-IntelliJ.md) | - | [IJ04](README.md#ij04) | Held inbound forge comments (`E0`) and outgoing forge comments, replies, suggestions and verdicts shown with their exact destination, operation, commit and content, each released, dismissed, sent or refused singly at its anchor in the review through the daemon; an edit invalidates a prior release |
+| <a id="ij11"></a>[IJ11](IJ11-Tried-On-A-Windows-Machine.md) | - | - | The WSL way and the ssh way tried once on a real Windows machine, with what to install and what to try; what failed goes to the channel, what passed into `doc/` with the plugin's version |
+| <a id="ij10"></a>[IJ10](IJ10-Relays-And-Connections-End-Cleanly.md) | - | - | Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first |
 
 ## Accepted
 
-| # | size | blocked by | what it covers |
+| # | Size | Blocked by | What it covers |
 |---|---|---|---|
-| <a id="ij23"></a>[IJ23](IJ23-The-Tests-Follow-The-Pyramid.md) | | | Every flow proven by unit tests over fakes and the unit suite under a minute: today 20 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject and the WSL choice moved into plain logic, among six sized fixes |
-| <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | | | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
+| <a id="ij23"></a>[IJ23](IJ23-The-Tests-Follow-The-Pyramid.md) | - | - | Every flow proven by unit tests over fakes and the unit suite under a minute: today 20 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject and the WSL choice moved into plain logic, among six sized fixes |
+| <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | - | - | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
 
-## Idea
+## Backlog
 
-| # | size | blocked by | what it covers |
+| # | Size | Blocked by | What it covers |
 |---|---|---|---|
-| <a id="ij22"></a>[IJ22](IJ22-A-Disconnected-Machine-Stays-Unconnected.md) | | | A machine the person disconnected in the interface stays listed and unconnected until *Connect*: the `disconnected` mark of `frontend.json` read, and one machine's open stream and tunnel closed when its entry leaves or gains the mark |
-| <a id="ij20"></a>[IJ20](IJ20-A-Review-Opens-With-Its-First-File-Shown.md) | | | A review tab always opens with its first file selected and its diff shown; twice in eleven it opened with the file unselected and the diff empty |
-| <a id="ij19"></a>[IJ19](IJ19-A-Fixed-Plugin-Loads-Without-A-Restart.md) | | | A fixed plugin unloads and loads into the running IDE without a restart; today the IDE refuses it as not unload-safe and is left without Porelo |
-| <a id="ij13"></a>[IJ13](IJ13-Held-And-Outgoing-Forge-Comments-Released-In-IntelliJ.md) | | [IJ04](README.md#ij04) | Held inbound forge comments (`E0`) and outgoing forge comments, replies, suggestions and verdicts shown with their exact destination, operation, commit and content, each released, dismissed, sent or refused singly at its anchor in the review through the daemon; an edit invalidates a prior release |
-| <a id="ij11"></a>[IJ11](IJ11-Tried-On-A-Windows-Machine.md) | | | The WSL way and the ssh way tried once on a real Windows machine, with what to install and what to try; what failed goes to the channel, what passed into `doc/` with the plugin's version |
-| <a id="ij10"></a>[IJ10](IJ10-Relays-And-Connections-End-Cleanly.md) | | | Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first |
+| <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | - | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
+| <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | - | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
+
+## Review
+
+| # | Size | Blocked by | What it covers |
+|---|---|---|---|
+| <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | - | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves |
+| <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | - | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
+| <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | - | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
 ## Finished
 

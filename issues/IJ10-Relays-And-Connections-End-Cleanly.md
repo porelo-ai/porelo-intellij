@@ -1,6 +1,18 @@
 # IJ10 — Relays and connections end cleanly
 
-**Status:** Idea.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ10",
+  "title": "Relays and connections end cleanly",
+  "state": "Idea",
+  "size": "-",
+  "priority": "Medium",
+  "rank": 6,
+  "blockedBy": [],
+  "covers": "Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first"
+}
+```
 
 **What must be true.** A relay, a WSL bridge or a tunnel the plugin raises never outlives its use, never leaves its
 socket file or a child process behind, and never answers with half of what its probe read, also when a far end

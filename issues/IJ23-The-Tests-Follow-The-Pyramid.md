@@ -1,6 +1,18 @@
 # IJ23 — The Tests Follow The Pyramid
 
-**Status:** Accepted.
+```json
+{
+  "$schema": "issue-1.json",
+  "id": "IJ23",
+  "title": "The Tests Follow The Pyramid",
+  "state": "Accepted",
+  "size": "-",
+  "priority": "Medium",
+  "rank": 1,
+  "blockedBy": [],
+  "covers": "Every flow proven by unit tests over fakes and the unit suite under a minute: today 20 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject and the WSL choice moved into plain logic, among six sized fixes"
+}
+```
 
 **What must be true.** Every flow of the plugin - its states, choices, limits and failure paths - is proven by unit
 tests over fakes that run in milliseconds. Integration tests keep only what a real socket, git, process or IDE adds,
