@@ -111,6 +111,12 @@ dependencies {
     "ideTestRuntimeOnly"(libs.junit4)
 }
 
+// The zip ships no third-party jar, so none travels without its license: jspecify comes with porelo-wire, and the IDE
+// carries it itself; compiling and the tests keep it.
+configurations.runtimeClasspath {
+    exclude(group = "org.jspecify", module = "jspecify")
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)

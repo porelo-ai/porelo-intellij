@@ -1,0 +1,2 @@
+title: The plugin's zip no longer bundles JSpecify, which IntelliJ IDEA carries itself, so it ships only Porelo's own jars and no third-party code without its license
+type: changed
