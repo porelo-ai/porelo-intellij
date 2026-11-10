@@ -13,7 +13,6 @@ is `IJ`.
 | <a id="ij13"></a>[IJ13](IJ13-Held-And-Outgoing-Forge-Comments-Released-In-IntelliJ.md) | - | [IJ04](README.md#ij04) | Held inbound forge comments (`E0`) and outgoing forge comments, replies, suggestions and verdicts shown with their exact destination, operation, commit and content, each released, dismissed, sent or refused singly at its anchor in the review through the daemon; an edit invalidates a prior release |
 | <a id="ij11"></a>[IJ11](IJ11-Tried-On-A-Windows-Machine.md) | - | - | The WSL way and the ssh way tried once on a real Windows machine, with what to install and what to try; what failed goes to the channel, what passed into `doc/` with the plugin's version |
 | <a id="ij10"></a>[IJ10](IJ10-Relays-And-Connections-End-Cleanly.md) | - | - | Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first |
-| <a id="ij24"></a>[IJ24](IJ24-The-Plugin-Ships-Its-Third-Party-Notices.md) | - | - | The plugin's zip carries one THIRD-PARTY-NOTICES file with the full license and notice texts of every jar it bundles, made by the shared generator in porelo-buildtools; today it bundles jspecify (Apache-2.0) and porelo-wire with no license text at all |
 
 ## Accepted
 
@@ -28,6 +27,12 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | - | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
 | <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | - | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
+
+## Implementing
+
+| # | Size | Blocked by | What it covers |
+|---|---|---|---|
+| <a id="ij24"></a>[IJ24](IJ24-The-Plugin-Ships-Its-Third-Party-Notices.md) | XS | - | The plugin's zip ships no third-party code without its license texts: jspecify, which the IDE carries itself, leaves the zip, so only Porelo's own jars remain, and a test fails once any other jar enters it, which is when the shared notices generator would be adopted |
 
 ## Review
 
