@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ24",
   "title": "The plugin ships its third-party notices",
-  "state": "Implementing",
+  "state": "Review",
   "size": "XS",
   "priority": "Medium",
   "rank": 1,
@@ -35,6 +35,10 @@ texts: the plugin's zip bundles Porelo's own jars alone, and a build that would 
 - The shared notices generator in `porelo-buildtools` is made for a native executable: it always writes the runtime's
   section from a JDK home, which the plugin does not ship, and it reads a CycloneDX bill, which this build does not
   make. With no third-party jar left in the zip, there is nothing for it to write.
+- Built: the zip holds `porelo-intellij` and `porelo-wire` alone; `BundledJarsTest` was red on `jspecify-1.0.0.jar`
+  first. The reading found that `test` did not take the zip's contents as an input, so a zip changed under the same
+  name left the test's earlier result standing; reproduced with a jar added to the zip by hand (`test` UP-TO-DATE),
+  fixed by naming the zip as an input of `test` (the same zip now fails it).
 
 ## Plan
 

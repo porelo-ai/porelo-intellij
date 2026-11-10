@@ -299,6 +299,8 @@ tasks.test {
     // The test of the published descriptor reads the one this build writes, so a changed one runs it again rather
     // than taking its result from the cache.
     inputs.files(updatePluginsXml).withPropertyName("updatePlugins")
+    // The test of the bundled jars reads the zip's entries, which updatePlugins.xml does not reflect.
+    inputs.files(tasks.named<Zip>("buildPlugin").flatMap { it.archiveFile }).withPropertyName("pluginZip")
     systemProperty("porelo.updatePlugins", updatePluginsXml.get().outputs.files.singleFile.absolutePath)
     systemProperty("porelo.version", version.toString())
     systemProperty("porelo.zip", tasks.named<Zip>("buildPlugin").get().archiveFile.get().asFile.absolutePath)
