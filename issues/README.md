@@ -28,16 +28,11 @@ is `IJ`.
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | - | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
 | <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | - | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
 
-## Implementing
-
-| # | Size | Blocked by | What it covers |
-|---|---|---|---|
-| <a id="ij27"></a>[IJ27](IJ27-Builds-Take-The-IDEs-From-A-Cache.md) | M | - | Every IntelliJ IDEA archive the Build and the Windows job download - 4.5 GB on Linux each run today - and the Windows job's Gradle and libraries come from the Actions cache, keyed by version, one generation kept; a JetBrains or Central outage no longer turns a build red |
-
 ## Review
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
+| <a id="ij27"></a>[IJ27](IJ27-Builds-Take-The-IDEs-From-A-Cache.md) | S | - | Every IntelliJ IDEA archive the Build and the Windows job download - 4.5 GB on Linux each run today - and the Windows job's Gradle and libraries come from the Actions cache, keyed by the IDE versions, old entries removed by GitHub's own eviction; the GraalVM follows with porelo-buildtools 0.5.2's cache |
 | <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | - | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves |
 | <a id="ij24"></a>[IJ24](IJ24-The-Plugin-Ships-Its-Third-Party-Notices.md) | XS | - | The plugin's zip ships no third-party code without its license texts: jspecify, which the IDE carries itself, leaves the zip, so only Porelo's own jars remain, and a test fails once any other jar enters it, which is when the shared notices generator would be adopted |
 | <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | - | *Approve* and *Reject* named in words beside their icons at the top of the review tab |

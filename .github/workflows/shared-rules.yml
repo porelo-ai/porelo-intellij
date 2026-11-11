@@ -33,6 +33,13 @@ jobs:
             - name: The pinned GraalVM
               uses: ./.github/actions/pinned-jdk
 
+            # Only the Build resolves every IDE; saving here would leave its cache incomplete.
+            - name: The IDEs' archives
+              uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.gradle/caches/modules-2/files-2.1/idea
+                  key: idea-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
+
             # check-actions, check-shared, check-citations and check-doc-site with porelo-release from Central, the
             # changelog's lint, and the tests tagged documents.
             - name: The documents

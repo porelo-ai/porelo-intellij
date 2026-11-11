@@ -74,6 +74,13 @@ jobs:
             - name: The pinned GraalVM
               uses: ./.github/actions/pinned-jdk
 
+            # A fetched IDE remains available when JetBrains' download server is down.
+            - name: The IDEs' archives
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.gradle/caches/modules-2/files-2.1/idea
+                  key: idea-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
+
             # A snapshot from main carries the run's number in its version, so an IDE offers it over the one before.
             - name: Build, tests and the shared checks
               env:
