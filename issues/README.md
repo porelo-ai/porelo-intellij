@@ -21,6 +21,12 @@ is `IJ`.
 | <a id="ij23"></a>[IJ23](IJ23-The-Tests-Follow-The-Pyramid.md) | - | - | Every flow proven by unit tests over fakes and the unit suite under a minute: today 20 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject and the WSL choice moved into plain logic, among six sized fixes |
 | <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | - | - | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
 
+## Analyzed
+
+| # | Size | Blocked by | Open questions | What it covers |
+|---|---|---|---|---|
+| <a id="ij27"></a>[IJ27](IJ27-Builds-Take-The-IDEs-From-A-Cache.md) | M | - | 0 | Every IntelliJ IDEA archive the Build and the Windows job download - 4.5 GB on Linux each run today - and the Windows job's Gradle and libraries come from the Actions cache, keyed by version, one generation kept; a JetBrains or Central outage no longer turns a build red |
+
 ## Backlog
 
 | # | Size | Blocked by | What it covers |
