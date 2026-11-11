@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ27",
   "title": "Builds take the IDEs from a cache",
-  "state": "Analyzed",
+  "state": "Implementing",
   "size": "M",
   "priority": "High",
   "rank": 1,
