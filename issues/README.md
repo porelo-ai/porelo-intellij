@@ -20,7 +20,7 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | - | - | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
 
-## Analyzed
+## Estimated
 
 | # | Size | Blocked by | What it covers | Open questions |
 |---|---|---|---|---|
