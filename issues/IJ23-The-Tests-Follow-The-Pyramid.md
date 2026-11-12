@@ -5,14 +5,17 @@
   "$schema": "issue-1.json",
   "id": "IJ23",
   "title": "The Tests Follow The Pyramid",
-  "state": "Accepted",
-  "size": "-",
+  "state": "Analyzed",
+  "size": "L",
   "priority": "Medium",
   "rank": 1,
   "blockedBy": [],
-  "covers": "Every flow proven by unit tests over fakes and the unit suite under a minute: today 20 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject and the WSL choice moved into plain logic, among six sized fixes"
+  "covers": "Every flow proven by unit tests over fakes and the unit suite under a minute: today 21 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject, the WSL choice and the gate's answers moved into plain logic, among six sized fixes",
+  "openQuestions": 0
 }
 ```
+
+**Why this size.** Six fixes in this repository alone, four of them S and two XS, with no contract: about two days.
 
 **What must be true.** Every flow of the plugin - its states, choices, limits and failure paths - is proven by unit
 tests over fakes that run in milliseconds. Integration tests keep only what a real socket, git, process or IDE adds,
@@ -28,7 +31,7 @@ plugin against a real daemon on a machine.
 
 | level | tests | time | classes |
 |---|---|---|---|
-| unit | 32 (20 %) | 0.9 s | `MachinesTest` 14, `OpenProjectsTest` 5, `LinesTest` 4, `SnapshotTest` 2, `DocumentTestsTaggedTest` 2, `NoticesTest`, `ConnectionsTest`, `NullMarkedPackagesTest`, `ReviewAdapterAloneTest`, `UpdatePluginsTest` 1 each |
+| unit | 33 (21 %) | 0.9 s | `MachinesTest` 14, `OpenProjectsTest` 5, `LinesTest` 4, `SnapshotTest` 2, `DocumentTestsTaggedTest` 2, `NoticesTest`, `ConnectionsTest`, `NullMarkedPackagesTest`, `ReviewAdapterAloneTest`, `UpdatePluginsTest`, `BundledJarsTest` 1 each |
 | integration, stand-in daemon on a real unix socket | 69 | 3.2 s | `GateReviewTest` 27, `GateTest` 18, `WaitingTest` 14, `ReviewTabTest` 10 |
 | integration, real git and shell stand-ins | 20 | 11.1 s | `ReviewCacheTest` |
 | integration, stand-ins for `ssh` and `wsl.exe` in a JVM of their own | 18 | 67.9 s | `WslBridgeTest` 8 (56.0 s), `TunnelTest` 6 (5.8 s), `RelayTest` 4 (6.1 s) |
@@ -36,7 +39,8 @@ plugin against a real daemon on a machine.
 | integration, Windows' `ssh.exe` and OpenSSH (`windowsSshTest`, Windows job only) | 3 | not run here | `WindowsSshRelayTest` |
 | end-to-end, a real daemon on a VM (`liveTest`, by hand) | 10 | not run in this audit | `LiveGateTest`, `LiveHostKeyTest` 3, `LiveIntoProjectTest`, `LiveNoticeTest`, `LiveRelayOverSshTest`, `LiveStreamHoldTest`, `LiveTakenBranchTest`, `LiveWslBridgeTest` |
 
-Of 157 tests, 32 are unit (20 %), 115 integration (73 %) and 10 end-to-end (6 %). The unit target is about 70-80 %
+Of 158 tests, 33 are unit (21 %), 115 integration (73 %) and 10 end-to-end (6 %); `BundledJarsTest` came after the
+measurement, and nothing else in `src` changed since. The unit target is about 70-80 %
 and integration about 15-20 %. The `test` task, which holds the unit and most integration tests, takes 83 s, so it
 is over the minute; `WslBridgeTest` alone is 56 s.
 
@@ -92,9 +96,13 @@ Each fix stands on its own; the order is by harm, then by time saved.
   under a minute.
 - **XS - ssh's command and its refusal as plain logic.** Unit tests on the built command lines and on how ssh's
   words are passed on. `TunnelTest` and `RelayTest` keep forwarding, the owner-only socket and cleanup.
-- **S - the gate read without a socket**, if porelo-wire lets a `Gate` speak over an in-process connection: then
-  `GateReviewTest`, `WaitingTest` and `ReviewTabTest` become unit tests, and `GateTest` keeps one test per real-socket
-  concern (deadline, owner-only path).
+- **S - the gate read without a socket.** porelo-wire's `VarlinkConnection` takes only a `SocketChannel`, so there is
+  no in-process pipe; the seam goes into `Gate` instead, with no change to porelo-wire. `Gate` takes a package-private
+  interface for `call`, `callMore` and `close`, which `VarlinkClient` serves as the real one, and a fake answers with
+  the replies the stand-in daemon sends today and throws `VarlinkException` with the daemon's error names, whose
+  constructors are public. `GateReviewTest`, `WaitingTest` and `ReviewTabTest` then become unit tests over that fake,
+  and `GateTest` keeps one test per real-socket concern: nothing answers at the path, the read deadline, the stream
+  cut off.
 - **XS - waits made short.** The fetch limit and the read deadline taken as parameters in milliseconds in their
   tests, and the process polls bounded at the stand-in's own exit, not at 10 s.
 
@@ -110,6 +118,4 @@ under 30 s.
 
 ## To be checked
 
-- Whether porelo-wire's `VarlinkConnection` can run over an in-process pipe, or a `Gate` can take one; if not, the
-  socket fix is dropped or asked of porelo-wire's agent.
 - The live suite's run time against a VM, measured once with the other fixes.
