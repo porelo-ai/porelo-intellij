@@ -7,7 +7,7 @@
   "title": "Relays and connections end cleanly",
   "state": "Idea",
   "size": "-",
-  "priority": "Medium",
+  "priority": "Low",
   "rank": 6,
   "blockedBy": [],
   "covers": "Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first"

@@ -7,7 +7,7 @@
   "title": "A disconnected machine stays unconnected",
   "state": "Idea",
   "size": "-",
-  "priority": "Medium",
+  "priority": "Low",
   "rank": 1,
   "blockedBy": [],
   "covers": "A machine the person disconnected in the interface stays listed and unconnected until *Connect*: the `disconnected` mark of `frontend.json` read, and one machine's open stream and tunnel closed when its entry leaves or gains the mark"

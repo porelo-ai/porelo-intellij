@@ -7,7 +7,7 @@
   "title": "A Fixed Plugin Loads Without A Restart",
   "state": "Idea",
   "size": "-",
-  "priority": "Medium",
+  "priority": "Low",
   "rank": 3,
   "blockedBy": [],
   "covers": "A fixed plugin unloads and loads into the running IDE without a restart; today the IDE refuses it as not unload-safe and is left without Porelo"

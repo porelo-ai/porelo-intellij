@@ -7,7 +7,7 @@
   "title": "A review opens with its first file shown",
   "state": "Idea",
   "size": "-",
-  "priority": "Medium",
+  "priority": "Low",
   "rank": 2,
   "blockedBy": [],
   "covers": "A review tab always opens with its first file selected and its diff shown; twice in eleven it opened with the file unselected and the diff empty"
