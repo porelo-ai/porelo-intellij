@@ -7,7 +7,7 @@ particular to the IntelliJ plugin.
 ## In this repository
 
 - **It is built with Gradle, not Maven**, on Java 25: the pinned GraalVM is `JAVA_HOME`, and Gradle never downloads
-  a JDK. The commands are in the README's [Build](README.md#build) section; a change is ready when `./gradlew build`
+  a JDK; only the *Windows* job, which publishes nothing, runs on the runner's own Java 25. The commands are in the README's [Build](README.md#build) section; a change is ready when `./gradlew build`
   and `./gradlew verifyPlugin` have passed, and a change to documents alone when `./gradlew documents` has.
 - **Every dependency is checked against `gradle/verification-metadata.xml`.** A version moved in
   `gradle/libs.versions.toml` or in the Gradle Wrapper renews that file in the same commit, written from an empty

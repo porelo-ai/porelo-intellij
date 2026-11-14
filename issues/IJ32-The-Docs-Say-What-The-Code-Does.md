@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ32",
   "title": "The docs say what the code does",
-  "state": "Implementing",
+  "state": "Review",
   "size": "S",
   "priority": "Highest",
   "rank": 2,

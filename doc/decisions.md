@@ -55,11 +55,12 @@ zip would then carry its license and notice texts.
 The Build, the *Shared rules check* and the *Windows* job take the IntelliJ IDEA archives from the Actions cache, so a
 build runs on an earlier run's downloads when JetBrains' download server does not answer. The cache holds
 `caches/modules-2/files-2.1/idea` of Gradle's user home alone, some 4.5 GB on Linux: the IDEs unpacked as well were
-some 17 GB, and restoring them once filled the runner's disk, so the transforms are made again in every run. The key is
-the hash of `gradle.properties`, which names every IDE version, with no fallback key, so a version move never restores
-the old archives beside the new ones; Gradle checks each restored archive against `gradle/verification-metadata.xml`
-as it does a download. The *Shared rules check* restores the Build's entry and never saves one, since it resolves only
-the IDE the plugin compiles against. No step deletes an entry, so no job holds a token that may write the cache: GitHub
-removes an entry seven days after its last use and the oldest once the repository's cache passes its limit, 10 GB:
-the repository keeps GitHub's defaults, and seven days is also the organization's maximum. A limit below the archives
-of one key, or a runner without room for them, would change the answer.
+some 17 GB, and restoring them once filled the runner's disk, so the transforms are made again in every run. The key
+is the hash of `gradle.properties`, which names every IDE version, with no fallback key, so a version move never
+restores the old archives beside the new ones; Gradle checks each restored archive against
+`gradle/verification-metadata.xml` as it does a download. The *Shared rules check* restores the Build's entry and
+never saves one, since it resolves only the IDE the plugin compiles against. No step deletes an entry, and no job that
+uses the cache holds a token that may: only *Delete old runs*, which never touches the cache, holds `actions: write`,
+for the runs it deletes. GitHub removes an entry seven days after its last use and the oldest once the repository's
+cache passes its limit, 10 GB: the repository keeps GitHub's defaults, and seven days is also the organization's
+maximum. A limit below the archives of one key, or a runner without room for them, would change the answer.

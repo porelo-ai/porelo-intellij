@@ -29,7 +29,8 @@ The *Porelo* tool window lists every push that waits at the gates of the machine
 repository, the newest first, and says how many of each push's files reach far. A push that starts to wait is
 announced in a notice within seconds: the plugin follows each machine's list of projects as the daemon streams it,
 and reads it again every minute besides. A machine that does not answer is said, with why, and never shown as having
-nothing waiting. The list is there whatever project is open, or none.
+nothing waiting. The list is there in every project's window, whatever project is open; with no project open, only
+the notice comes, and a review opens once a project is.
 
 ## Reading a push
 
@@ -51,8 +52,8 @@ that pushed it.
 
 ## The machines and the cache
 
-The plugin reaches the machines the Porelo interface lists in its own settings, which it reads and never writes, and
-this computer's daemon whether the list names it or not. A machine elsewhere is reached through a tunnel over ssh,
+The plugin reaches the machines the Porelo interface lists in its own settings, which it reads and never writes, and,
+on Linux, this computer's daemon whether the list names it or not. A machine elsewhere is reached through a tunnel over ssh,
 from Windows through its own `ssh.exe`, and only as its host card says: through the ssh configuration the interface
 writes from the card, `porelo/ssh/<host>.conf` beside its settings, with the card's host key pinned in
 `<host>.known_hosts`. That configuration is the only one ssh reads for it, for the tunnel and for every fetch of a
