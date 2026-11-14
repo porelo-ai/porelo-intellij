@@ -31,6 +31,7 @@ is `IJ`.
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
+| <a id="ij32"></a>[IJ32](IJ32-The-Docs-Say-What-The-Code-Does.md) | S | - | Every sentence of the user-facing documents - `README.md`, `CONTRIBUTING.md`, `SECURITY.md` and `doc/` - read against the code on main, and each one the code does not bear out fixed in the document, or filed as a bug where the document is right and the code wrong; no behavior changes |
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | - | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
 | <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | - | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
 | <a id="ij28"></a>[IJ28](IJ28-A-Removed-Machine-Is-Not-Called-Decided.md) | S | - | A review tab whose machine was taken out of the interface's list while it was open stays as it was, never marked *no longer waits*: a read records which machines it asked, and a push of a machine it did not ask is unknown |
