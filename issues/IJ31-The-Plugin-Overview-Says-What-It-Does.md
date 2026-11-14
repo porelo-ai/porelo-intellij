@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ31",
   "title": "The plugin overview says what it does",
-  "state": "Backlog",
+  "state": "Implementing",
   "size": "S",
   "priority": "Highest",
   "rank": 1,
