@@ -6,6 +6,8 @@
 | The WSL way on Windows | WSL is the local way on a Windows machine, deliberately not ssh, so `WslBridge` stays though no Windows machine has run it yet | [The WSL way on Windows](#the-wsl-way-on-windows) |
 | Three poms the digest check leaves out | Gradle reads them unchecked as version candidates and takes the release, whose files are checked | [Three poms the digest check leaves out](#three-poms-the-digest-check-leaves-out) |
 | Which repository's snapshot wins | The first repository that holds a Porelo snapshot serves it - the host's registry before the central source - not the newest | [Which repository's snapshot wins](#which-repositorys-snapshot-wins) |
+| Third-party jars in the zip | The plugin's zip bundles Porelo's own jars alone, so no third-party code ships without its license texts | [Third-party jars in the zip](#third-party-jars-in-the-zip) |
+| The IDEs in the Actions cache | The cache keeps the IDEs' archives alone, under the IDE versions, and GitHub's eviction removes old entries | [The IDEs in the Actions cache](#the-ides-in-the-actions-cache) |
 
 ## A host's daemon socket
 
@@ -38,3 +40,26 @@ Gradle takes a snapshot from the first repository that holds it, not the newest 
 beats a newer central one. That stays because the host's registry holds what was built on that host, which a build there
 is meant to use; a stale one is replaced by a newer Build on the host. A wrong `PORELO_PACKAGES_READ_TOKEN` fails the
 build rather than falling through to the central source.
+
+## Third-party jars in the zip
+
+The plugin ships as a zip, not as a package, and its `lib/` holds `porelo-intellij` and `porelo-wire` alone. jspecify,
+which `porelo-wire` pulls in, is left out of the runtime classpath: every IntelliJ IDEA the plugin supports carries it
+itself, and its annotations change nothing at run time. `BundledJarsTest` reads the zip the build made and fails on any
+other jar. The shared notices generator is not used, since it writes a JDK's section the zip does not ship and reads a
+bill of materials this build does not make; a third-party jar the plugin must bundle would change the answer, and the
+zip would then carry its license and notice texts.
+
+## The IDEs in the Actions cache
+
+The Build, the *Shared rules check* and the *Windows* job take the IntelliJ IDEA archives from the Actions cache, so a
+build runs on an earlier run's downloads when JetBrains' download server does not answer. The cache holds
+`caches/modules-2/files-2.1/idea` of Gradle's user home alone, some 4.5 GB on Linux: the IDEs unpacked as well were
+some 17 GB, and restoring them once filled the runner's disk, so the transforms are made again in every run. The key is
+the hash of `gradle.properties`, which names every IDE version, with no fallback key, so a version move never restores
+the old archives beside the new ones; Gradle checks each restored archive against `gradle/verification-metadata.xml`
+as it does a download. The *Shared rules check* restores the Build's entry and never saves one, since it resolves only
+the IDE the plugin compiles against. No step deletes an entry, so no job holds a token that may write the cache: GitHub
+removes an entry seven days after its last use and the oldest once the repository's cache passes its limit, 10 GB by
+default. The repository's own settings were not read, since that needs administrative rights; a limit below the
+archives of one key, or a runner without room for them, would change the answer.

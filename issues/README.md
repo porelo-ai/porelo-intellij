@@ -13,6 +13,7 @@ is `IJ`.
 | <a id="ij19"></a>[IJ19](IJ19-A-Fixed-Plugin-Loads-Without-A-Restart.md) | - | - | A fixed plugin unloads and loads into the running IDE without a restart; today the IDE refuses it as not unload-safe and is left without Porelo |
 | <a id="ij11"></a>[IJ11](IJ11-Tried-On-A-Windows-Machine.md) | - | - | The WSL way and the ssh way tried once on a real Windows machine, with what to install and what to try; what failed goes to the channel, what passed into `doc/` with the plugin's version |
 | <a id="ij10"></a>[IJ10](IJ10-Relays-And-Connections-End-Cleanly.md) | - | - | Relays, WSL bridges and tunnels never outlive their use, leave no socket file or child behind, and a probe never answers with half of what it read; seven older points from a skill reading, each to be reproduced first |
+| <a id="ij29"></a>[IJ29](IJ29-An-Open-Review-Sees-Its-Push-Move-Within-Seconds.md) | - | - | An open review tab says its push moved to another commit within seconds, as a new push is announced, once the daemon's stream of projects names something that changes with any waiting push's commit; today only the once-a-minute read shows a move |
 
 ## Accepted
 
@@ -32,15 +33,13 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij04"></a>[IJ04](IJ04-Code-Comments-In-The-Review.md) | L | - | Comments, findings, replies and read-only fix previews in the review tab as SARIF 2.1.0, inline through [IJ12](README.md#ij12)'s adapter and in a discussion panel for file, general and outdated threads, with authenticated source levels and risk classes; the gate's calls and the threads' placing are built behind a stand-in reader, and nothing is shown yet |
 | <a id="ij15"></a>[IJ15](IJ15-The-IntelliJ-Agent-Works-In-A-Porelo-Task.md) | S | - | This repository's agent moves into a Porelo task on the move's host, as the project's procedure for an agent's move lays out; the image on the forge's Ubuntu 24.04, Gradle's user home kept in the task, the move's own change through the gate with the forge's build green |
+| <a id="ij28"></a>[IJ28](IJ28-A-Removed-Machine-Is-Not-Called-Decided.md) | S | - | A review tab whose machine was taken out of the interface's list while it was open stays as it was, never marked *no longer waits*: a read records which machines it asked, and a push of a machine it did not ask is unknown |
+| <a id="ij30"></a>[IJ30](IJ30-The-Issue-Heads-Are-Checked-Every-Day.md) | XS | - | The *Shared rules check* reads every issue's head in `issues/` once a day with the shared tooling's `issues check issues`, from the released porelo-release, and fails naming the issue whose head is wrong |
 
 ## Review
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
-| <a id="ij27"></a>[IJ27](IJ27-Builds-Take-The-IDEs-From-A-Cache.md) | S | - | Every IntelliJ IDEA archive the Build and the Windows job download - 4.5 GB on Linux each run today - and the Windows job's Gradle and libraries come from the Actions cache, keyed by the IDE versions, old entries removed by GitHub's own eviction; the GraalVM follows with porelo-buildtools 0.5.2's cache |
-| <a id="ij16"></a>[IJ16](IJ16-An-Open-Review-Shows-That-Its-Push-Moved.md) | S | - | A review tab open while its push moves or is decided elsewhere says so within a minute, today's read, and disables *Approve* and *Reject*; within seconds once the daemon's stream names moves |
-| <a id="ij24"></a>[IJ24](IJ24-The-Plugin-Ships-Its-Third-Party-Notices.md) | XS | - | The plugin's zip ships no third-party code without its license texts: jspecify, which the IDE carries itself, leaves the zip, so only Porelo's own jars remain, and a test fails once any other jar enters it, which is when the shared notices generator would be adopted |
-| <a id="ij17"></a>[IJ17](IJ17-Approve-And-Reject-Named-In-Words.md) | XS | - | *Approve* and *Reject* named in words beside their icons at the top of the review tab |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | - | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
 ## Finished
@@ -57,3 +56,7 @@ is `IJ`.
 | <a id="ij18"></a>[IJ18](README.md#ij18) | A host is reached as its card says | Every ssh the plugin starts for a host - tunnel, Windows relay, review fetch - runs with the ssh configuration the interface writes from the host card, so the card's host key is enforced and the person's own ssh configuration cannot redirect it; tested in sprint 6m: passed. |
 | <a id="ij09"></a>[IJ09](README.md#ij09) | The build verifies every dependency | Every plugin, library and IDE the Gradle build resolves checked against its SHA-256 before use, a changed digest failing the build by the artifact's name, the file renewed by hand with every version move, and `porelo-buildtools` pinned to a release from Central. |
 | <a id="ij14"></a>[IJ14](README.md#ij14) | Every workflow runs on the host's forge as on GitHub | The workflows run unchanged on a host's Forgejo and on GitHub, Publish, the Windows job and run deletion switched by `PORELO_PUBLISH`, Porelo's snapshots read from `MAVEN_SNAPSHOTS_URL` first; green on a throwaway Forgejo with the forge's image and limits, what only a host shows checked with the agent's move. |
+| <a id="ij24"></a>[IJ24](README.md#ij24) | The plugin ships its third-party notices | The plugin's zip bundles Porelo's own jars alone, jspecify left to the copy the IDE carries, and `BundledJarsTest` fails the build once any other jar would enter it without its license texts. |
+| <a id="ij16"></a>[IJ16](README.md#ij16) | An open review shows that its push moved | A review tab open while its push moves or is decided elsewhere says so above its header within a minute, at once after a decision in this IDE, disables *Approve* and *Reject*, and offers to read the new commit or to close the tab. |
+| <a id="ij17"></a>[IJ17](README.md#ij17) | Approve and Reject named in words | *Approve* and *Reject* named in words beside their icons at the top of the review tab. |
+| <a id="ij27"></a>[IJ27](README.md#ij27) | Builds take the IDEs from a cache | The Build, the *Shared rules check* and the *Windows* job take every IntelliJ IDEA archive from the Actions cache, keyed by `gradle.properties`, and the *Windows* job its Gradle and libraries too, old entries left to GitHub's own eviction. |
