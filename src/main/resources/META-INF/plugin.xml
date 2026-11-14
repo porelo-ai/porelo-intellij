@@ -3,8 +3,12 @@
     <name>Porelo</name>
     <vendor url="https://porelo-ai.github.io">Porelo</vendor>
     <description><![CDATA[
-    Review an agent's waiting work in IntelliJ IDEA: see what waits at Porelo's gate, read its diff in the IDE,
-    and approve or reject it - without checking anything out, building it or running it.
+    <p>Review an agent's waiting work in IntelliJ IDEA, as you would review a colleague's change: see every push that
+    waits at Porelo's gate, read its diff in IntelliJ's own diff windows, and approve or reject it - without checking
+    anything out, building it or running it on your computer.</p>
+    <p>The plugin reaches Porelo on this machine, in a WSL 2 distribution or on a machine over ssh, as Porelo's
+    interface lists them, and is told within seconds when new work waits.</p>
+    <p><a href="https://porelo-ai.github.io/intellij/">Documentation</a>: how to install, connect and review.</p>
     ]]></description>
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.vcs</depends>

@@ -36,16 +36,11 @@ is `IJ`.
 | <a id="ij28"></a>[IJ28](IJ28-A-Removed-Machine-Is-Not-Called-Decided.md) | S | - | A review tab whose machine was taken out of the interface's list while it was open stays as it was, never marked *no longer waits*: a read records which machines it asked, and a push of a machine it did not ask is unknown |
 | <a id="ij30"></a>[IJ30](IJ30-The-Issue-Heads-Are-Checked-Every-Day.md) | XS | - | The *Shared rules check* reads every issue's head in `issues/` once a day with the shared tooling's `issues check issues`, from the released porelo-release, and fails naming the issue whose head is wrong |
 
-## Implementing
-
-| # | Size | Blocked by | What it covers |
-|---|---|---|---|
-| <a id="ij31"></a>[IJ31](IJ31-The-Plugin-Overview-Says-What-It-Does.md) | S | - | Settings > Plugins shows Porelo from the custom plugin repository with what it does, its vendor, a link to the documentation and change notes, since the repository's `updatePlugins.xml` carries the built plugin.xml's description, change notes and vendor; today its Overview, What's New and Additional Info are empty |
-
 ## Review
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
+| <a id="ij31"></a>[IJ31](IJ31-The-Plugin-Overview-Says-What-It-Does.md) | S | - | Settings > Plugins shows Porelo from the custom plugin repository with what it does, its vendor, a link to the documentation and, under What's New, the changelog entries of its version, since the repository's `updatePlugins.xml` carries the built plugin.xml's description, change notes and vendor; today its Overview, What's New and Additional Info are empty |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | - | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
 ## Finished

@@ -128,7 +128,7 @@ jobs:
               run: |
                   set -euo pipefail
                   descriptor=build/distributions/updatePlugins.xml
-                  url="$(sed -n 's/.* url="\([^"]*\)".*/\1/p' "$descriptor")"
+                  url="$(sed -n 's/.*<plugin [^>]*url="\([^"]*\)".*/\1/p' "$descriptor")"
                   base=https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij/
                   case "$url" in
                     "$base"snapshots/*|"$base"releases/*) ;;

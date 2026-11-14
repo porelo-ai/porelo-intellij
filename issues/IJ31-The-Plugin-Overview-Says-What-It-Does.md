@@ -5,21 +5,21 @@
   "$schema": "issue-1.json",
   "id": "IJ31",
   "title": "The plugin overview says what it does",
-  "state": "Implementing",
+  "state": "Review",
   "size": "S",
   "priority": "Highest",
   "rank": 1,
   "blockedBy": [],
-  "covers": "Settings > Plugins shows Porelo from the custom plugin repository with what it does, its vendor, a link to the documentation and change notes, since the repository's `updatePlugins.xml` carries the built plugin.xml's description, change notes and vendor; today its Overview, What's New and Additional Info are empty"
+  "covers": "Settings > Plugins shows Porelo from the custom plugin repository with what it does, its vendor, a link to the documentation and, under What's New, the changelog entries of its version, since the repository's `updatePlugins.xml` carries the built plugin.xml's description, change notes and vendor; today its Overview, What's New and Additional Info are empty"
 }
 ```
 
-**Why this size.** One Gradle task, the plugin descriptor and one test class; no code of the plugin and no contract
-another repository reads.
+**Why this size.** The build script, the plugin descriptor, one workflow line and one test class; no code of the plugin
+and no contract another repository reads.
 
 **What must be true.** A person who adds Porelo's custom plugin repository and opens Porelo in Settings > Plugins >
-Marketplace reads what the plugin does, who publishes it, where its documentation is and where its changes are, before
-installing it.
+Marketplace reads what the plugin does, who publishes it, where its documentation is and what changed in the version offered,
+before installing it.
 
 ## Plan
 
@@ -31,11 +31,16 @@ the zip it has not downloaded yet, and the `updatePluginsXml` task in `build.gra
 1. **Red first:** `UpdatePluginsTest` asserts that the built plugin's `META-INF/plugin.xml`, read from the jar in the
    zip, carries a description, change notes and a vendor with its URL, and that `updatePlugins.xml` carries the same
    three; it fails today on the missing `<description>` of `updatePlugins.xml`.
-2. **`plugin.xml`:** the description says what the plugin does and links to the documentation; `<change-notes>`
-   link to the changelog.
-3. **`updatePluginsXml`:** reads the patched descriptor, the one the zip carries, and writes its description and
+2. **`plugin.xml`:** the description says what the plugin does and links to the documentation.
+3. **Change notes from the changelog:** `pluginConfiguration.changeNotes` in `build.gradle.kts` is written from the
+   version's changelog entries, `changelog/unreleased` for a snapshot and `changelog/v<version>` for a release,
+   grouped by type, with a link to the whole changelog; an entry that is not one plain line `title:` and one `type:` of
+   a known type, or a release without an entry, fails the build, and a snapshot right after a release says there is
+   no change yet. `UpdatePluginsTest` asserts that every entry's title stands in the notes.
+4. **`updatePluginsXml`:** reads the patched descriptor, the one the zip carries, and writes its description and
    change notes as CDATA and its vendor into the `<plugin>` entry, failing the build when one is missing or a text
-   holds `]]>`.
+   holds `]]>`. The Publish step reads the zip's address from the `<plugin>` element alone, since the vendor now
+   carries a `url` too.
 
 ## Acceptance
 

@@ -123,8 +123,50 @@ java {
     }
 }
 
+// What's New: the changelog entries of the version being built, from changelog/unreleased for a snapshot and from
+// the version's own directory for a release, so the notes never drift from the changelog.
+val changelogKinds = linkedMapOf(
+    "added" to "Added", "changed" to "Changed", "deprecated" to "Deprecated", "removed" to "Removed",
+    "fixed" to "Fixed", "security" to "Security", "dependency_update" to "Dependency updates", "other" to "Other",
+)
+
+fun changeNotesOf(directory: File, snapshot: Boolean): String {
+    val link = "<p>Every version: the <a href=\"https://github.com/porelo-ai/porelo-intellij/tree/main/changelog\">" +
+        "changelog</a>.</p>"
+    val entries = directory.listFiles { file -> file.name.endsWith(".yml") }?.sortedBy { it.name }.orEmpty()
+    // Right after a release the next snapshot has no entry yet; a release without one is a mistake.
+    if (entries.isEmpty()) {
+        if (snapshot) return "<p>No changes since the last release yet.</p>\n$link"
+        throw GradleException("$directory holds no changelog entry for What's New")
+    }
+    val byKind = entries.map { file ->
+        val lines = file.readLines().filter { it.isNotBlank() }
+        val title = lines.singleOrNull { it.startsWith("title: ") }?.removePrefix("title: ")?.trim()
+        val kind = lines.singleOrNull { it.startsWith("type: ") }?.removePrefix("type: ")?.trim()
+        // A wrapped title or another key would be cut off or lost here, so only the two plain lines are taken.
+        if (lines.size != 2 || title.isNullOrEmpty() || title.first() in "'\"|>" || kind !in changelogKinds) {
+            throw GradleException("$file is not one plain line 'title: ...' and one 'type: ...' of a known type")
+        }
+        kind!! to title
+    }.groupBy({ it.first }, { it.second })
+    fun html(title: String) = title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("\"", "&quot;").replace(Regex("`([^`]+)`"), "<code>$1</code>")
+    return changelogKinds.filterKeys { it in byKind }.entries.joinToString("\n") { (kind, heading) ->
+        "<h3>$heading</h3>\n<ul>\n" + byKind.getValue(kind).joinToString("\n") { "<li>${html(it)}</li>" } + "\n</ul>"
+    } + "\n" + link
+}
+
+val builtVersion = project.version.toString()
+
 intellijPlatform {
     pluginConfiguration {
+        changeNotes = provider {
+            val snapshot = builtVersion.contains("-SNAPSHOT")
+            changeNotesOf(
+                layout.projectDirectory.dir("changelog/" + if (snapshot) "unreleased" else "v$builtVersion").asFile,
+                snapshot,
+            )
+        }
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
             untilBuild = provider { null }
@@ -258,7 +300,9 @@ val updatePluginsXml = tasks.register("updatePluginsXml") {
     group = "intellij platform"
     val distribution = "https://fuinorg.jfrog.io/artifactory/porelo-dist-intellij"
     val zip = tasks.named<Zip>("buildPlugin").flatMap { it.archiveFile }
-    val pluginXml = layout.projectDirectory.file("src/main/resources/META-INF/plugin.xml")
+    // The descriptor the zip carries, so the repository serves what an installed plugin shows.
+    val pluginXml = tasks.named<org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask>("patchPluginXml")
+        .flatMap { it.outputFile }
     val since = providers.gradleProperty("pluginSinceBuild")
     val pluginVersion = version.toString()
     val output = layout.buildDirectory.file("distributions/updatePlugins.xml")
@@ -268,7 +312,7 @@ val updatePluginsXml = tasks.register("updatePluginsXml") {
     inputs.property("version", pluginVersion)
     outputs.file(output)
     doLast {
-        val descriptor = pluginXml.asFile.readText()
+        val descriptor = pluginXml.get().asFile.readText()
         val id = Regex("<id>([^<]+)</id>").find(descriptor)?.groupValues?.get(1)
             ?: throw GradleException("plugin.xml names no <id>")
         val name = Regex("<name>([^<]+)</name>").find(descriptor)?.groupValues?.get(1)
@@ -279,18 +323,35 @@ val updatePluginsXml = tasks.register("updatePluginsXml") {
             .forEach { (what, value) ->
                 if (!value.matches(plain)) throw GradleException("The plugin's $what '$value' is not plain enough for a URL")
             }
+        // The IDE shows a custom repository's plugin from this entry before it downloads the zip.
+        fun cdata(tag: String): String {
+            val text = Regex("<$tag><!\\[CDATA\\[(.*?)]]></$tag>", RegexOption.DOT_MATCHES_ALL).find(descriptor)
+                ?.groupValues?.get(1)?.trim()
+            if (text.isNullOrBlank() || text.contains("]]>")) {
+                throw GradleException("plugin.xml has no <$tag> in one CDATA section")
+            }
+            return "<$tag><![CDATA[$text]]></$tag>"
+        }
+        val vendor = Regex("<vendor url=\"(https://[A-Za-z0-9./_-]+)\">([A-Za-z0-9._-]+(?: [A-Za-z0-9._-]+)*)</vendor>")
+            .find(descriptor) ?: throw GradleException("plugin.xml names no <vendor> with a plain https url and name")
+        val description = cdata("description")
+        val changeNotes = cdata("change-notes")
         val channel = if (pluginVersion.contains("-SNAPSHOT")) "snapshots" else "releases"
         val url = "$distribution/$channel/$pluginVersion/${zip.get().asFile.name}"
+        // Joined, not trimMargin'd, so no line of the description is taken for a margin.
         output.get().asFile.writeText(
-            """
-            |<?xml version="1.0" encoding="UTF-8"?>
-            |<plugins>
-            |  <plugin id="$id" url="$url" version="$pluginVersion">
-            |    <name>$name</name>
-            |    <idea-version since-build="${since.get()}"/>
-            |  </plugin>
-            |</plugins>
-            |""".trimMargin()
+            listOf(
+                """<?xml version="1.0" encoding="UTF-8"?>""",
+                "<plugins>",
+                """  <plugin id="$id" url="$url" version="$pluginVersion">""",
+                "    <name>$name</name>",
+                """    <idea-version since-build="${since.get()}"/>""",
+                """    <vendor url="${vendor.groupValues[1]}">${vendor.groupValues[2]}</vendor>""",
+                "    $description",
+                "    $changeNotes",
+                "  </plugin>",
+                "</plugins>",
+            ).joinToString("\n", postfix = "\n")
         )
     }
 }
