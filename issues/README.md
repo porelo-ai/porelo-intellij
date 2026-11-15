@@ -40,8 +40,6 @@ is `IJ`.
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
-| <a id="ij31"></a>[IJ31](IJ31-The-Plugin-Overview-Says-What-It-Does.md) | S | - | Settings > Plugins shows Porelo from the custom plugin repository with what it does, its vendor, a link to the documentation and, under What's New, the changelog entries of its version, since the repository's `updatePlugins.xml` carries the built plugin.xml's description, change notes and vendor; today its Overview, What's New and Additional Info are empty |
-| <a id="ij32"></a>[IJ32](IJ32-The-Docs-Say-What-The-Code-Does.md) | S | - | Every sentence of the user-facing documents - `README.md`, `CONTRIBUTING.md`, `SECURITY.md` and `doc/` - read against the code on main, and each one the code does not bear out fixed in the document, or filed as a bug where the document is right and the code wrong; no behavior changes |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | - | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
 ## Finished
@@ -62,3 +60,5 @@ is `IJ`.
 | <a id="ij16"></a>[IJ16](README.md#ij16) | An open review shows that its push moved | A review tab open while its push moves or is decided elsewhere says so above its header within a minute, at once after a decision in this IDE, disables *Approve* and *Reject*, and offers to read the new commit or to close the tab. |
 | <a id="ij17"></a>[IJ17](README.md#ij17) | Approve and Reject named in words | *Approve* and *Reject* named in words beside their icons at the top of the review tab. |
 | <a id="ij27"></a>[IJ27](README.md#ij27) | Builds take the IDEs from a cache | The Build, the *Shared rules check* and the *Windows* job take every IntelliJ IDEA archive from the Actions cache, keyed by `gradle.properties`, and the *Windows* job its Gradle and libraries too, old entries left to GitHub's own eviction. |
+| <a id="ij31"></a>[IJ31](README.md#ij31) | The plugin overview says what it does | Settings > Plugins shows Porelo from the custom plugin repository with what it does, its vendor, a link to the documentation and, under What's New, its version's changelog entries, all carried into `updatePlugins.xml` from the built plugin.xml, and `UpdatePluginsTest` fails the build when one is missing. |
+| <a id="ij32"></a>[IJ32](README.md#ij32) | The docs say what the code does | Every sentence of `README.md`, `CONTRIBUTING.md`, `SECURITY.md` and `doc/` read against the code on main, and each one the code did not bear out fixed in the document. |

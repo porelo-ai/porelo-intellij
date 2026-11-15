@@ -48,7 +48,10 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   only GitHub can run (Publish, Windows, run deletion) runs `if: vars.PORELO_PUBLISH != 'false'`, never by a branch
   in the workflow, and Porelo's snapshots come from `MAVEN_SNAPSHOTS_URL` first, read with
   `PORELO_PACKAGES_READ_TOKEN`, then from the central source.
-- **A changelog entry is one YAML file under `changelog/unreleased/`** with a one-sentence `title` and a `type`.
+- **A changelog entry is one YAML file under `changelog/unreleased/`**: one plain line `title:`, a single sentence
+  without quotes or block marks, and one line `type:` of `added`, `changed`, `deprecated`, `removed`, `fixed`,
+  `security`, `dependency_update` or `other`. The build writes the version's entries into the plugin's What's New
+  and fails on an entry of any other shape, and on a release whose `changelog/v<version>` holds none.
 - **Issue prefix: `IJ`**, in `issues/`.
 - **Skills used:** `java-code-review`, `concurrency-review`, `test-quality`, `security-audit`, `clean-code`.
 
