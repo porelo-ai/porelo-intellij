@@ -9,8 +9,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +44,10 @@ public final class ReviewCache {
 
     /** Where a push fetched into a repository of the person's is kept, one ref each. */
     private static final String PERSONS = "refs/remotes/porelo/";
+
+    /** A path on this computer or a share: it begins with a slash or a drive letter. */
+    private static final Pattern PATH =
+            Pattern.compile("(?:[/\\\\]|[A-Za-z]:[/\\\\]).*", Pattern.DOTALL);
 
     private static final Duration TIMEOUT = Duration.ofSeconds(120);
 
@@ -423,13 +429,62 @@ public final class ReviewCache {
         return result.text();
     }
 
-    /** Runs git that reaches a mirror, through the host's own ssh configuration when it has one. */
+    /**
+     * Runs git that reaches a mirror, through the host's own ssh configuration when it has one.
+     *
+     * @param arguments A command, its options, {@code --}, the mirror's address and what follows
+     *     it.
+     */
     private String reach(List<String> place, @Nullable Path sshConfig, String... arguments) {
-        final Result result = run(place, null, sshConfig, arguments);
+        final int end = List.of(arguments).indexOf("--");
+        if (end < 0 || end + 1 >= arguments.length) {
+            throw new CacheException("git " + String.join(" ", arguments) + " names no address");
+        }
+        final List<String> command = new ArrayList<>(List.of(arguments).subList(0, end));
+        command.addAll(trusting(arguments[end + 1]));
+        command.addAll(List.of(arguments).subList(end, arguments.length));
+        final Result result = run(place, null, sshConfig, command.toArray(String[]::new));
         if (result.exit() != 0) {
             throw failed(arguments, result);
         }
         return result.text();
+    }
+
+    /**
+     * Says how git reads a mirror on a path while trusting that one repository, which belongs to
+     * somebody else when it is a WSL distribution's: its Linux account is a stranger to Windows'
+     * git, which then refuses it as of dubious ownership. The trust is given on the command line of
+     * the {@code upload-pack} that opens the mirror, because a local fetch or {@code ls-remote}
+     * starts it with the configuration of its own environment and command line removed.
+     *
+     * @param url The mirror's address.
+     * @return For a path on this computer or a Windows share ({@code /}, {@code //} or a drive
+     *     letter), {@code --upload-pack} and the command that trusts that path alone, in each form
+     *     git may compare it in; nothing for anything else, an {@code ssh://} address among them,
+     *     whose far side opens the mirror as its owner.
+     * @throws CacheException If the path holds a {@code '}, which the shell that starts {@code
+     *     upload-pack} would read as the end of a word, a line break, or ends in {@code *}, which
+     *     git reads as every repository below.
+     */
+    static List<String> trusting(String url) {
+        if (url.contains("://") || !PATH.matcher(url).matches()) {
+            return List.of();
+        }
+        if (url.contains("'") || url.contains("\n") || url.contains("\r") || url.endsWith("*")) {
+            throw new CacheException("The mirror's path cannot be trusted alone: " + url);
+        }
+        final String slashed = url.replace('\\', '/');
+        final Set<String> forms = new LinkedHashSet<>(List.of(url, slashed));
+        if (slashed.startsWith("/")) {
+            // Git for Windows may read a configured path that begins with / against its own
+            // installation, and writes it after %(prefix)/ when it asks for an exception.
+            forms.add("%(prefix)/" + slashed);
+        }
+        final StringBuilder uploadPack = new StringBuilder("git");
+        for (final String form : forms) {
+            uploadPack.append(" -c 'safe.directory=").append(form).append('\'');
+        }
+        return List.of("--upload-pack", uploadPack.append(" upload-pack").toString());
     }
 
     private Result runIn(Path root, String... arguments) {
@@ -468,15 +523,6 @@ public final class ReviewCache {
         final ProcessBuilder builder = new ProcessBuilder(command);
         // No prompt can be answered from here: a fetch that would ask fails and says so.
         builder.environment().put("GIT_TERMINAL_PROMPT", "0");
-        if (List.of(arguments).stream()
-                .anyMatch(argument -> argument.startsWith("//wsl.localhost/"))) {
-            // A gate mirror in a WSL distribution belongs to its Linux user, whom Windows' git sees
-            // as a stranger and refuses to read from; trusted for this one call only, as a -c on
-            // its command line would be.
-            builder.environment().put("GIT_CONFIG_COUNT", "1");
-            builder.environment().put("GIT_CONFIG_KEY_0", "safe.directory");
-            builder.environment().put("GIT_CONFIG_VALUE_0", "*");
-        }
         builder.environment().putAll(environment);
         if (sshConfig != null) {
             // GIT_SSH_COMMAND outranks GIT_SSH and core.sshCommand, so no ssh of the person's,

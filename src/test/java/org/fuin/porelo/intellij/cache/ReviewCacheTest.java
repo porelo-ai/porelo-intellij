@@ -317,6 +317,110 @@ class ReviewCacheTest {
         assertThat(cache.remoteUrls(bare)).as("the remotes of a repository with none").isEmpty();
     }
 
+    @Test
+    @DisplayName(
+            "A mirror that belongs to somebody else, as a WSL distribution's does to Windows' git, is read and fetched into a project by an upload-pack that trusts that mirror alone")
+    void aMirrorOfAnotherOwnerIsTrustedByItsUploadPackAlone() throws IOException {
+        final Path person = personsRepository();
+        final Path trace = dir.resolve("trace.txt");
+        final Map<String, String> environment = new HashMap<>(NO_CONFIG);
+        // Git's own switch: every repository is somebody else's. The cache and the person's
+        // repository are trusted as the person's own git configuration would, which a local
+        // upload-pack is started without.
+        environment.put("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1");
+        environment.put("GIT_CONFIG_COUNT", "1");
+        environment.put("GIT_CONFIG_KEY_0", "safe.directory");
+        environment.put("GIT_CONFIG_VALUE_0", "*");
+        environment.put("GIT_TRACE", trace.toString());
+        final ReviewCache strangers = new ReviewCache(dir.resolve("cache"), environment);
+
+        final Changes changes =
+                strangers.fetch(
+                        strangers.repository("m", "p", "r"),
+                        mirror.toString(),
+                        null,
+                        "app",
+                        pushed);
+        strangers.fetchInto(person, mirror.toString(), null, "app", pushed);
+
+        assertThat(changes.branch()).as("the branch the mirror's HEAD names").isEqualTo("trunk");
+        assertThat(git(person, "rev-parse", "refs/remotes/porelo/app"))
+                .as("the push's ref in the person's repository")
+                .isEqualTo(pushed);
+        final List<String> uploadPacks =
+                Files.readAllLines(trace, StandardCharsets.UTF_8).stream()
+                        .filter(line -> line.contains("run_command:"))
+                        .filter(line -> line.contains("upload-pack"))
+                        .toList();
+        // Each form trusts the mirror's path, written as it is or after %(prefix)/, and nothing
+        // else.
+        final String path = mirror.toString();
+        final String slashed = path.replace('\\', '/');
+        final int forms =
+                ReviewCache.trusting(path).get(1).split("safe\\.directory=", -1).length - 1;
+        assertThat(uploadPacks)
+                .as("the upload-packs of the ls-remote and the two fetches")
+                .hasSizeGreaterThanOrEqualTo(3)
+                .allSatisfy(
+                        line -> {
+                            final String[] parts = line.split("safe\\.directory=", -1);
+                            assertThat(parts).as("the trusts in " + line).hasSize(forms + 1);
+                            for (int at = 1; at < parts.length; at++) {
+                                // The value ends at its closing quote, which the trace may escape.
+                                assertThat(parts[at].substring(0, parts[at].indexOf('\'')))
+                                        .as("a trust in " + line)
+                                        .isIn(path, slashed, "%(prefix)/" + slashed);
+                            }
+                        });
+    }
+
+    @Test
+    @DisplayName(
+            "Only the mirror's own path is trusted, in each form git compares it in, and an ssh address, whose far side opens the mirror as its owner, is trusted not at all")
+    void onlyTheMirrorsPathIsTrusted() {
+        assertThat(ReviewCache.trusting("ssh://wsl-host/home/user/m.git")).isEmpty();
+        assertThat(
+                        ReviewCache.trusting(
+                                "//wsl.localhost/Ubuntu/home/user/mirrors/default/example-project.git"))
+                .containsExactly(
+                        "--upload-pack",
+                        "git -c 'safe.directory=//wsl.localhost/Ubuntu/home/user/mirrors/default/example-project.git'"
+                                + " -c 'safe.directory=%(prefix)///wsl.localhost/Ubuntu/home/user/mirrors/default/example-project.git'"
+                                + " upload-pack");
+        assertThat(ReviewCache.trusting("C:\\Users\\user\\m.git"))
+                .containsExactly(
+                        "--upload-pack",
+                        "git -c 'safe.directory=C:\\Users\\user\\m.git'"
+                                + " -c 'safe.directory=C:/Users/user/m.git' upload-pack");
+        assertThat(ReviewCache.trusting("/home/a b/$x`y\\z.git"))
+                .as("a path whose characters a shell would read, kept inside the quotes")
+                .containsExactly(
+                        "--upload-pack",
+                        "git -c 'safe.directory=/home/a b/$x`y\\z.git'"
+                                + " -c 'safe.directory=/home/a b/$x`y/z.git'"
+                                + " -c 'safe.directory=%(prefix)//home/a b/$x`y/z.git'"
+                                + " upload-pack");
+        for (final String address :
+                List.of(
+                        "user@wsl-host:/home/user/m.git",
+                        "https://example.org/m.git",
+                        "git://example.org/m.git",
+                        "file:///home/user/m.git",
+                        "origin",
+                        "*")) {
+            assertThat(ReviewCache.trusting(address))
+                    .as("no trust for " + address + ", which is no path")
+                    .isEmpty();
+        }
+        for (final String wide :
+                List.of("/home/user/it's.git", "/home/user/*", "/home/user/m.git\n/x")) {
+            assertThatThrownBy(() -> ReviewCache.trusting(wide))
+                    .as("the path " + wide)
+                    .isInstanceOf(CacheException.class)
+                    .hasMessageContaining(wide);
+        }
+    }
+
     /** A clone of the mirror's source with work of the person's: staged, unstaged and new. */
     private Path personsRepository() throws IOException {
         final Path person = dir.resolve("person");

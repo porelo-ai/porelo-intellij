@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ34",
   "title": "A review reads a WSL mirror owned by the Linux account",
-  "state": "Implementing",
+  "state": "Review",
   "size": "S",
   "priority": "High",
   "rank": 1,
@@ -42,9 +42,12 @@ Steps:
 
 1. `ReviewCache`'s three calls that reach a mirror, `defaultBranch`'s `ls-remote`, `fetched`'s `fetch` and
    `fetchInto`'s `fetch`, pass `--upload-pack` with `git -c safe.directory=<path> -c safe.directory=%(prefix)/<path>
-   upload-pack` when the address is a path rather than an `ssh://` address: the mirror alone is trusted, by both forms
-   Git for Windows matches a path that begins with `//`, for that one process. A path holding a `'` is refused, since
-   `upload-pack` is started through a shell.
+   upload-pack` when the address is a path (it begins with `/`, `\\` or a drive letter), never for an `ssh://` or any
+   other address: the mirror alone is trusted, in each form Git for Windows may compare a path that begins with `//`
+   in, for that one process. A path holding a `'` or a line break is refused, since `upload-pack` is started through a
+   shell, and so is one ending in `*`, which git reads as every repository below it. A mirror on a plain path of this
+   computer is trusted too, though only a WSL distribution's is known to be refused: it is the gate's own mirror,
+   which the person asked to read, and `upload-pack` runs no hook of the mirror's.
 2. The `GIT_CONFIG_COUNT` `safe.directory=*` is removed: it trusted every repository the outer git opened and helped
    none.
 3. A changelog entry under *Fixed*.

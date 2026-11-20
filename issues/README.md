@@ -37,16 +37,11 @@ is `IJ`.
 | <a id="ij28"></a>[IJ28](IJ28-A-Removed-Machine-Is-Not-Called-Decided.md) | S | - | A review tab whose machine was taken out of the interface's list while it was open stays as it was, never marked *no longer waits*: a read records which machines it asked, and a push of a machine it did not ask is unknown |
 | <a id="ij30"></a>[IJ30](IJ30-The-Issue-Heads-Are-Checked-Every-Day.md) | XS | - | The *Shared rules check* reads every issue's head in `issues/` once a day with the shared tooling's `issues check issues`, from the released porelo-release, and fails naming the issue whose head is wrong |
 
-## Implementing
-
-| # | Size | Blocked by | What it covers |
-|---|---|---|---|
-| <a id="ij34"></a>[IJ34](IJ34-A-Review-Reads-A-WSL-Mirror-Owned-By-The-Linux-Account.md) | S | - | Reading, and opening in a project, a push that waits in a WSL distribution works from the IDE on Windows: git's upload-pack reading the gate's mirror at its `//wsl.localhost` path trusts that one repository on its own command line, so Windows' git no longer refuses it as of dubious ownership, and the person's global git configuration is left alone |
-
 ## Review
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
+| <a id="ij34"></a>[IJ34](IJ34-A-Review-Reads-A-WSL-Mirror-Owned-By-The-Linux-Account.md) | S | - | Reading, and opening in a project, a push that waits in a WSL distribution works from the IDE on Windows: git's upload-pack reading the gate's mirror at its `//wsl.localhost` path trusts that one repository on its own command line, so Windows' git no longer refuses it as of dubious ownership, and the person's global git configuration is left alone |
 | <a id="ij12"></a>[IJ12](IJ12-The-Code-Review-Adapter-Over-collaborationTools.md) | M | - | One narrow, replaceable pure-Java adapter package over `intellij.platform.collaborationTools` for diff threads and multi-line gutter controls on Porelo's diff viewers, verified on 2026.1+ without `qodana-sarif` or internal classes; a spike ran it against stand-in threads |
 
 ## Finished

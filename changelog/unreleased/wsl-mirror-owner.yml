@@ -1,0 +1,2 @@
+title: A push waiting in a WSL distribution is read and opened in a project from the IDE on Windows, where Windows' git refused the distribution's mirror as of dubious ownership; only that mirror is trusted, for the one read, and the person's git configuration is left alone
+type: fixed
