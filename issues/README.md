@@ -21,16 +21,11 @@ is `IJ`.
 |---|---|---|---|
 | <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | - | - | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
 
-## Analyzed
-
-| # | Size | Blocked by | What it covers |
-|---|---|---|---|
-| <a id="ij33"></a>[IJ33](IJ33-Handlers-Only-Map-And-Use-Cases-Run-Without-The-IDE.md) | M | - | Each of the plugin's IDE handlers (a dialog's answer, a button, a notification's action, a background task) only reads its input, calls one use case and shows the answer; reading a review, approving, rejecting and fetching a push into an open project run in classes that know no IntelliJ type and are tested with a stand-in daemon |
-
 ## Estimated
 
 | # | Size | Blocked by | What it covers | Open questions |
 |---|---|---|---|---|
+| <a id="ij33"></a>[IJ33](IJ33-Handlers-Only-Map-And-Use-Cases-Run-Without-The-IDE.md) | M | - | Each of the plugin's IDE handlers (a dialog's answer, a button, a notification's action, a background task) only reads its input, calls one use case and shows the answer; reading a review, approving, rejecting and fetching a push into an open project run in classes that know no IntelliJ type and are tested with a stand-in daemon | - |
 | <a id="ij23"></a>[IJ23](IJ23-The-Tests-Follow-The-Pyramid.md) | L | - | Every flow proven by unit tests over fakes and the unit suite under a minute: today 21 % unit, 73 % integration, 6 % end-to-end, `test` 83 s; the stream follower, Approve and Reject, the WSL choice and the gate's answers moved into plain logic, among six sized fixes | 0 |
 
 ## Backlog
