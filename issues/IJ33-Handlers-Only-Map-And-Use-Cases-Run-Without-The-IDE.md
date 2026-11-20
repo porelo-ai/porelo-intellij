@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ33",
   "title": "Handlers only map, and use cases run without the IDE",
-  "state": "Idea",
+  "state": "Accepted",
   "size": "M",
   "priority": "High",
   "rank": 1,
