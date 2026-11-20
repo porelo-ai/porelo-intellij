@@ -7,6 +7,7 @@ is `IJ`.
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
+| <a id="ij33"></a>[IJ33](IJ33-Handlers-Only-Map-And-Use-Cases-Run-Without-The-IDE.md) | M | - | Each of the plugin's IDE handlers (a dialog's answer, a button, a notification's action, a background task) only reads its input, calls one use case and shows the answer; reading a review, approving, rejecting and fetching a push into an open project run in classes that know no IntelliJ type and are tested with a fake daemon |
 | <a id="ij13"></a>[IJ13](IJ13-Held-And-Outgoing-Forge-Comments-Released-In-IntelliJ.md) | - | [IJ04](README.md#ij04) | Held inbound forge comments (`E0`) and outgoing forge comments, replies, suggestions and verdicts shown with their exact destination, operation, commit and content, each released, dismissed, sent or refused singly at its anchor in the review through the daemon; an edit invalidates a prior release |
 | <a id="ij22"></a>[IJ22](IJ22-A-Disconnected-Machine-Stays-Unconnected.md) | - | - | A machine the person disconnected in the interface stays listed and unconnected until *Connect*: the `disconnected` mark of `frontend.json` read, and one machine's open stream and tunnel closed when its entry leaves or gains the mark |
 | <a id="ij20"></a>[IJ20](IJ20-A-Review-Opens-With-Its-First-File-Shown.md) | - | - | A review tab always opens with its first file selected and its diff shown; twice in eleven it opened with the file unselected and the diff empty |
