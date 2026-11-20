@@ -4,6 +4,10 @@
 # cache and stays out.
 .*
 !.gitignore
+!.agents
+!.claude
+.claude/*
+!.claude/skills
 !.editorconfig
 !.git-blame-ignore-revs
 !.gitkeep
