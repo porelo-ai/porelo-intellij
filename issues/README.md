@@ -19,8 +19,13 @@ is `IJ`.
 
 | # | Size | Blocked by | What it covers |
 |---|---|---|---|
-| <a id="ij33"></a>[IJ33](IJ33-Handlers-Only-Map-And-Use-Cases-Run-Without-The-IDE.md) | M | - | Each of the plugin's IDE handlers (a dialog's answer, a button, a notification's action, a background task) only reads its input, calls one use case and shows the answer; reading a review, approving, rejecting and fetching a push into an open project run in classes that know no IntelliJ type and are tested with a fake daemon |
 | <a id="ij21"></a>[IJ21](IJ21-Mutation-Testing-With-PIT.md) | - | - | Mutation testing with PIT over the plugin, run by hand, not in CI and with no threshold, PIT and its JUnit 5 plugin pinned, on a VM where tests call real tools, with a report sorting survivors into real gaps and harmless ones |
+
+## Analyzed
+
+| # | Size | Blocked by | What it covers |
+|---|---|---|---|
+| <a id="ij33"></a>[IJ33](IJ33-Handlers-Only-Map-And-Use-Cases-Run-Without-The-IDE.md) | M | - | Each of the plugin's IDE handlers (a dialog's answer, a button, a notification's action, a background task) only reads its input, calls one use case and shows the answer; reading a review, approving, rejecting and fetching a push into an open project run in classes that know no IntelliJ type and are tested with a stand-in daemon |
 
 ## Estimated
 
