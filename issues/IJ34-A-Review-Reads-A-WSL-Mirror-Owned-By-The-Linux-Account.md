@@ -5,7 +5,7 @@
   "$schema": "issue-1.json",
   "id": "IJ34",
   "title": "A review reads a WSL mirror owned by the Linux account",
-  "state": "Backlog",
+  "state": "Implementing",
   "size": "S",
   "priority": "High",
   "rank": 1,
