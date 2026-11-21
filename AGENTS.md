@@ -17,7 +17,9 @@ the daemon's Varlink contract, `org.fuin.porelo.Tasks1`, through `porelo-wire`, 
   only GitHub can run (Publish, Windows, run deletion) runs `if: vars.PORELO_PUBLISH != 'false'`, never by a branch
   in the workflow, and Porelo's snapshots come from `MAVEN_SNAPSHOTS_URL` first, read with
   `PORELO_PACKAGES_READ_TOKEN`, then from the central source.
-- **Issue prefix: `IJ`**, in `issues/`.
+- **Issues are in the repository's GitHub Issues**, each named by its reference there
+  (`porelo-ai/porelo-intellij#<number>`); one carried over from the Markdown files keeps its old id (`IJ`) as a fixed
+  alias.
 - **Skills used:** `java-code-review`, `concurrency-review`, `test-quality`, `security-audit`, `clean-code`.
 
 ## Shared across the Porelo repositories

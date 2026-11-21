@@ -260,7 +260,7 @@ tasks.register<Test>("windowsSshTest") {
     outputs.upToDateWhen { false }
 }
 
-// A change to documents or issues runs only these: the tests that read a document, which carry the tag.
+// A change to documents runs only these: the tests that read a document, which carry the tag.
 val documentsTest = tasks.register<Test>("documentsTest") {
     description = "Runs the tests tagged documents."
     group = LifecycleBasePlugin.VERIFICATION_GROUP

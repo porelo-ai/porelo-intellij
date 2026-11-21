@@ -9,7 +9,7 @@ on:
         # porelo.yml, the image a Porelo task builds this repository in, is no part of the Build either.
         # Workflows alone build nothing: an action's move is checked by its pull request, and the next push with
         # content builds with it.
-        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', 'porelo.yml', '.github/**']
+        paths-ignore: ['**.md', 'doc/**', 'mkdocs.yml', 'porelo.yml', '.github/**']
     pull_request:
         paths-ignore: ['porelo.yml', '.github/**']
     workflow_dispatch:

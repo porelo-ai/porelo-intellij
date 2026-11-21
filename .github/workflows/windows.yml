@@ -9,9 +9,9 @@ on:
         branches: [main]
         # Documents alone change nothing it checks, unlike the Build, which also checks them. A change to this workflow runs
         # it.
-        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', 'porelo.yml']
+        paths-ignore: ['**.md', 'doc/**', 'mkdocs.yml', 'porelo.yml']
     pull_request:
-        paths-ignore: ['**.md', 'doc/**', 'issues/**', 'mkdocs.yml', 'porelo.yml']
+        paths-ignore: ['**.md', 'doc/**', 'mkdocs.yml', 'porelo.yml']
     workflow_dispatch:
 
 permissions:
