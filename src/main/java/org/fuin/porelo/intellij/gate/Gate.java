@@ -113,6 +113,9 @@ public final class Gate implements AutoCloseable {
      */
     public LimitFactors limits() {
         final String line = string(read("Limits", Map.of()), "line");
+        if (line.isEmpty()) {
+            throw new GateException("The daemon's limits line '' does not name all four factors");
+        }
         final LimitFactors factors;
         try {
             factors = LimitFactors.parse(line);
@@ -123,7 +126,7 @@ public final class Gate implements AutoCloseable {
         }
         // The grammar takes a name left out as 1.0; porelod writes all four, so a line without them
         // is no daemon's.
-        if (line.isEmpty() || line.split(",", -1).length != 4) {
+        if (line.split(",", -1).length != 4) {
             throw new GateException(
                     "The daemon's limits line '"
                             + shown(line)
