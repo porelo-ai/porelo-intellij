@@ -38,7 +38,9 @@ the notice comes, and a review opens once a project is.
 on the left, IntelliJ's diff of the selected one on the right, against where the push and its branch last met, so
 the branch's later work is not shown as removed. The files the daemon ranks far-reaching - a workflow, a build file,
 IDE settings, anything that runs or decides what runs - come first and are marked. A file the daemon ranks that the
-diff does not show is refused rather than left out, so what is approved is never more than what was shown. *Read
+diff does not show is refused rather than left out, so what is approved is never more than what was shown. A
+review too large for one message is read page by page to its last file, every page for the commit listed; a push
+that moves meanwhile is listed again at its new commit, never shown half. *Read
 Again* reads the push anew from its machine. A tab whose push moved to another commit, or was decided elsewhere,
 says so above its header within a minute, at once after a decision in this IDE, and *Approve* and *Reject* are
 disabled: a moved push is read again at its new commit, one decided elsewhere is closed.

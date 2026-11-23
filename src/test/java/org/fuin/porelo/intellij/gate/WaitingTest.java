@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Machines;
+import org.fuin.porelo.wire.varlink.VarlinkException;
 import org.fuin.porelo.wire.varlink.VarlinkServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -143,6 +144,63 @@ class WaitingTest {
                                                         "reason",
                                                         "")))));
         return new Machine(name, daemon.socketPath());
+    }
+
+    @Test
+    @DisplayName(
+            "A push that moves while its review's pages are read is listed again, not its machine left unread")
+    void listsAgainAPushThatMovedWhileItsPagesWereRead() {
+        final Machine machine = machine("one", "2026-10-07T16:00:00Z");
+        final VarlinkServer daemon = daemons.getFirst();
+        final java.util.concurrent.atomic.AtomicInteger pages =
+                new java.util.concurrent.atomic.AtomicInteger();
+        daemon.method(
+                "Review",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "diff",
+                                        "",
+                                        "log",
+                                        "",
+                                        "files",
+                                        List.of(file("pom.xml", "DANGEROUS")),
+                                        "paged",
+                                        Map.of(
+                                                "files",
+                                                2,
+                                                "commits",
+                                                0,
+                                                "logBytes",
+                                                0,
+                                                "diffBytes",
+                                                0,
+                                                "filesNext",
+                                                1))));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) -> {
+                    if (pages.getAndIncrement() == 0) {
+                        throw new VarlinkException(
+                                Gate.INTERFACE + ".MovedSinceReview",
+                                Map.of("name", "task-one", "reviewed", COMMIT, "now", COMMIT));
+                    }
+                    replies.last(Map.of("files", List.of(file("A.java", "ORDINARY"))));
+                });
+
+        final Waiting waiting = Waiting.read(List.of(machine), any -> new Gate(any.socket()));
+
+        assertThat(waiting.silent()).as("machines that did not answer").isEmpty();
+        assertThat(waiting.pushes())
+                .extracting(entry -> entry.push().name() + "/" + entry.farReaching())
+                .as("the push, read again to its last file")
+                .containsExactly("task-one/1");
+        assertThat(pages).as("pages asked for: the moved one and the one after").hasValue(2);
+    }
+
+    private static Map<String, Object> file(String path, String rank) {
+        return Map.of(
+                "path", path, "status", "M", "added", 1, "removed", 1, "rank", rank, "reason", "");
     }
 
     @Test

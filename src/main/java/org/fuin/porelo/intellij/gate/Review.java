@@ -6,8 +6,10 @@ import org.jspecify.annotations.Nullable;
 /**
  * What a pending push changes, as the daemon ranks it.
  *
- * @param diff The unified diff, the far-reaching files first.
- * @param log The commit log over the same range.
+ * @param diff The unified diff, the far-reaching files first; for a review too large for one
+ *     message only its first page.
+ * @param log The commit log over the same range; for a review too large for one message only its
+ *     first page.
  * @param files What it changes, in the order to read them.
  * @param asked What the task that pushed it was asked, {@code ""} when nothing, {@code null} when
  *     the task is gone.

@@ -72,7 +72,8 @@ class LiveGateTest {
                 assertThat(gate.limits())
                         .as("the factors of a daemon whose config.yml sets none")
                         .isEqualTo(LimitFactors.DEFAULT);
-                final Review review = gate.review(entry.project(), entry.repository(), task);
+                final Review review =
+                        gate.review(entry.project(), entry.repository(), task, commit);
                 assertThat(review.files())
                         .as("what it changes")
                         .hasSizeGreaterThan(entry.farReaching());

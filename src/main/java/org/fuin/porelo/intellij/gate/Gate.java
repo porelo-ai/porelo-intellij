@@ -255,28 +255,65 @@ public final class Gate implements AutoCloseable {
     }
 
     /**
-     * Returns what a pending push changes, ranked.
+     * Returns what a pending push changes, ranked, with every file however many pages the daemon
+     * sends them in.
      *
      * @param project The project's name.
      * @param repository The repository's name.
      * @param name The push's name.
+     * @param commit The commit the push was listed with; every page is read for it.
      * @return What it changes.
+     * @throws MovedSinceReviewException If the push moved while its pages were read.
+     * @throws GateException If the pages do not add up to the files the daemon says there are.
      */
-    public Review review(String project, String repository, String name) {
+    public Review review(String project, String repository, String name, String commit) {
         final Map<String, Object> call = parameters(project, repository);
         call.put("name", name);
         final Map<String, Object> reply = read("Review", call);
-        final List<Review.File> files = new ArrayList<>();
-        for (final Map<String, Object> file : objects(reply, "files")) {
-            files.add(
-                    new Review.File(
-                            string(file, "path"),
-                            string(file, "status"),
-                            number(file, "added"),
-                            number(file, "removed"),
-                            string(file, "rank"),
-                            string(file, "reason"),
-                            optionalString(file, "riskClass")));
+        final List<Review.File> files = filesOf(objects(reply, "files"));
+        if (reply.get("paged") != null) {
+            final Map<String, Object> paged = object(reply, "paged");
+            final int whole = number(paged, "files");
+            @Nullable Integer next = optionalNumber(paged, "filesNext");
+            while (next != null) {
+                // A page starts where the files read so far end, so none is read twice or left out.
+                if (next != files.size() || files.size() >= whole) {
+                    throw new GateException(
+                            "The daemon's review of "
+                                    + name
+                                    + " asks for files from "
+                                    + next
+                                    + " after "
+                                    + files.size()
+                                    + " of "
+                                    + whole);
+                }
+                final Map<String, Object> page = parameters(project, repository);
+                page.put("name", name);
+                page.put("commit", commit);
+                page.put("part", "files");
+                page.put("from", next);
+                final Map<String, Object> answer = read("ReviewPage", page);
+                final List<Review.File> more = filesOf(objects(answer, "files"));
+                // Every page brings a file, so pages end within the count the daemon named.
+                if (more.isEmpty()) {
+                    throw new GateException(
+                            "The daemon's review of "
+                                    + name
+                                    + " sent a page of files without a file");
+                }
+                files.addAll(more);
+                next = optionalNumber(answer, "next");
+            }
+            if (files.size() != whole) {
+                throw new GateException(
+                        "The daemon's review of "
+                                + name
+                                + " holds "
+                                + files.size()
+                                + " files, but says it has "
+                                + whole);
+            }
         }
         // Absent when the task is gone; anything but text is no answer to what it asked.
         final Object asked = reply.get("asked");
@@ -717,6 +754,26 @@ public final class Gate implements AutoCloseable {
             throw new GateException("The daemon answered without '" + field + "': " + shown(reply));
         }
         return value;
+    }
+
+    private static List<Review.File> filesOf(List<Map<String, Object>> answered) {
+        final List<Review.File> files = new ArrayList<>();
+        for (final Map<String, Object> file : answered) {
+            files.add(
+                    new Review.File(
+                            string(file, "path"),
+                            string(file, "status"),
+                            number(file, "added"),
+                            number(file, "removed"),
+                            string(file, "rank"),
+                            string(file, "reason"),
+                            optionalString(file, "riskClass")));
+        }
+        return files;
+    }
+
+    private static @Nullable Integer optionalNumber(Map<String, Object> reply, String field) {
+        return reply.get(field) == null ? null : number(reply, field);
     }
 
     // A count is whole and not negative, and one an int cannot hold is refused, never cut to fit.

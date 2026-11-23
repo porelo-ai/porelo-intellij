@@ -176,7 +176,7 @@ class GateReviewTest {
                                                         file("b", Map.of())))));
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            final Review review = gate.review("porelo", "core", "app");
+            final Review review = gate.review("porelo", "core", "app", COMMIT);
 
             assertThat(review.base()).as("the base").isEqualTo(BASE);
             assertThat(review.files())

@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.fuin.porelo.intellij.cache.Changes;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.GateException;
+import org.fuin.porelo.intellij.gate.MovedSinceReviewException;
 import org.fuin.porelo.intellij.gate.Review;
 import org.fuin.porelo.intellij.gate.ReviewSummary;
 import org.fuin.porelo.intellij.gate.Waiting;
@@ -182,7 +183,22 @@ final class ReviewTab {
     private static Read read(Waiting.Entry entry) {
         final Review review;
         try (Gate gate = PoreloWatch.get().gate(entry.machine())) {
-            review = gate.review(entry.project(), entry.repository(), entry.push().name());
+            review =
+                    gate.review(
+                            entry.project(),
+                            entry.repository(),
+                            entry.push().name(),
+                            entry.push().commit());
+        } catch (MovedSinceReviewException moved) {
+            // What is shown, fetched and approved is one commit, so the moved push is listed anew.
+            PoreloWatch.get().readNow();
+            throw new GateException(
+                    entry.push().name()
+                            + " moved to "
+                            + moved.now()
+                            + " while its review was read; what waits is read again, open it from"
+                            + " there",
+                    moved);
         }
         final PoreloWatch watch = PoreloWatch.get();
         final Changes changes = watch.fetch(entry);

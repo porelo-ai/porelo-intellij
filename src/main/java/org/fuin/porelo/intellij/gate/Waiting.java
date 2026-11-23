@@ -443,7 +443,7 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
             Gate gate = null;
             try {
                 gate = connect.apply(machine);
-                read = at(machine, gate, known);
+                read = atOnceMore(machine, gate, known);
             } catch (RuntimeException ex) {
                 // An interrupted read is no machine that did not answer; it is given up whole.
                 if (Thread.currentThread().isInterrupted()) {
@@ -468,6 +468,17 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
             gate.close();
         } catch (RuntimeException ex) {
             // See above.
+        }
+    }
+
+    // A push that moved while its review's pages were read is listed anew at its new commit; one
+    // that moves again leaves the machine unread, saying why.
+    private static List<Entry> atOnceMore(
+            Machine machine, Gate gate, java.util.Map<String, Integer> known) {
+        try {
+            return at(machine, gate, known);
+        } catch (MovedSinceReviewException moved) {
+            return at(machine, gate, known);
         }
     }
 
@@ -501,7 +512,8 @@ public record Waiting(List<Entry> pushes, List<Silent> silent) {
                                                     .review(
                                                             project.name(),
                                                             repository.name(),
-                                                            push.name())
+                                                            push.name(),
+                                                            push.commit())
                                                     .files()
                                                     .stream()
                                                     .filter(Review.File::farReaching)

@@ -257,7 +257,7 @@ class GateTest {
                                                         "")))));
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            final Review review = gate.review("porelo", "core", "app");
+            final Review review = gate.review("porelo", "core", "app", COMMIT);
 
             assertThat(review.files())
                     .extracting(Review.File::path)
@@ -281,7 +281,7 @@ class GateTest {
                         replies.last(Map.of("diff", "", "log", "", "files", List.of())));
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            assertThat(gate.review("porelo", "core", "app").asked())
+            assertThat(gate.review("porelo", "core", "app", COMMIT).asked())
                     .as("what a gone task was asked")
                     .isNull();
         }
@@ -723,5 +723,226 @@ class GateTest {
                         .hasMessageContaining("does not name all four");
             }
         }
+    }
+
+    private static Map<String, Object> file(String path) {
+        return Map.of(
+                "path",
+                path,
+                "status",
+                "M",
+                "added",
+                1,
+                "removed",
+                0,
+                "rank",
+                "ORDINARY",
+                "reason",
+                "");
+    }
+
+    private static Map<String, Object> pagedReview(int whole, int next) {
+        return Map.of(
+                "diff",
+                "diff --git",
+                "log",
+                "abc x",
+                "files",
+                List.of(file("a")),
+                "paged",
+                Map.of(
+                        "files",
+                        whole,
+                        "commits",
+                        0,
+                        "logBytes",
+                        5,
+                        "diffBytes",
+                        10,
+                        "filesNext",
+                        next));
+    }
+
+    @Test
+    @DisplayName(
+            "A review whose files come in pages is read to its last file, each page asked for the commit listed")
+    void readsEveryPageOfAReviewsFiles() {
+        final List<Map<String, Object>> pages = new java.util.ArrayList<>();
+        daemon.method("Review", (parameters, replies) -> replies.last(pagedReview(3, 1)));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) -> {
+                    pages.add(parameters);
+                    final int from = ((Number) parameters.get("from")).intValue();
+                    replies.last(
+                            from == 1
+                                    ? Map.of("files", List.of(file("b")), "next", 2)
+                                    : Map.of("files", List.of(file("c"))));
+                });
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.review("porelo", "core", "app", COMMIT).files())
+                    .extracting(Review.File::path)
+                    .as("every file, in the review's order")
+                    .containsExactly("a", "b", "c");
+        }
+        assertThat(pages)
+                .as("the pages asked for")
+                .hasSize(2)
+                .allSatisfy(
+                        page ->
+                                assertThat(page)
+                                        .as("a page's call")
+                                        .containsEntry("commit", COMMIT)
+                                        .containsEntry("part", "files")
+                                        .containsEntry("name", "app"));
+    }
+
+    @Test
+    @DisplayName("Pages that leave a file out are refused, never shown as the whole review")
+    void refusesPagesThatLeaveAFileOut() {
+        daemon.method("Review", (parameters, replies) -> replies.last(pagedReview(3, 1)));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) -> replies.last(Map.of("files", List.of(file("b")))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.review("porelo", "core", "app", COMMIT))
+                    .as("two files of three")
+                    .isInstanceOf(GateException.class)
+                    .hasMessage("The daemon's review of app holds 2 files, but says it has 3");
+        }
+    }
+
+    @Test
+    @DisplayName("A page that brings no file is refused, so pages that never end are not asked for")
+    void refusesAPageWithoutAFile() {
+        final java.util.concurrent.atomic.AtomicInteger pages =
+                new java.util.concurrent.atomic.AtomicInteger();
+        daemon.method("Review", (parameters, replies) -> replies.last(pagedReview(3, 1)));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) ->
+                        // After a hundred empty pages it ends, so a loop shows as a wrong answer.
+                        replies.last(
+                                pages.incrementAndGet() < 100
+                                        ? Map.of("files", List.of(), "next", 1)
+                                        : Map.of("files", List.of())));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.review("porelo", "core", "app", COMMIT))
+                    .as("an empty page that asks for the same place again")
+                    .isInstanceOf(GateException.class)
+                    .hasMessage("The daemon's review of app sent a page of files without a file");
+        }
+        assertThat(pages).as("pages asked for").hasValue(1);
+    }
+
+    @Test
+    @DisplayName(
+            "A review that says it has more files than it sent, and no page for them, is refused")
+    void refusesAReviewThatSaysItHasMoreFilesThanItSent() {
+        daemon.method(
+                "Review",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "diff",
+                                        "",
+                                        "log",
+                                        "",
+                                        "files",
+                                        List.of(file("a")),
+                                        "paged",
+                                        Map.of(
+                                                "files",
+                                                2,
+                                                "commits",
+                                                0,
+                                                "logBytes",
+                                                0,
+                                                "diffBytes",
+                                                10,
+                                                "diffNext",
+                                                0))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.review("porelo", "core", "app", COMMIT))
+                    .as("one file of two, with no page for the other")
+                    .isInstanceOf(GateException.class)
+                    .hasMessage("The daemon's review of app holds 1 files, but says it has 2");
+        }
+    }
+
+    @Test
+    @DisplayName("A page that starts elsewhere than where the files read so far end is refused")
+    void refusesAPageThatDoesNotFollowOn() {
+        daemon.method("Review", (parameters, replies) -> replies.last(pagedReview(3, 1)));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) ->
+                        replies.last(Map.of("files", List.of(file("b")), "next", 1)));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.review("porelo", "core", "app", COMMIT))
+                    .as("a page asked for again")
+                    .isInstanceOf(GateException.class)
+                    .hasMessage("The daemon's review of app asks for files from 1 after 2 of 3");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A push that moved while its pages were read is refused as moved, naming the commit now")
+    void refusesAReviewWhosePushMovedBetweenPages() {
+        daemon.method("Review", (parameters, replies) -> replies.last(pagedReview(2, 1)));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) -> {
+                    throw new VarlinkException(
+                            Gate.INTERFACE + ".MovedSinceReview",
+                            Map.of(
+                                    "name",
+                                    "app",
+                                    "reviewed",
+                                    COMMIT,
+                                    "now",
+                                    "0123456789abcdef0123456789abcdef01234567"));
+                });
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.review("porelo", "core", "app", COMMIT))
+                    .as("a push that moved between pages")
+                    .isInstanceOfSatisfying(
+                            MovedSinceReviewException.class,
+                            moved ->
+                                    assertThat(moved.now())
+                                            .as("what it holds now")
+                                            .isEqualTo("0123456789abcdef0123456789abcdef01234567"));
+        }
+    }
+
+    @Test
+    @DisplayName("A review that fits one message is read without asking for a page")
+    void readsAWholeReviewWithoutAPage() {
+        final java.util.concurrent.atomic.AtomicInteger pages =
+                new java.util.concurrent.atomic.AtomicInteger();
+        daemon.method(
+                "Review",
+                (parameters, replies) ->
+                        replies.last(Map.of("diff", "", "log", "", "files", List.of(file("a")))));
+        daemon.method(
+                "ReviewPage",
+                (parameters, replies) -> {
+                    pages.incrementAndGet();
+                    replies.last(Map.of("files", List.of()));
+                });
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.review("porelo", "core", "app", COMMIT).files())
+                    .as("its one file")
+                    .hasSize(1);
+        }
+        assertThat(pages).as("pages asked for").hasValue(0);
     }
 }
