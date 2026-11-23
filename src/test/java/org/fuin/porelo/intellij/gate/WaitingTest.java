@@ -176,7 +176,9 @@ class WaitingTest {
                                                 "diffBytes",
                                                 0,
                                                 "filesNext",
-                                                1))));
+                                                1,
+                                                "base",
+                                                ""))));
         daemon.method(
                 "ReviewPage",
                 (parameters, replies) -> {

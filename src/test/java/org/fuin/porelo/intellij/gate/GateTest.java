@@ -31,6 +31,8 @@ class GateTest {
 
     private static final String COMMIT = "9119cf0a6a99d1e2b3c4d5e6f708192a3b4c5d6e";
 
+    private static final String BASE = "5a1e0c2b7d9f3e4a6b8c0d1e2f3a4b5c6d7e8f90";
+
     @TempDir Path dir;
 
     private VarlinkServer daemon;
@@ -760,7 +762,9 @@ class GateTest {
                         "diffBytes",
                         10,
                         "filesNext",
-                        next));
+                        next,
+                        "base",
+                        BASE));
     }
 
     @Test
@@ -794,6 +798,8 @@ class GateTest {
                                 assertThat(page)
                                         .as("a page's call")
                                         .containsEntry("commit", COMMIT)
+                                        .containsEntry("against", BASE)
+                                        .containsEntry("ignoreLineEndings", false)
                                         .containsEntry("part", "files")
                                         .containsEntry("name", "app"));
     }
@@ -864,7 +870,9 @@ class GateTest {
                                                 "diffBytes",
                                                 10,
                                                 "diffNext",
-                                                0))));
+                                                0,
+                                                "base",
+                                                BASE))));
 
         try (Gate gate = new Gate(daemon.socketPath())) {
             assertThatThrownBy(() -> gate.review("porelo", "core", "app", COMMIT))

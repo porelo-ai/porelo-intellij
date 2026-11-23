@@ -274,6 +274,8 @@ public final class Gate implements AutoCloseable {
         if (reply.get("paged") != null) {
             final Map<String, Object> paged = object(reply, "paged");
             final int whole = number(paged, "files");
+            // The base Review read against, never a default resolved again for a later page.
+            final String base = string(paged, "base");
             @Nullable Integer next = optionalNumber(paged, "filesNext");
             while (next != null) {
                 // A page starts where the files read so far end, so none is read twice or left out.
@@ -291,6 +293,8 @@ public final class Gate implements AutoCloseable {
                 final Map<String, Object> page = parameters(project, repository);
                 page.put("name", name);
                 page.put("commit", commit);
+                page.put("against", base);
+                page.put("ignoreLineEndings", false);
                 page.put("part", "files");
                 page.put("from", next);
                 final Map<String, Object> answer = read("ReviewPage", page);
