@@ -1,2 +1,2 @@
-title: The plugin's time limits follow the four factors each machine's porelod reads from Porelo's config.yml, so a slow network or machine is met there instead of by a new plugin
+title: The plugin's time limits follow the four factors each machine's porelod reads from Porelo's config.yml, so a slow network or machine is met there instead of by a new plugin; an approval or rejection waits at most 10 minutes under the services factor, where it waited without end
 type: changed

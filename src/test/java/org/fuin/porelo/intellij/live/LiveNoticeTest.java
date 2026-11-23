@@ -55,10 +55,11 @@ class LiveNoticeTest {
                         env("PORELO_LIVE_SOCKET"),
                         Path.of(env("PORELO_LIVE_SSH_CONFIG")));
         try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"), LimitFactors.DEFAULT)) {
-            final Waiting before = Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
+            final Waiting before =
+                    Waiting.read(List.of(machine), any -> LiveGates.opened(tunnel.socket()));
             final AtomicReference<List<Project>> first = new AtomicReference<>();
             final AtomicReference<Long> moved = new AtomicReference<>();
-            final Gate watching = new Gate(tunnel.socket());
+            final Gate watching = LiveGates.opened(tunnel.socket());
             final Thread stream =
                     Thread.ofVirtual()
                             .start(
@@ -88,7 +89,9 @@ class LiveNoticeTest {
                     before.withMachine(
                             "live",
                             Waiting.read(
-                                    List.of(machine), any -> new Gate(tunnel.socket()), before));
+                                    List.of(machine),
+                                    any -> LiveGates.opened(tunnel.socket()),
+                                    before));
             final Duration known = Duration.ofNanos(System.nanoTime() - pushed);
 
             assertThat(after.newSince(before)).as("what is new once the stream said so").hasSize(1);
@@ -100,7 +103,9 @@ class LiveNoticeTest {
 
             watching.close();
             stream.join(Duration.ofSeconds(10));
-            assertThat(Waiting.read(List.of(machine), any -> new Gate(tunnel.socket())).pushes())
+            assertThat(
+                            Waiting.read(List.of(machine), any -> LiveGates.opened(tunnel.socket()))
+                                    .pushes())
                     .as("what a plain read finds with the stream cut")
                     .containsAll(after.newSince(before));
         }

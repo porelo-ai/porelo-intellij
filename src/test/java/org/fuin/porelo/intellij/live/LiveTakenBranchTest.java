@@ -54,9 +54,9 @@ class LiveTakenBranchTest {
         final String free = env("PORELO_LIVE_FREE_BRANCH");
 
         try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"), LimitFactors.DEFAULT);
-                Gate gate = new Gate(tunnel.socket())) {
+                Gate gate = LiveGates.opened(tunnel.socket())) {
             final Waiting.Entry entry =
-                    Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()))
+                    Waiting.read(List.of(machine), any -> LiveGates.opened(tunnel.socket()))
                             .pushes()
                             .stream()
                             .filter(push -> push.push().name().equals(task))

@@ -68,7 +68,8 @@ one repository with no working tree for each gate.
 ## Time limits
 
 The plugin's waits follow the four factors Porelo's `config.yml` sets on each machine, under `limits:`, which that
-machine's daemon answers once per connection: `services` for how long an answer from the daemon and a fetch may take,
+machine's daemon answers once per connection: `services` for how long an answer from the daemon (30 seconds, an
+approval or rejection 10 minutes, since the daemon then pushes to the forge) and a fetch may take,
 `machines` for how long a tunnel, relay or WSL bridge may take to start and to end, `polling` for how often every
 machine is read, and `retries` for the pause before a stream that ended is opened again. A tunnel, relay or bridge
 starts, and the first answer is waited on, before the daemon can be asked, so they follow the factors last read from

@@ -32,6 +32,12 @@ public final class Gate implements AutoCloseable {
     /** How long a read waits for the daemon's answer. */
     private static final Duration ANSWER = Duration.ofSeconds(30);
 
+    /**
+     * How long an approval or rejection waits: the daemon bounds its own push to the forge, which
+     * may rightly take longer than any read.
+     */
+    private static final Duration FORWARD = Duration.ofMinutes(10);
+
     /** What the daemon takes as a comment's id. */
     private static final Pattern COMMENT_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
@@ -59,6 +65,8 @@ public final class Gate implements AutoCloseable {
 
     private volatile Duration answer;
 
+    private volatile Duration forward;
+
     /**
      * Connects to a daemon's socket.
      *
@@ -78,11 +86,16 @@ public final class Gate implements AutoCloseable {
      * @throws GateException If nothing answers there.
      */
     public Gate(Path socket, LimitFactors factors) {
-        this(socket, factors.services(ANSWER));
+        this(socket, factors.services(ANSWER), factors.services(FORWARD));
     }
 
     Gate(Path socket, Duration answer) {
+        this(socket, answer, FORWARD);
+    }
+
+    private Gate(Path socket, Duration answer, Duration forward) {
         this.answer = answer;
+        this.forward = forward;
         try {
             this.client = new VarlinkClient(socket);
         } catch (VarlinkException ex) {
@@ -117,6 +130,7 @@ public final class Gate implements AutoCloseable {
                             + "' does not name all four factors");
         }
         answer = factors.services(ANSWER);
+        forward = factors.services(FORWARD);
         return factors;
     }
 
@@ -484,7 +498,7 @@ public final class Gate implements AutoCloseable {
         call.put("name", name);
         call.put("branch", branch);
         call.put("commit", commit);
-        final Map<String, Object> reply = call("Approve", call);
+        final Map<String, Object> reply = call("Approve", call, forward);
         return string(reply, "forwarded") + " onto " + string(reply, "branch");
     }
 
@@ -501,7 +515,7 @@ public final class Gate implements AutoCloseable {
         final Map<String, Object> call = parameters(project, repository);
         call.put("name", name);
         call.put("reason", reason);
-        final Map<String, Object> reply = call("Reject", call);
+        final Map<String, Object> reply = call("Reject", call, forward);
         if (!(reply.get("told") instanceof Boolean told)) {
             throw new GateException("Reject answered without 'told': " + shown(reply));
         }
@@ -519,15 +533,15 @@ public final class Gate implements AutoCloseable {
     }
 
     // A read is bounded: a daemon that takes the call and never answers would otherwise hold every
-    // machine read after it. Approving and rejecting are not: the daemon bounds its own push to the
-    // forge, which may rightly take longer than any read.
+    // machine read after it.
     private Map<String, Object> read(String method, Map<String, Object> parameters) {
+        final Duration answer = this.answer;
         final CompletableFuture<Map<String, Object>> answered = new CompletableFuture<>();
         Thread.ofVirtual()
                 .start(
                         () -> {
                             try {
-                                answered.complete(call(method, parameters));
+                                answered.complete(call(method, parameters, answer));
                             } catch (RuntimeException ex) {
                                 answered.completeExceptionally(ex);
                             }
@@ -559,9 +573,11 @@ public final class Gate implements AutoCloseable {
         }
     }
 
-    private Map<String, Object> call(String method, Map<String, Object> parameters) {
+    // The client bounds every call by its own default unless given one, so each names its own.
+    private Map<String, Object> call(
+            String method, Map<String, Object> parameters, Duration deadline) {
         try {
-            return client.call(INTERFACE + "." + method, parameters);
+            return client.call(INTERFACE + "." + method, parameters, deadline);
         } catch (VarlinkException ex) {
             throw refusal(method, ex);
         }

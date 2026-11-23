@@ -25,7 +25,10 @@ import org.junit.jupiter.api.io.TempDir;
  * PORELO_LIVE_COMMIT}, changing at least one file the daemon ranks as far-reaching - a workflow, a
  * build file or IDE settings - and one that it does not. {@code PORELO_LIVE_HOST} is ssh's target,
  * {@code PORELO_LIVE_SOCKET} the daemon's socket there, and {@code PORELO_LIVE_SSH_CONFIG} the ssh
- * configuration that reaches it.
+ * configuration that reaches it. {@code PORELO_LIVE_LIMITS}, when set, is the limits line the
+ * daemon's {@code config.yml} gives. {@code PORELO_LIVE_FILES}, when set, is how many files the
+ * push changes: a push of more files than one message holds proves that a review read in pages
+ * comes out whole.
  */
 @Tag("live")
 class LiveGateTest {
@@ -54,7 +57,7 @@ class LiveGateTest {
 
         try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"), LimitFactors.DEFAULT)) {
             final Waiting waiting =
-                    Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
+                    Waiting.read(List.of(machine), any -> LiveGates.opened(tunnel.socket()));
 
             assertThat(waiting.silent()).as("machines that did not answer").isEmpty();
             final Waiting.Entry entry =
@@ -68,15 +71,23 @@ class LiveGateTest {
             assertThat(entry.push().commit()).as("the commit that waits").isEqualTo(commit);
             assertThat(entry.farReaching()).as("far-reaching files").isPositive();
 
-            try (Gate gate = new Gate(tunnel.socket())) {
+            try (Gate gate = LiveGates.opened(tunnel.socket())) {
+                final String limits = System.getenv("PORELO_LIVE_LIMITS");
                 assertThat(gate.limits())
-                        .as("the factors of a daemon whose config.yml sets none")
-                        .isEqualTo(LimitFactors.DEFAULT);
+                        .as("the factors the daemon's config.yml sets, all 1.0 when it sets none")
+                        .isEqualTo(
+                                limits == null ? LimitFactors.DEFAULT : LimitFactors.parse(limits));
                 final Review review =
                         gate.review(entry.project(), entry.repository(), task, commit);
                 assertThat(review.files())
                         .as("what it changes")
                         .hasSizeGreaterThan(entry.farReaching());
+                final String files = System.getenv("PORELO_LIVE_FILES");
+                if (files != null) {
+                    assertThat(review.files())
+                            .as("every file of a review read in pages")
+                            .hasSize(Integer.parseInt(files));
+                }
                 assertThat(review.files().getFirst().farReaching())
                         .as("whether a far-reaching file comes first")
                         .isTrue();

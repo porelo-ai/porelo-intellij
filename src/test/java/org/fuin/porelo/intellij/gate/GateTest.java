@@ -658,6 +658,37 @@ class GateTest {
 
     @Test
     @DisplayName(
+            "A read and an approval wait past the client's own 30 s when the services factor allows it")
+    void waitsPastThirtySecondsUnderALargerServicesFactor() throws Exception {
+        final Duration late = Duration.ofSeconds(31);
+        daemon.method(
+                "Projects",
+                (parameters, replies) -> {
+                    pause(late);
+                    replies.last(Map.of("projects", List.of()));
+                });
+        daemon.method(
+                "Approve",
+                (parameters, replies) -> {
+                    pause(late);
+                    replies.last(Map.of("forwarded", COMMIT, "branch", "main"));
+                });
+
+        try (Gate reading = new Gate(daemon.socketPath(), LimitFactors.parse("services=2.0"));
+                Gate approving =
+                        new Gate(daemon.socketPath(), LimitFactors.parse("services=2.0"))) {
+            final java.util.concurrent.CompletableFuture<String> approved =
+                    java.util.concurrent.CompletableFuture.supplyAsync(
+                            () -> approving.approve("porelo", "core", "app", "main", COMMIT));
+            assertThat(reading.projects()).as("projects answered after 31 s").isEmpty();
+            assertThat(approved.get())
+                    .as("an approval answered after 31 s")
+                    .isEqualTo(COMMIT + " onto main");
+        }
+    }
+
+    @Test
+    @DisplayName(
             "A connection opened with a machine's last factors waits on its first answer by them")
     void waitsOnTheFirstAnswerByTheFactorsGiven() {
         daemon.method("Projects", (parameters, replies) -> {});
@@ -741,6 +772,14 @@ class GateTest {
                 "ORDINARY",
                 "reason",
                 "");
+    }
+
+    private static void pause(Duration time) {
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static Map<String, Object> pagedReview(int whole, int next) {

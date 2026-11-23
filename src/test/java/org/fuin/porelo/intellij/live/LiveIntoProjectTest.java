@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.fuin.porelo.intellij.cache.ReviewCache;
-import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Tunnel;
@@ -56,7 +55,7 @@ class LiveIntoProjectTest {
         final Waiting.Entry entry;
         try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"), LimitFactors.DEFAULT)) {
             final Waiting waiting =
-                    Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
+                    Waiting.read(List.of(machine), any -> LiveGates.opened(tunnel.socket()));
             entry =
                     waiting.pushes().stream()
                             .filter(push -> push.push().name().equals(task))
