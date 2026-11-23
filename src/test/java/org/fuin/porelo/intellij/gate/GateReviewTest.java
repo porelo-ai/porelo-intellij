@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -351,22 +352,68 @@ class GateReviewTest {
     }
 
     @Test
-    @DisplayName("A daemon that never ends a run is left after a bounded number of pages")
-    void aRunWithoutEndIsLeft() {
+    @DisplayName("A run of more than 100 pages is read to its last page")
+    void aLongRunIsReadToItsEnd() {
+        final int last = 150;
+        daemon.method(
+                "Comments",
+                (parameters, replies) -> {
+                    final Object cursor = parameters.get("cursor");
+                    final int page = cursor == null ? 1 : Integer.parseInt((String) cursor);
+                    replies.last(
+                            page == last
+                                    ? Map.of("sarif", "page " + page)
+                                    : Map.of(
+                                            "sarif",
+                                            "page " + page,
+                                            "cursor",
+                                            String.valueOf(page + 1)));
+                });
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            final List<String> pages = gate.comments("porelo", "core", "app", "r1", null);
+            assertThat(pages).as("every page of the run").hasSize(last);
+            assertThat(pages.getLast()).as("the run's last page").isEqualTo("page " + last);
+        }
+    }
+
+    @Test
+    @DisplayName("A run that never ends is left once its reader is interrupted, as Cancel does")
+    void aRunWithoutEndIsLeftOnInterrupt() throws Exception {
         final AtomicInteger calls = new AtomicInteger();
         daemon.method(
                 "Comments",
                 (parameters, replies) ->
                         replies.last(
                                 Map.of("sarif", "page", "cursor", "c" + calls.incrementAndGet())));
+        final AtomicReference<Throwable> failed = new AtomicReference<>();
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            assertThatThrownBy(() -> gate.comments("porelo", "core", "app", "r1", null))
-                    .as("a run that never ends")
-                    .isInstanceOf(GateException.class)
-                    .hasMessageContaining(Gate.PAGES + " pages");
+            final Thread reader =
+                    Thread.ofVirtual()
+                            .start(
+                                    () -> {
+                                        try {
+                                            gate.comments("porelo", "core", "app", "r1", null);
+                                        } catch (RuntimeException ex) {
+                                            failed.set(ex);
+                                        }
+                                    });
+            final long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+            while (calls.get() < 3 && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertThat(calls.get())
+                    .as("pages asked before the interrupt")
+                    .isGreaterThanOrEqualTo(3);
+            reader.interrupt();
+            reader.join(Duration.ofSeconds(10));
+            assertThat(reader.isAlive()).as("the reader after its interrupt").isFalse();
         }
-        assertThat(calls).as("pages asked").hasValue(Gate.PAGES);
+        assertThat(failed.get())
+                .as("how a run without end is left")
+                .isInstanceOf(GateException.class)
+                .hasMessageContaining("interrupted");
     }
 
     @Test

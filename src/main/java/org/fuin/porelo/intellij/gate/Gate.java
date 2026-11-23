@@ -31,12 +31,6 @@ public final class Gate implements AutoCloseable {
     /** How long a read waits for the daemon's answer. */
     private static final Duration ANSWER = Duration.ofSeconds(30);
 
-    /**
-     * How many pages of one run are read at most: 10,000 comments, past which a daemon that never
-     * ends a run is left rather than read forever.
-     */
-    static final int PAGES = 100;
-
     /** What the daemon takes as a comment's id. */
     private static final Pattern COMMENT_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
@@ -306,6 +300,9 @@ public final class Gate implements AutoCloseable {
     /**
      * Reads every page of one run's comments on a pending push.
      *
+     * <p>No count of pages bounds it, since a large project's analysis may yield any number; a
+     * daemon that hands new cursors forever is ended only by interrupting the reading thread.
+     *
      * @param project The project's name.
      * @param repository The repository's name.
      * @param name The push's name.
@@ -313,8 +310,8 @@ public final class Gate implements AutoCloseable {
      * @param round The review round; {@code null} for the push's current one.
      * @return Each page's SARIF document, in the daemon's order; only the last speaks for the run's
      *     completeness.
-     * @throws GateException If the daemon answers a cursor it answered before, or more than {@value
-     *     #PAGES} pages.
+     * @throws GateException If the daemon answers a cursor it answered before, or the reading
+     *     thread is interrupted.
      */
     public List<String> comments(
             String project, String repository, String name, String run, @Nullable Integer round) {
@@ -322,10 +319,6 @@ public final class Gate implements AutoCloseable {
         final java.util.Set<String> cursors = new java.util.HashSet<>();
         @Nullable String cursor = null;
         do {
-            if (pages.size() == PAGES) {
-                throw new GateException(
-                        "Run " + run + " of " + name + " did not end within " + PAGES + " pages");
-            }
             final Map<String, Object> call = parameters(project, repository);
             call.put("name", name);
             call.put("run", run);
