@@ -28,7 +28,7 @@ there.
 The *Porelo* tool window lists every push that waits at the gates of the machines you reach, grouped by project and
 repository, the newest first, and says how many of each push's files reach far. A push that starts to wait is
 announced in a notice within seconds: the plugin follows each machine's list of projects as the daemon streams it,
-and reads it again every minute besides. A machine that does not answer is said, with why, and never shown as having
+and reads it again every minute besides, by default. A machine that does not answer is said, with why, and never shown as having
 nothing waiting. The list is there in every project's window, whatever project is open; with no project open, only
 the notice comes, and a review opens once a project is.
 
@@ -62,6 +62,18 @@ machine. A host whose configuration is missing is listed as not reached, naming 
 another key than its card names is refused. A WSL 2 distribution on Windows is reached through `porelo daemon
 connect`. A review is fetched into the plugin's own cache, `porelo-intellij` under `$XDG_CACHE_HOME`, by default the cache folder in your home directory,
 one repository with no working tree for each gate.
+
+## Time limits
+
+The plugin's waits follow the four factors Porelo's `config.yml` sets on each machine, under `limits:`, which that
+machine's daemon answers once per connection: `services` for how long an answer from the daemon and a fetch may take,
+`machines` for how long a tunnel, relay or WSL bridge may take to start and to end, `polling` for how often every
+machine is read, and `retries` for the pause before a stream that ended is opened again. A tunnel, relay or bridge
+starts, and the first answer is waited on, before the daemon can be asked, so they follow the factors last read from
+that machine, or all four at 1.0 before the first; one kept open keeps those until it drops and is raised again.
+Every machine is read as seldom as the largest `polling` factor among the machines listed asks, and a fetch into your
+own repository, which comes from no one machine, waits by their largest `services` factor. A daemon that answers no
+limits line naming all four factors is not read.
 
 ## In the project you work in
 

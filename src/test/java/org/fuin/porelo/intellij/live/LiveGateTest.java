@@ -11,6 +11,7 @@ import org.fuin.porelo.intellij.gate.Review;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Tunnel;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,7 @@ class LiveGateTest {
         final String task = env("PORELO_LIVE_TASK");
         final String commit = env("PORELO_LIVE_COMMIT");
 
-        try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"))) {
+        try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"), LimitFactors.DEFAULT)) {
             final Waiting waiting =
                     Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
 
@@ -68,6 +69,9 @@ class LiveGateTest {
             assertThat(entry.farReaching()).as("far-reaching files").isPositive();
 
             try (Gate gate = new Gate(tunnel.socket())) {
+                assertThat(gate.limits())
+                        .as("the factors of a daemon whose config.yml sets none")
+                        .isEqualTo(LimitFactors.DEFAULT);
                 final Review review = gate.review(entry.project(), entry.repository(), task);
                 assertThat(review.files())
                         .as("what it changes")

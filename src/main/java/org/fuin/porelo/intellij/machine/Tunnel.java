@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.fuin.porelo.wire.LimitFactors;
 
 /**
  * An ssh forward of a machine's daemon socket to a socket of the plugin's own.
@@ -43,8 +44,11 @@ public final class Tunnel implements AutoCloseable {
 
     private final Thread listener;
 
-    private Tunnel(Machine machine, Path socket, Process ssh) {
+    private final Duration ready;
+
+    private Tunnel(Machine machine, Path socket, Process ssh, Duration ready) {
         this.machine = machine;
+        this.ready = ready;
         this.socket = socket;
         this.ssh = ssh;
         // Read as it comes: a pipe nobody empties stops ssh once it is full.
@@ -71,12 +75,15 @@ public final class Tunnel implements AutoCloseable {
      * @param machine A machine that needs a tunnel.
      * @param runtimeDirectory The person's runtime directory, where the plugin's end goes.
      * @param ssh The ssh command, {@code ssh} unless a test stands in for it.
+     * @param factors The factors last read from the machine; its {@code machines} factor scales how
+     *     long ssh may take to forward and to end.
      * @return The tunnel, up.
      * @throws MachinesException If something already answers at the plugin's end, or ssh ends or
      *     does not forward in time - with ssh's own words.
      */
-    public static Tunnel raise(Machine machine, Path runtimeDirectory, List<String> ssh) {
-        return raise(machine, runtimeDirectory, ssh, READY);
+    public static Tunnel raise(
+            Machine machine, Path runtimeDirectory, List<String> ssh, LimitFactors factors) {
+        return raise(machine, runtimeDirectory, ssh, factors.machines(READY));
     }
 
     static Tunnel raise(Machine machine, Path runtimeDirectory, List<String> ssh, Duration ready) {
@@ -130,7 +137,7 @@ public final class Tunnel implements AutoCloseable {
             throw new MachinesException(
                     "Cannot start ssh for '" + machine.name() + "': " + ex.getMessage(), ex);
         }
-        final Tunnel tunnel = new Tunnel(machine, socket, process);
+        final Tunnel tunnel = new Tunnel(machine, socket, process, ready);
         try {
             tunnel.awaitReady(ready);
             return tunnel;
@@ -162,7 +169,7 @@ public final class Tunnel implements AutoCloseable {
     public void close() {
         ssh.destroy();
         try {
-            if (!ssh.waitFor(READY.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)) {
+            if (!ssh.waitFor(ready.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)) {
                 ssh.destroyForcibly();
             }
             Files.deleteIfExists(socket);
@@ -264,7 +271,7 @@ public final class Tunnel implements AutoCloseable {
         try {
             // ssh has ended, so its pipe ends too; what it said last is read once the listener sees
             // that.
-            listener.join(READY);
+            listener.join(ready);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }

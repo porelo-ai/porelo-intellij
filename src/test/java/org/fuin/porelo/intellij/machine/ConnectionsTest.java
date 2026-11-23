@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
 import java.util.List;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,7 +41,7 @@ class ConnectionsTest {
 
         connections.close();
 
-        assertThatThrownBy(() -> connections.socketOf(BUILD1))
+        assertThatThrownBy(() -> connections.socketOf(BUILD1, LimitFactors.DEFAULT))
                 .as("a tunnel asked for after closing")
                 .isInstanceOf(MachinesException.class);
         assertThat(dir.resolve("args")).as("whether ssh was started").doesNotExist();

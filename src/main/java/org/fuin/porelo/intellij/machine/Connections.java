@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import org.fuin.porelo.wire.LimitFactors;
 
 /**
  * The tunnels, relays and WSL bridges the plugin holds to reach its machines' daemons, each kept
@@ -46,10 +47,12 @@ public final class Connections implements AutoCloseable {
      * when it needs one that is not up.
      *
      * @param machine The machine.
+     * @param factors The factors last read from the machine, or all four at 1.0; one raised now
+     *     waits on its start by them.
      * @return Its daemon's socket, or the plugin's end of a tunnel, relay or bridge to it.
      * @throws MachinesException If the tunnel, relay or bridge cannot be raised.
      */
-    public Path socketOf(Machine machine) {
+    public Path socketOf(Machine machine, LimitFactors factors) {
         // A read or a decision that ends after the IDE closed would leave a new ssh behind.
         if (closed) {
             throw new MachinesException(
@@ -65,7 +68,8 @@ public final class Connections implements AutoCloseable {
                                 if (existing != null) {
                                     existing.close();
                                 }
-                                return WslBridge.open(machine, runtimeDirectory.get(), wsl);
+                                return WslBridge.open(
+                                        machine, runtimeDirectory.get(), wsl, factors);
                             })
                     .socket();
         }
@@ -79,7 +83,7 @@ public final class Connections implements AutoCloseable {
                                 if (existing != null) {
                                     existing.close();
                                 }
-                                return Relay.overSsh(machine, runtimeDirectory.get(), ssh);
+                                return Relay.overSsh(machine, runtimeDirectory.get(), ssh, factors);
                             })
                     .socket();
         }
@@ -96,7 +100,7 @@ public final class Connections implements AutoCloseable {
                             if (existing != null) {
                                 existing.close();
                             }
-                            return Tunnel.raise(machine, runtimeDirectory.get(), ssh);
+                            return Tunnel.raise(machine, runtimeDirectory.get(), ssh, factors);
                         })
                 .socket();
     }

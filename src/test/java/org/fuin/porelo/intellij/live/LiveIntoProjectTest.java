@@ -14,6 +14,7 @@ import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Tunnel;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class LiveIntoProjectTest {
         final String task = env("PORELO_LIVE_TASK");
         final String commit = env("PORELO_LIVE_COMMIT");
         final Waiting.Entry entry;
-        try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"))) {
+        try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"), LimitFactors.DEFAULT)) {
             final Waiting waiting =
                     Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
             entry =

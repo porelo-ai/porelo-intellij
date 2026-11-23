@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Project;
+import org.fuin.porelo.wire.LimitFactors;
 import org.fuin.porelo.wire.varlink.VarlinkServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -109,7 +110,9 @@ class WslBridgeTest {
     @DisplayName(
             "A running WSL 2 distribution's daemon is read through the bridge, with wsl.exe asked for no shell")
     void readsTheDaemonThroughWsl() throws IOException {
-        try (WslBridge bridge = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()));
+        try (WslBridge bridge =
+                        WslBridge.open(
+                                UBUNTU, dir, wsl(daemon.socketPath()), LimitFactors.DEFAULT);
                 Gate gate = new Gate(bridge.socket())) {
             assertThat(bridge.socket())
                     .as("the plugin's end")
@@ -135,7 +138,8 @@ class WslBridgeTest {
     @DisplayName(
             "Closing the bridge ends every wsl.exe it started for a connection still open, within seconds")
     void closingEndsTheRelaysOfOpenConnections() throws IOException, InterruptedException {
-        final WslBridge bridge = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()));
+        final WslBridge bridge =
+                WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()), LimitFactors.DEFAULT);
         try (bridge;
                 Gate gate = new Gate(bridge.socket())) {
             gate.projects();
@@ -169,7 +173,8 @@ class WslBridgeTest {
                                 WslBridge.open(
                                         Machine.wsl("Debian here", "Debian"),
                                         dir,
-                                        wsl(daemon.socketPath())))
+                                        wsl(daemon.socketPath()),
+                                        LimitFactors.DEFAULT))
                 .as("a stopped distribution")
                 .isInstanceOf(MachinesException.class)
                 .hasMessage(
@@ -186,7 +191,10 @@ class WslBridgeTest {
         assertThatThrownBy(
                         () ->
                                 WslBridge.open(
-                                        Machine.wsl("old", "Old"), dir, wsl(daemon.socketPath())))
+                                        Machine.wsl("old", "Old"),
+                                        dir,
+                                        wsl(daemon.socketPath()),
+                                        LimitFactors.DEFAULT))
                 .as("a WSL 1 distribution")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("Porelo needs WSL 2 (wsl --set-version Old 2)");
@@ -195,7 +203,8 @@ class WslBridgeTest {
                                 WslBridge.open(
                                         Machine.wsl("gone", "Fedora"),
                                         dir,
-                                        wsl(daemon.socketPath())))
+                                        wsl(daemon.socketPath()),
+                                        LimitFactors.DEFAULT))
                 .as("a distribution that is not there")
                 .isInstanceOf(MachinesException.class)
                 .hasMessage("'gone': this computer has no WSL distribution 'Fedora'");
@@ -204,7 +213,13 @@ class WslBridgeTest {
     @Test
     @DisplayName("A distribution whose daemon does not answer is refused with what wsl.exe said")
     void saysWhatWslSaidWhenTheDaemonDoesNotAnswer() {
-        assertThatThrownBy(() -> WslBridge.open(UBUNTU, dir, wsl(dir.resolve("nothing-here.sock"))))
+        assertThatThrownBy(
+                        () ->
+                                WslBridge.open(
+                                        UBUNTU,
+                                        dir,
+                                        wsl(dir.resolve("nothing-here.sock")),
+                                        LimitFactors.DEFAULT))
                 .as("a daemon that does not answer")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageStartingWith(
@@ -237,8 +252,15 @@ class WslBridgeTest {
     @DisplayName(
             "A second bridge to a machine whose bridge is open is refused, so it never cuts the first one off")
     void aSecondBridgeLeavesTheFirstAlone() throws IOException {
-        try (WslBridge first = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()))) {
-            assertThatThrownBy(() -> WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath())))
+        try (WslBridge first =
+                WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()), LimitFactors.DEFAULT)) {
+            assertThatThrownBy(
+                            () ->
+                                    WslBridge.open(
+                                            UBUNTU,
+                                            dir,
+                                            wsl(daemon.socketPath()),
+                                            LimitFactors.DEFAULT))
                     .as("a second bridge on the first one's socket")
                     .isInstanceOf(MachinesException.class)
                     .hasMessageContaining("already answers");
@@ -260,7 +282,9 @@ class WslBridgeTest {
                 "* Ubuntu    Wird ausgeführt    2\r\n  Debian    Beendet    2\r\n",
                 StandardCharsets.UTF_8);
 
-        try (WslBridge bridge = WslBridge.open(UBUNTU, dir, wsl(daemon.socketPath()));
+        try (WslBridge bridge =
+                        WslBridge.open(
+                                UBUNTU, dir, wsl(daemon.socketPath()), LimitFactors.DEFAULT);
                 Gate gate = new Gate(bridge.socket())) {
             assertThat(gate.projects())
                     .extracting(Project::name)
@@ -272,7 +296,8 @@ class WslBridgeTest {
                                 WslBridge.open(
                                         Machine.wsl("Debian here", "Debian"),
                                         dir,
-                                        wsl(daemon.socketPath())))
+                                        wsl(daemon.socketPath()),
+                                        LimitFactors.DEFAULT))
                 .as("a distribution that is not running, in that language")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("the plugin never starts one");

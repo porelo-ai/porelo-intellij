@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
+import org.fuin.porelo.wire.LimitFactors;
 import org.fuin.porelo.wire.varlink.VarlinkClient;
 import org.fuin.porelo.wire.varlink.VarlinkException;
 import org.jspecify.annotations.Nullable;
@@ -56,7 +57,7 @@ public final class Gate implements AutoCloseable {
 
     private final VarlinkClient client;
 
-    private final Duration answer;
+    private volatile Duration answer;
 
     /**
      * Connects to a daemon's socket.
@@ -65,7 +66,19 @@ public final class Gate implements AutoCloseable {
      * @throws GateException If nothing answers there.
      */
     public Gate(Path socket) {
-        this(socket, ANSWER);
+        this(socket, LimitFactors.DEFAULT);
+    }
+
+    /**
+     * Connects to a daemon's socket, waiting on its answers by the factors last read from its
+     * machine until {@link #limits()} reads its own.
+     *
+     * @param socket The daemon's socket, or the plugin's end of a tunnel to it.
+     * @param factors The factors last read from the machine, or all four at 1.0.
+     * @throws GateException If nothing answers there.
+     */
+    public Gate(Path socket, LimitFactors factors) {
+        this(socket, factors.services(ANSWER));
     }
 
     Gate(Path socket, Duration answer) {
@@ -75,6 +88,36 @@ public final class Gate implements AutoCloseable {
         } catch (VarlinkException ex) {
             throw new GateException("Nothing answers at " + socket + ": " + causeOf(ex), ex);
         }
+    }
+
+    /**
+     * Reads the factors every time limit follows, as the daemon read them at its start, and waits
+     * on this connection's later answers by its {@code services} factor.
+     *
+     * @return The factors.
+     * @throws GateException If the daemon does not answer them, or answers no limits line naming
+     *     all four.
+     */
+    public LimitFactors limits() {
+        final String line = string(read("Limits", Map.of()), "line");
+        final LimitFactors factors;
+        try {
+            factors = LimitFactors.parse(line);
+        } catch (IllegalArgumentException ex) {
+            throw new GateException(
+                    "The daemon's limits line '" + shown(line) + "' is refused: " + ex.getMessage(),
+                    ex);
+        }
+        // The grammar takes a name left out as 1.0; porelod writes all four, so a line without them
+        // is no daemon's.
+        if (line.isEmpty() || line.split(",", -1).length != 4) {
+            throw new GateException(
+                    "The daemon's limits line '"
+                            + shown(line)
+                            + "' does not name all four factors");
+        }
+        answer = factors.services(ANSWER);
+        return factors;
     }
 
     /**

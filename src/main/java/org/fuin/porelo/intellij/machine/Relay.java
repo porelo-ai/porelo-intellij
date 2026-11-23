@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import org.fuin.porelo.wire.LimitFactors;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -34,7 +35,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class Relay implements AutoCloseable {
 
-    private static final Duration READY = Duration.ofSeconds(10);
+    /** How long a command may take to answer and to end, before its factor. */
+    static final Duration READY = Duration.ofSeconds(10);
 
     private static final java.util.regex.Pattern PLAIN_PATH =
             java.util.regex.Pattern.compile("/[A-Za-z0-9._/-]*");
@@ -52,13 +54,21 @@ public final class Relay implements AutoCloseable {
 
     private final Thread acceptor;
 
+    private final Duration ready;
+
     private volatile boolean closed;
 
     // On Windows a child does not end with its parent: each command is ended here, with the relay.
     private final Set<Process> running = ConcurrentHashMap.newKeySet();
 
-    private Relay(Machine machine, Path socket, List<String> command, ServerSocketChannel server) {
+    private Relay(
+            Machine machine,
+            Path socket,
+            List<String> command,
+            ServerSocketChannel server,
+            Duration ready) {
         this.machine = machine;
+        this.ready = ready;
         this.socket = socket;
         this.command = List.copyOf(command);
         this.server = server;
@@ -77,11 +87,14 @@ public final class Relay implements AutoCloseable {
      *     configuration.
      * @param runtimeDirectory Where the plugin's end goes.
      * @param ssh The ssh command, Windows' {@code ssh.exe} unless a test stands in for it.
+     * @param factors The factors last read from the machine; its {@code machines} factor scales how
+     *     long a command may take to answer and to end.
      * @return The relay, open.
      * @throws MachinesException If ssh cannot reach the machine or its daemon does not answer -
      *     with ssh's own words.
      */
-    public static Relay overSsh(Machine machine, Path runtimeDirectory, List<String> ssh) {
+    public static Relay overSsh(
+            Machine machine, Path runtimeDirectory, List<String> ssh, LimitFactors factors) {
         final String host = Objects.requireNonNull(machine.host(), "a machine without a host");
         final String remote =
                 Objects.requireNonNull(machine.remoteSocket(), "a machine without a remote socket");
@@ -128,7 +141,7 @@ public final class Relay implements AutoCloseable {
                         // The remote shell reads this line, so the socket is one word to it
                         // whatever it holds.
                         "porelo daemon connect --socket " + quoted(remote)));
-        return open(machine, runtimeDirectory, command, "ssh to " + host);
+        return open(machine, runtimeDirectory, command, "ssh to " + host, factors.machines(READY));
     }
 
     /**
@@ -138,13 +151,18 @@ public final class Relay implements AutoCloseable {
      * @param runtimeDirectory Where the plugin's end goes.
      * @param command What each connection runs.
      * @param through How the command reaches the daemon, as the refusal names it.
+     * @param ready How long a command may take to answer and to end.
      * @return The relay, open.
      * @throws MachinesException If the daemon does not answer through the command, with its own
      *     words, or the plugin's end cannot be opened.
      */
     static Relay open(
-            Machine machine, Path runtimeDirectory, List<String> command, String through) {
-        answers(machine, command, through);
+            Machine machine,
+            Path runtimeDirectory,
+            List<String> command,
+            String through,
+            Duration ready) {
+        answers(machine, command, through, ready);
         final Path socket = Tunnel.socketFor(runtimeDirectory, machine);
         // A relay another IDE holds there is left alone; only a stale socket is removed.
         Tunnel.clear(machine, socket);
@@ -163,7 +181,7 @@ public final class Relay implements AutoCloseable {
                             + ex.getMessage(),
                     ex);
         }
-        return new Relay(machine, socket, command, server);
+        return new Relay(machine, socket, command, server, ready);
     }
 
     /**
@@ -194,10 +212,10 @@ public final class Relay implements AutoCloseable {
         }
         // Every command is ended even if what follows fails: none may outlive the relay.
         for (final Process process : running) {
-            end(process);
+            end(process, ready);
         }
         try {
-            acceptor.join(READY);
+            acceptor.join(ready);
             Files.deleteIfExists(socket);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -214,11 +232,12 @@ public final class Relay implements AutoCloseable {
      *
      * @param command The command.
      * @param input What it reads, or {@code null} for nothing.
+     * @param ready How long it may take to answer and to end.
      * @return Its exit code ({@code -1} if it would not end), what it printed and what it said on
      *     standard error.
      * @throws MachinesException If it cannot be started.
      */
-    static Ran run(List<String> command, byte @Nullable [] input) {
+    static Ran run(List<String> command, byte @Nullable [] input, Duration ready) {
         final Process process;
         try {
             process = new ProcessBuilder(command).start();
@@ -240,14 +259,14 @@ public final class Relay implements AutoCloseable {
             // The process ended before it read; what it said tells why.
         }
         try {
-            reader.join(READY);
+            reader.join(ready);
             if (process.isAlive()) {
                 process.destroy();
             }
-            if (!process.waitFor(READY.toMillis(), TimeUnit.MILLISECONDS)) {
+            if (!process.waitFor(ready.toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
             }
-            errors.join(READY);
+            errors.join(ready);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             process.destroyForcibly();
@@ -265,8 +284,9 @@ public final class Relay implements AutoCloseable {
         return "'" + word.replace("'", "'\\''") + "'";
     }
 
-    private static void answers(Machine machine, List<String> command, String through) {
-        final Ran ran = run(command, GET_INFO);
+    private static void answers(
+            Machine machine, List<String> command, String through, Duration ready) {
+        final Ran ran = run(command, GET_INFO, ready);
         final String answer = new String(ran.out(), StandardCharsets.UTF_8);
         if (!answer.contains("\"interfaces\"")) {
             throw new MachinesException(
@@ -335,7 +355,7 @@ public final class Relay implements AutoCloseable {
         }
         running.add(process);
         if (closed) {
-            end(process);
+            end(process, ready);
         }
         final Thread in =
                 Thread.ofVirtual()
@@ -345,16 +365,16 @@ public final class Relay implements AutoCloseable {
                                                 Channels.newInputStream(client),
                                                 process.getOutputStream()));
         pump(process.getInputStream(), Channels.newOutputStream(client));
-        end(process);
+        end(process, ready);
         running.remove(process);
         in.interrupt();
         close(client);
     }
 
-    private static void end(Process process) {
+    private static void end(Process process, Duration ready) {
         process.destroy();
         try {
-            if (!process.waitFor(READY.toMillis(), TimeUnit.MILLISECONDS)) {
+            if (!process.waitFor(ready.toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
             }
         } catch (InterruptedException ex) {

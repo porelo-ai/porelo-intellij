@@ -8,6 +8,7 @@ import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Project;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.WslBridge;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,10 @@ class LiveWslBridgeTest {
 
         try (WslBridge bridge =
                         WslBridge.open(
-                                machine, runtime, List.of(env("PORELO_LIVE_WSL").split(" ")));
+                                machine,
+                                runtime,
+                                List.of(env("PORELO_LIVE_WSL").split(" ")),
+                                LimitFactors.DEFAULT);
                 Gate gate = new Gate(bridge.socket())) {
             assertThat(gate.projects())
                     .extracting(Project::name)

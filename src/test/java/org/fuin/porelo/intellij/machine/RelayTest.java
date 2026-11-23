@@ -7,10 +7,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Project;
+import org.fuin.porelo.wire.LimitFactors;
 import org.fuin.porelo.wire.varlink.VarlinkServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,7 +100,7 @@ class RelayTest {
         final Machine build1 =
                 Machine.overSsh("build 1", "dev@build1", daemonSocket.toString(), CONFIG);
 
-        try (Relay relay = Relay.overSsh(build1, dir, ssh("connect"));
+        try (Relay relay = Relay.overSsh(build1, dir, ssh("connect"), LimitFactors.DEFAULT);
                 Gate gate = new Gate(relay.socket())) {
             assertThat(relay.socket())
                     .as("the plugin's end")
@@ -140,7 +142,7 @@ class RelayTest {
         final Machine build1 =
                 Machine.overSsh("build 1", "dev@build1", daemonSocket.toString(), CONFIG);
 
-        assertThatThrownBy(() -> Relay.overSsh(build1, dir, ssh("refuse")))
+        assertThatThrownBy(() -> Relay.overSsh(build1, dir, ssh("refuse"), LimitFactors.DEFAULT))
                 .as("a host whose key ssh does not know")
                 .isInstanceOf(MachinesException.class)
                 .hasMessage(
@@ -170,7 +172,8 @@ class RelayTest {
                                     Relay.overSsh(
                                             Machine.overSsh("sly", "dev@build1", remote, CONFIG),
                                             dir,
-                                            ssh("connect")))
+                                            ssh("connect"),
+                                            LimitFactors.DEFAULT))
                     .as("the remote socket " + remote)
                     .isInstanceOf(MachinesException.class)
                     .hasMessageContaining("which the remote shell could read as more than a path");
@@ -184,10 +187,33 @@ class RelayTest {
         final Machine sly =
                 Machine.overSsh("sly", "-oProxyCommand=touch", daemonSocket.toString(), CONFIG);
 
-        assertThatThrownBy(() -> Relay.overSsh(sly, dir, ssh("connect")))
+        assertThatThrownBy(() -> Relay.overSsh(sly, dir, ssh("connect"), LimitFactors.DEFAULT))
                 .as("a host that starts with '-'")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("which ssh would read as an option");
         assertThat(dir.resolve("args")).as("whether ssh was started").doesNotExist();
+    }
+
+    @Test
+    @DisplayName("The wait for a relay's daemon to answer follows the machine's machines factor")
+    void waitsForTheRelayByTheMachinesFactor() {
+        final Machine build1 =
+                Machine.overSsh("build 1", "dev@build1", daemonSocket.toString(), CONFIG);
+        final long started = System.nanoTime();
+
+        assertThatThrownBy(
+                        () ->
+                                Relay.overSsh(
+                                        build1,
+                                        dir,
+                                        ssh("hang"),
+                                        LimitFactors.parse("machines=0.1")))
+                .as("ssh that never answers")
+                .isInstanceOf(MachinesException.class)
+                .hasMessageContaining("does not answer through ssh to dev@build1");
+        // At 1.0 the probe waits ten seconds for an answer and ten more for ssh to end.
+        assertThat(Duration.ofNanos(System.nanoTime() - started))
+                .as("how long the probe waited")
+                .isLessThan(Duration.ofSeconds(8));
     }
 }

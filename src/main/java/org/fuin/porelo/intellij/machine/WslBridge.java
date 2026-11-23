@@ -2,9 +2,11 @@ package org.fuin.porelo.intellij.machine;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.fuin.porelo.wire.LimitFactors;
 
 /**
  * A socket of the plugin's own that reaches the daemon in a WSL distribution: each connection to it
@@ -32,11 +34,15 @@ public final class WslBridge implements AutoCloseable {
      * @param machine A machine in a WSL distribution.
      * @param runtimeDirectory Where the plugin's end goes.
      * @param wsl The {@code wsl.exe} command, {@code wsl.exe} unless a test stands in for it.
+     * @param factors The factors last read from the machine; its {@code machines} factor scales how
+     *     long {@code wsl.exe} may take to answer and to end.
      * @return The bridge, open.
      * @throws MachinesException If the distribution is not there, not WSL2 or not running, or its
      *     daemon does not answer - with {@code wsl.exe}'s own words.
      */
-    public static WslBridge open(Machine machine, Path runtimeDirectory, List<String> wsl) {
+    public static WslBridge open(
+            Machine machine, Path runtimeDirectory, List<String> wsl, LimitFactors factors) {
+        final Duration ready = factors.machines(Relay.READY);
         final String distribution =
                 Objects.requireNonNull(machine.distribution(), "a machine outside WSL");
         // wsl.exe would read a name that starts with '-' as one of its own options.
@@ -48,13 +54,13 @@ public final class WslBridge implements AutoCloseable {
                             + distribution
                             + "', which wsl.exe would read as an option");
         }
-        running(machine, distribution, wsl);
+        running(machine, distribution, wsl, ready);
         final List<String> connect =
                 List.of("-d", distribution, "--exec", "porelo", "daemon", "connect");
         final List<String> command = new ArrayList<>(wsl);
         command.addAll(connect);
         return new WslBridge(
-                Relay.open(machine, runtimeDirectory, command, String.join(" ", connect)));
+                Relay.open(machine, runtimeDirectory, command, String.join(" ", connect), ready));
     }
 
     /**
@@ -121,10 +127,11 @@ public final class WslBridge implements AutoCloseable {
         relay.close();
     }
 
-    private static void running(Machine machine, String distribution, List<String> wsl) {
+    private static void running(
+            Machine machine, String distribution, List<String> wsl, Duration ready) {
         final List<String> list = new ArrayList<>(wsl);
         list.addAll(List.of("-l", "-v"));
-        final Relay.Ran ran = Relay.run(list, null);
+        final Relay.Ran ran = Relay.run(list, null, ready);
         if (ran.exit() != 0) {
             throw new MachinesException(
                     "wsl.exe -l -v ended with exit code "
@@ -154,7 +161,7 @@ public final class WslBridge implements AutoCloseable {
             final boolean running =
                     row[1].equalsIgnoreCase("Running")
                             || !row[1].equalsIgnoreCase("Stopped")
-                                    && runningByName(distribution, wsl);
+                                    && runningByName(distribution, wsl, ready);
             if (!running) {
                 throw new MachinesException(
                         "'"
@@ -177,10 +184,10 @@ public final class WslBridge implements AutoCloseable {
     }
 
     // The state is named in Windows' language; the running ones by name alone are the same in all.
-    private static boolean runningByName(String distribution, List<String> wsl) {
+    private static boolean runningByName(String distribution, List<String> wsl, Duration ready) {
         final List<String> list = new ArrayList<>(wsl);
         list.addAll(List.of("-l", "--running", "-q"));
-        final Relay.Ran ran = Relay.run(list, null);
+        final Relay.Ran ran = Relay.run(list, null, ready);
         final String printed =
                 new String(
                         ran.out(),

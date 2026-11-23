@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Project;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ class WindowsSshRelayTest {
                         REMOTE_SOCKET,
                         PinnedConfig.ofTheHost(dir, knownHosts(), null));
 
-        try (Relay relay = Relay.overSsh(machine, dir, ssh());
+        try (Relay relay = Relay.overSsh(machine, dir, ssh(), LimitFactors.DEFAULT);
                 Gate gate = new Gate(relay.socket())) {
             assertThat(gate.projects())
                     .extracting(Project::name)
@@ -83,7 +84,7 @@ class WindowsSshRelayTest {
                         REMOTE_SOCKET,
                         PinnedConfig.ofTheHost(dir, knownHosts(), null));
 
-        assertThatThrownBy(() -> Relay.overSsh(machine, dir, ssh()))
+        assertThatThrownBy(() -> Relay.overSsh(machine, dir, ssh(), LimitFactors.DEFAULT))
                 .as("a machine ssh has no key for")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("does not answer through ssh to")
@@ -101,7 +102,7 @@ class WindowsSshRelayTest {
                         REMOTE_SOCKET,
                         PinnedConfig.ofAnotherHost(dir, null));
 
-        assertThatThrownBy(() -> Relay.overSsh(machine, dir, ssh()))
+        assertThatThrownBy(() -> Relay.overSsh(machine, dir, ssh(), LimitFactors.DEFAULT))
                 .as("a host whose key is not the card's")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("does not answer through ssh to")

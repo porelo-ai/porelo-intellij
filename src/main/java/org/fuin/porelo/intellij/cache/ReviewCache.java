@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import org.fuin.porelo.wire.LimitFactors;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -87,7 +88,21 @@ public final class ReviewCache {
      *     hosts.
      */
     public ReviewCache(Path root, Map<String, String> environment, String ssh) {
-        this(root, environment, ssh, TIMEOUT);
+        this(root, environment, ssh, LimitFactors.DEFAULT);
+    }
+
+    /**
+     * Keeps the repositories under a directory, fetching over the given ssh, each git command
+     * bounded by the {@code services} factor.
+     *
+     * @param root The cache directory, such as {@code ~/.cache/porelo-intellij}.
+     * @param environment Variables git runs with beyond the IDE's own.
+     * @param ssh The ssh git runs when the person named none of their own.
+     * @param factors The factors read from the machine the repositories come from.
+     */
+    public ReviewCache(
+            Path root, Map<String, String> environment, String ssh, LimitFactors factors) {
+        this(root, environment, ssh, factors.services(TIMEOUT));
     }
 
     ReviewCache(Path root, Map<String, String> environment, Duration timeout) {

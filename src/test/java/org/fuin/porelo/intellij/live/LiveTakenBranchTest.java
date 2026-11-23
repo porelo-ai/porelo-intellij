@@ -10,6 +10,7 @@ import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Tunnel;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class LiveTakenBranchTest {
         final String commit = env("PORELO_LIVE_COMMIT");
         final String free = env("PORELO_LIVE_FREE_BRANCH");
 
-        try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"));
+        try (Tunnel tunnel = Tunnel.raise(machine, runtime, List.of("ssh"), LimitFactors.DEFAULT);
                 Gate gate = new Gate(tunnel.socket())) {
             final Waiting.Entry entry =
                     Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()))

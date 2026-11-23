@@ -13,6 +13,7 @@ import org.fuin.porelo.intellij.machine.MachinesException;
 import org.fuin.porelo.intellij.machine.PinnedConfig;
 import org.fuin.porelo.intellij.machine.Relay;
 import org.fuin.porelo.intellij.machine.Tunnel;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,10 @@ class LiveHostKeyTest {
                         env("PORELO_LIVE_SOCKET"),
                         PinnedConfig.ofAnotherHost(card, Path.of(env("PORELO_LIVE_SSH_CONFIG"))));
 
-        assertThatThrownBy(() -> Tunnel.raise(machine, runtime, personsSsh()).close())
+        assertThatThrownBy(
+                        () ->
+                                Tunnel.raise(machine, runtime, personsSsh(), LimitFactors.DEFAULT)
+                                        .close())
                 .as("a tunnel to a host whose key is not the card's")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("'live'")
@@ -81,7 +85,10 @@ class LiveHostKeyTest {
                         env("PORELO_LIVE_SOCKET"),
                         PinnedConfig.ofAnotherHost(card, Path.of(env("PORELO_LIVE_SSH_CONFIG"))));
 
-        assertThatThrownBy(() -> Relay.overSsh(machine, runtime, personsSsh()).close())
+        assertThatThrownBy(
+                        () ->
+                                Relay.overSsh(machine, runtime, personsSsh(), LimitFactors.DEFAULT)
+                                        .close())
                 .as("a relay to a host whose key is not the card's")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("ssh to " + env("PORELO_LIVE_HOST"))
@@ -102,11 +109,11 @@ class LiveHostKeyTest {
         final Machine relayed =
                 Machine.overSsh("live", env("PORELO_LIVE_HOST"), env("PORELO_LIVE_SOCKET"), config);
 
-        try (Tunnel tunnel = Tunnel.raise(tunnelled, runtime, personsSsh());
+        try (Tunnel tunnel = Tunnel.raise(tunnelled, runtime, personsSsh(), LimitFactors.DEFAULT);
                 Gate gate = new Gate(tunnel.socket())) {
             assertThat(gate.projects()).as("the projects read through the tunnel").isNotEmpty();
         }
-        try (Relay relay = Relay.overSsh(relayed, runtime, personsSsh());
+        try (Relay relay = Relay.overSsh(relayed, runtime, personsSsh(), LimitFactors.DEFAULT);
                 Gate gate = new Gate(relay.socket())) {
             assertThat(gate.projects()).as("the projects read through the relay").isNotEmpty();
         }

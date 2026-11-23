@@ -9,9 +9,13 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.util.concurrency.AppExecutorUtil;
+import java.math.BigDecimal;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -24,11 +28,12 @@ import org.fuin.porelo.intellij.machine.Connections;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Machines;
 import org.fuin.porelo.intellij.machine.MachinesException;
+import org.fuin.porelo.wire.LimitFactors;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Reads what waits at every machine's gates, once a minute and on demand, whatever project is open
- * or none, and says when something new waits.
+ * Reads what waits at every machine's gates, once a minute times the daemons' polling factor and on
+ * demand, whatever project is open or none, and says when something new waits.
  *
  * <p>Each tunnel it raises is kept while it forwards and closed with the IDE; a tunnel that dropped
  * is raised again at the next read.
@@ -39,10 +44,18 @@ public final class PoreloWatch implements Disposable {
     /** The notification group, as {@code plugin.xml} declares it. */
     public static final String NOTIFICATIONS = "Porelo";
 
-    private static final long EVERY_SECONDS = 60;
+    /** How often every machine is read, before the polling factor. */
+    private static final Duration EVERY = Duration.ofSeconds(60);
 
-    /** How long a machine's stream that ended waits before it is opened again. */
-    private static final long REOPEN_SECONDS = 10;
+    /**
+     * How long a machine's stream that ended waits before it is opened again, before the factor.
+     */
+    private static final Duration REOPEN = Duration.ofSeconds(10);
+
+    /**
+     * The factors each machine's daemon answered last, by name, for what starts before it is asked.
+     */
+    private final Map<String, LimitFactors> factors = new ConcurrentHashMap<>();
 
     /** The machines whose stream of projects is followed, by name, each on a thread of its own. */
     private final Map<String, Thread> streams = new java.util.concurrent.ConcurrentHashMap<>();
@@ -77,13 +90,101 @@ public final class PoreloWatch implements Disposable {
         return ApplicationManager.getApplication().getService(PoreloWatch.class);
     }
 
-    /** Starts reading once a minute, from now; a second call changes nothing. */
+    /** Starts reading, from now; a second call changes nothing. */
     public synchronized void start() {
         if (schedule == null) {
+            next(Duration.ZERO);
+        }
+    }
+
+    private synchronized void next(Duration delay) {
+        if (!disposed) {
             schedule =
                     AppExecutorUtil.getAppScheduledExecutorService()
-                            .scheduleWithFixedDelay(this::read, 0, EVERY_SECONDS, TimeUnit.SECONDS);
+                            .schedule(this::tick, delay.toMillis(), TimeUnit.MILLISECONDS);
         }
+    }
+
+    // Scheduled anew after each read, so a polling factor read meanwhile sets the next delay.
+    private void tick() {
+        try {
+            read();
+        } finally {
+            next(every(listedFactors()));
+        }
+    }
+
+    /**
+     * Returns how long until every machine is read again.
+     *
+     * @param read The factors the machines answered.
+     * @return A minute times the largest polling factor among them, which looks least often.
+     */
+    static Duration every(Collection<LimitFactors> read) {
+        return widest(read).polling(EVERY);
+    }
+
+    /**
+     * Returns, for each of the four, the largest factor any machine answered: what a limit that
+     * serves no one machine waits by.
+     *
+     * @param read The factors the machines answered.
+     * @return The largest of each, or all four at 1.0 when none answered.
+     */
+    static LimitFactors widest(Collection<LimitFactors> read) {
+        if (read.isEmpty()) {
+            return LimitFactors.DEFAULT;
+        }
+        final LimitFactors first = read.iterator().next();
+        BigDecimal services = first.services();
+        BigDecimal machines = first.machines();
+        BigDecimal polling = first.polling();
+        BigDecimal retries = first.retries();
+        for (final LimitFactors one : read) {
+            services = services.max(one.services());
+            machines = machines.max(one.machines());
+            polling = polling.max(one.polling());
+            retries = retries.max(one.retries());
+        }
+        return new LimitFactors(services, machines, polling, retries);
+    }
+
+    /**
+     * Returns the factors of the machines still listed, so one taken out no longer counts.
+     *
+     * @param read The factors read, by machine name.
+     * @param listed The names of the machines listed now.
+     * @return Their factors.
+     */
+    static Collection<LimitFactors> ofListed(
+            Map<String, LimitFactors> read, java.util.Set<String> listed) {
+        return read.entrySet().stream()
+                .filter(entry -> listed.contains(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .toList();
+    }
+
+    // A list that cannot be read counts no machine, so every limit waits by 1.0.
+    private Collection<LimitFactors> listedFactors() {
+        try {
+            return ofListed(
+                    factors,
+                    machines().read().machines().stream()
+                            .map(Machine::name)
+                            .collect(java.util.stream.Collectors.toSet()));
+        } catch (RuntimeException ex) {
+            return List.of();
+        }
+    }
+
+    /**
+     * Returns how long a machine's stream that ended waits before it is opened again.
+     *
+     * @param machine The factors its daemon answered last.
+     * @return Ten seconds times its retries factor.
+     */
+    static Duration reopen(LimitFactors machine) {
+        return machine.retryPause(REOPEN);
     }
 
     /** Reads again now, in the background. */
@@ -122,7 +223,8 @@ public final class PoreloWatch implements Disposable {
      */
     public Changes fetch(Waiting.Entry entry) {
         final String url = entry.source(mirror -> java.nio.file.Files.isDirectory(Path.of(mirror)));
-        return cache().fetch(
+        return cache(entry)
+                .fetch(
                         repository(entry),
                         url,
                         entry.machine().sshConfig(),
@@ -139,7 +241,7 @@ public final class PoreloWatch implements Disposable {
      * @return Its bytes, or {@code null} when that side has no such file.
      */
     public byte @Nullable [] file(Waiting.Entry entry, String commit, String path) {
-        return cache().file(repository(entry), commit, path);
+        return cache(entry).file(repository(entry), commit, path);
     }
 
     /**
@@ -152,7 +254,7 @@ public final class PoreloWatch implements Disposable {
      */
     public Map<String, byte @Nullable []> files(
             Waiting.Entry entry, String commit, List<String> paths) {
-        return cache().files(repository(entry), commit, paths);
+        return cache(entry).files(repository(entry), commit, paths);
     }
 
     /**
@@ -164,7 +266,8 @@ public final class PoreloWatch implements Disposable {
      */
     public void fetchInto(Waiting.Entry entry, Path root) {
         final String url = entry.source(mirror -> java.nio.file.Files.isDirectory(Path.of(mirror)));
-        cache().fetchInto(
+        cache(entry)
+                .fetchInto(
                         root,
                         url,
                         entry.machine().sshConfig(),
@@ -179,7 +282,7 @@ public final class PoreloWatch implements Disposable {
      * @return Each remote's name and address.
      */
     Map<String, String> remotes(Path root) {
-        return OpenProjects.remotes(cache().remoteUrls(root));
+        return OpenProjects.remotes(anyCache().remoteUrls(root));
     }
 
     /**
@@ -189,7 +292,7 @@ public final class PoreloWatch implements Disposable {
      * @param remote The remote's name.
      */
     void fetchRemote(Path root, String remote) {
-        cache().fetchRemote(root, remote);
+        anyCache().fetchRemote(root, remote);
     }
 
     /**
@@ -199,30 +302,54 @@ public final class PoreloWatch implements Disposable {
      * @param name The push's name.
      */
     void forget(Path root, String name) {
-        cache().forget(root, name);
+        anyCache().forget(root, name);
     }
 
     private Path repository(Waiting.Entry entry) {
-        return cache().repository(entry.machine().name(), entry.project(), entry.repository());
+        return cache(entry).repository(entry.machine().name(), entry.project(), entry.repository());
     }
 
-    private static ReviewCache cache() {
+    private ReviewCache cache(Waiting.Entry entry) {
+        return cache(factorsOf(entry.machine()));
+    }
+
+    // A repository of the person's comes from no one machine.
+    private ReviewCache anyCache() {
+        return cache(widest(listedFactors()));
+    }
+
+    private static ReviewCache cache(LimitFactors factors) {
         final String set = System.getenv("XDG_CACHE_HOME");
         final Path root =
                 set == null || set.isEmpty() || !Path.of(set).isAbsolute()
                         ? Path.of(System.getProperty("user.home"), ".cache")
                         : Path.of(set);
-        return new ReviewCache(root.resolve("porelo-intellij"), Map.of(), machines().ssh());
+        return new ReviewCache(
+                root.resolve("porelo-intellij"), Map.of(), machines().ssh(), factors);
     }
 
     /**
-     * Opens a gate to a machine, through a tunnel when it needs one.
+     * Opens a gate to a machine, through a tunnel when it needs one, and reads the factors its
+     * daemon answers, which its later waits and this machine's next start follow.
      *
      * @param machine The machine.
      * @return The gate; the caller closes it.
+     * @throws org.fuin.porelo.intellij.gate.GateException If the daemon answers no limits line.
      */
     public Gate gate(Machine machine) {
-        return new Gate(connections.socketOf(machine));
+        final LimitFactors known = factorsOf(machine);
+        final Gate gate = new Gate(connections.socketOf(machine, known), known);
+        try {
+            factors.put(machine.name(), gate.limits());
+        } catch (RuntimeException ex) {
+            closeQuietly(gate);
+            throw ex;
+        }
+        return gate;
+    }
+
+    private LimitFactors factorsOf(Machine machine) {
+        return factors.getOrDefault(machine.name(), LimitFactors.DEFAULT);
     }
 
     @Override
@@ -313,7 +440,7 @@ public final class PoreloWatch implements Disposable {
                 }
                 // A stream that ended may be a daemon that went; reading it again says so.
                 read(machine);
-                Thread.sleep(TimeUnit.SECONDS.toMillis(REOPEN_SECONDS));
+                Thread.sleep(reopen(factorsOf(machine)).toMillis());
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();

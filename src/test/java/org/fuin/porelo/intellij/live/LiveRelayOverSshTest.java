@@ -8,6 +8,7 @@ import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Project;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Relay;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class LiveRelayOverSshTest {
                         env("PORELO_LIVE_SOCKET"),
                         Path.of(env("PORELO_LIVE_SSH_CONFIG")));
 
-        try (Relay relay = Relay.overSsh(machine, runtime, List.of("ssh"));
+        try (Relay relay = Relay.overSsh(machine, runtime, List.of("ssh"), LimitFactors.DEFAULT);
                 Gate gate = new Gate(relay.socket())) {
             assertThat(gate.projects())
                     .extracting(Project::name)

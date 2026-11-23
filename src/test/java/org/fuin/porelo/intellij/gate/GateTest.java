@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import org.fuin.porelo.wire.LimitFactors;
 import org.fuin.porelo.wire.varlink.VarlinkException;
 import org.fuin.porelo.wire.varlink.VarlinkServer;
 import org.junit.jupiter.api.AfterEach;
@@ -589,5 +591,137 @@ class GateTest {
                         + name
                         + ":refs/remotes/porelo/"
                         + name);
+    }
+
+    @Test
+    @DisplayName("The factors are read from the daemon's limits line, not from its numbers")
+    void readsTheFactorsFromTheLimitsLine() {
+        daemon.method(
+                "Limits",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "line",
+                                        "services=2.0,machines=1.5,polling=3.0,retries=0.5",
+                                        "services",
+                                        9.0,
+                                        "machines",
+                                        9.0,
+                                        "polling",
+                                        9.0,
+                                        "retries",
+                                        9.0)));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.limits())
+                    .as("the factors the daemon answered")
+                    .isEqualTo(
+                            LimitFactors.parse(
+                                    "services=2.0,machines=1.5,polling=3.0,retries=0.5"));
+        }
+    }
+
+    @Test
+    @DisplayName("After the factors are read, an answer is waited on by the services factor")
+    void waitsOnLaterAnswersByTheServicesFactor() {
+        daemon.method(
+                "Limits",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "line",
+                                        "services=0.1,machines=1.0,polling=1.0,retries=1.0",
+                                        "services",
+                                        0.1,
+                                        "machines",
+                                        1.0,
+                                        "polling",
+                                        1.0,
+                                        "retries",
+                                        1.0)));
+        daemon.method("Projects", (parameters, replies) -> {});
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            gate.limits();
+            final long started = System.nanoTime();
+            assertThatThrownBy(gate::projects)
+                    .as("a daemon that does not answer")
+                    .isInstanceOf(GateException.class)
+                    .hasMessage("Projects did not answer within 3 s");
+            assertThat(Duration.ofNanos(System.nanoTime() - started))
+                    .as("how long it was waited on")
+                    .isLessThan(Duration.ofSeconds(10));
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A connection opened with a machine's last factors waits on its first answer by them")
+    void waitsOnTheFirstAnswerByTheFactorsGiven() {
+        daemon.method("Projects", (parameters, replies) -> {});
+
+        try (Gate gate = new Gate(daemon.socketPath(), LimitFactors.parse("services=0.1"))) {
+            assertThatThrownBy(gate::projects)
+                    .as("a daemon that does not answer")
+                    .isInstanceOf(GateException.class)
+                    .hasMessage("Projects did not answer within 3 s");
+        }
+    }
+
+    @Test
+    @DisplayName("A limits line that breaks the grammar is refused, never read as all four at 1.0")
+    void refusesABrokenLimitsLine() {
+        daemon.method(
+                "Limits",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "line",
+                                        "services=0",
+                                        "services",
+                                        0.0,
+                                        "machines",
+                                        1.0,
+                                        "polling",
+                                        1.0,
+                                        "retries",
+                                        1.0)));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(gate::limits)
+                    .as("a factor of 0")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("limits line 'services=0' is refused");
+        }
+    }
+
+    @Test
+    @DisplayName("A daemon that answers no limits line is refused")
+    void refusesAnAnswerWithoutTheLine() {
+        daemon.method("Limits", (parameters, replies) -> replies.last(Map.of("services", 1.0)));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(gate::limits)
+                    .as("an answer without the line")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("The daemon answered without 'line'");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A limits line that leaves a factor out is refused: porelod writes all four, and one left out would be read as 1.0")
+    void refusesALimitsLineWithoutAllFour() {
+        for (final String line :
+                List.of("", "services=2.0", "services=1.0,machines=1.0,polling=1.0")) {
+            daemon.method("Limits", (parameters, replies) -> replies.last(Map.of("line", line)));
+
+            try (Gate gate = new Gate(daemon.socketPath())) {
+                assertThatThrownBy(gate::limits)
+                        .as("the line '" + line + "'")
+                        .isInstanceOf(GateException.class)
+                        .hasMessageContaining("does not name all four");
+            }
+        }
     }
 }

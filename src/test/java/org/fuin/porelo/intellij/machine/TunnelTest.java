@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.List;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -57,7 +58,7 @@ class TunnelTest {
     @DisplayName(
             "The tunnel forwards the remote socket to the plugin's own, owner-only, and asks ssh for no prompt")
     void forwardsToThePluginsOwnSocket() throws IOException {
-        try (Tunnel tunnel = Tunnel.raise(BUILD1, dir, ssh("forward"))) {
+        try (Tunnel tunnel = Tunnel.raise(BUILD1, dir, ssh("forward"), LimitFactors.DEFAULT)) {
             assertThat(tunnel.socket())
                     .as("the plugin's end")
                     .isEqualTo(dir.resolve("porelo-intellij-build-1.sock"));
@@ -97,7 +98,7 @@ class TunnelTest {
     @Test
     @DisplayName("When ssh refuses, its own words are said")
     void saysWhatSshSaid() {
-        assertThatThrownBy(() -> Tunnel.raise(BUILD1, dir, ssh("refuse")))
+        assertThatThrownBy(() -> Tunnel.raise(BUILD1, dir, ssh("refuse"), LimitFactors.DEFAULT))
                 .as("a refused host key")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("exit code 255")
@@ -140,7 +141,8 @@ class TunnelTest {
         try (ServerSocketChannel other = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
             other.bind(UnixDomainSocketAddress.of(socket));
 
-            assertThatThrownBy(() -> Tunnel.raise(BUILD1, dir, ssh("forward")))
+            assertThatThrownBy(
+                            () -> Tunnel.raise(BUILD1, dir, ssh("forward"), LimitFactors.DEFAULT))
                     .as("a socket in use")
                     .isInstanceOf(MachinesException.class)
                     .hasMessageContaining("Something already answers at " + socket);
@@ -153,7 +155,7 @@ class TunnelTest {
     void replacesAStaleSocket() throws IOException {
         Files.createFile(dir.resolve("porelo-intellij-build-1.sock"));
 
-        try (Tunnel tunnel = Tunnel.raise(BUILD1, dir, ssh("forward"))) {
+        try (Tunnel tunnel = Tunnel.raise(BUILD1, dir, ssh("forward"), LimitFactors.DEFAULT)) {
             assertThat(tunnel.up()).as("whether ssh runs").isTrue();
         }
     }
@@ -169,10 +171,25 @@ class TunnelTest {
                         "/r.sock",
                         CONFIG);
 
-        assertThatThrownBy(() -> Tunnel.raise(evil, dir, ssh("forward")))
+        assertThatThrownBy(() -> Tunnel.raise(evil, dir, ssh("forward"), LimitFactors.DEFAULT))
                 .as("a host starting with '-'")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("which ssh would read as an option");
         assertThat(dir.resolve("args")).as("whether ssh was started").doesNotExist();
+    }
+
+    @Test
+    @DisplayName("The wait for a tunnel to come up follows the machine's machines factor")
+    void waitsForTheTunnelByTheMachinesFactor() {
+        assertThatThrownBy(
+                        () ->
+                                Tunnel.raise(
+                                        BUILD1,
+                                        dir,
+                                        ssh("hang"),
+                                        LimitFactors.parse("machines=0.15")))
+                .as("a tunnel that does not come up")
+                .isInstanceOf(MachinesException.class)
+                .hasMessageContaining("within 1500 ms");
     }
 }

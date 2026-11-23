@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.machine.Connections;
 import org.fuin.porelo.intellij.machine.Machine;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -194,7 +195,7 @@ class LiveStreamHoldTest {
                 Gate gate = null;
                 final int currentStream = ++stream;
                 try {
-                    gate = new Gate(connections.socketOf(machine));
+                    gate = new Gate(connections.socketOf(machine, LimitFactors.DEFAULT));
                     state.currentGate.set(gate);
                     if (state.stopped.get()) {
                         break;
@@ -225,7 +226,7 @@ class LiveStreamHoldTest {
                     }
                 }
                 try {
-                    // Wait as long as PoreloWatch.REOPEN_SECONDS before reopening.
+                    // Wait as long as PoreloWatch.REOPEN before reopening.
                     Thread.sleep(Duration.ofSeconds(10));
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();

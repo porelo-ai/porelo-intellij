@@ -13,6 +13,7 @@ import org.fuin.porelo.intellij.gate.Project;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Machine;
 import org.fuin.porelo.intellij.machine.Tunnel;
+import org.fuin.porelo.wire.LimitFactors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class LiveNoticeTest {
                         env("PORELO_LIVE_HOST"),
                         env("PORELO_LIVE_SOCKET"),
                         Path.of(env("PORELO_LIVE_SSH_CONFIG")));
-        try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"))) {
+        try (Tunnel tunnel = Tunnel.raise(machine, dir, List.of("ssh"), LimitFactors.DEFAULT)) {
             final Waiting before = Waiting.read(List.of(machine), any -> new Gate(tunnel.socket()));
             final AtomicReference<List<Project>> first = new AtomicReference<>();
             final AtomicReference<Long> moved = new AtomicReference<>();
