@@ -103,6 +103,16 @@ public final class Tunnel implements AutoCloseable {
                             + host
                             + "', which ssh would read as an option");
         }
+        // ssh splits a forward at ':', so a remote socket holding one would forward elsewhere.
+        if (!Relay.PLAIN_PATH.matcher(remote).matches()) {
+            throw new MachinesException(
+                    "Machine '"
+                            + machine.name()
+                            + "' names the remote socket '"
+                            + remote
+                            + "', which ssh could read as more than a path;"
+                            + " only letters, digits and . _ / - are taken");
+        }
         final Path socket = socketFor(runtimeDirectory, machine);
         clear(machine, socket);
         final List<String> command = new ArrayList<>(ssh);

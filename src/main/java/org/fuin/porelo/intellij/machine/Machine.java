@@ -10,11 +10,12 @@ import org.jspecify.annotations.Nullable;
  * <p>Either its socket is opened as it is - this computer's daemon, or a forward somebody else
  * keeps up - or the plugin forwards {@code remoteSocket} over ssh to {@code host}, through a socket
  * of its own, or it is a WSL distribution the plugin reaches through {@code wsl.exe}, again through
- * a socket of its own. On Windows, which cannot forward to a unix socket, a machine over ssh has no
- * socket of the interface's: the plugin relays to {@code porelo daemon connect} there. A machine
- * over ssh is reached only through the ssh configuration the interface wrote from its host card,
- * never through the person's own, so the card's host key is the one ssh accepts; the person's key
- * stays in their agent.
+ * a socket of its own. A machine over ssh with no socket of the interface's - every one on Windows,
+ * a server the interface set up elsewhere - is relayed to through {@code porelo daemon connect} on
+ * Windows, which cannot forward to a unix socket, and tunnelled to elsewhere. A machine over ssh is
+ * reached only through the ssh configuration the interface wrote from its host card, never through
+ * the person's own, so the card's host key is the one ssh accepts; the person's key stays in their
+ * agent.
  *
  * @param name What the person calls it.
  * @param socket The unix socket that is opened as it is; for a machine reached through a tunnel,
@@ -171,7 +172,8 @@ public record Machine(
     }
 
     /**
-     * Tells whether the daemon is reached through an ssh tunnel the plugin raises.
+     * Tells whether the daemon is reached through an ssh tunnel the plugin raises in place of the
+     * interface's own; a machine {@link #relayedOverSsh()} is tunnelled to off Windows too.
      *
      * @return {@code true} when the machine names a socket, a host and a remote socket.
      */
@@ -180,7 +182,8 @@ public record Machine(
     }
 
     /**
-     * Tells whether the daemon is reached by relaying to {@code porelo daemon connect} over ssh.
+     * Tells whether the machine is reached over ssh with no socket of the interface's: relayed to
+     * {@code porelo daemon connect} on Windows, tunnelled to elsewhere.
      *
      * @return {@code true} when the machine names a host and no socket.
      */

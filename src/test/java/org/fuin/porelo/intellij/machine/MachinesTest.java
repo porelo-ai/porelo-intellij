@@ -84,6 +84,46 @@ class MachinesTest {
     }
 
     @Test
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
+    @DisplayName(
+            "A server the interface keeps as a host entry, with no socket of its own, is reached over ssh through its card's configuration")
+    void reachesAServerEntryOverSsh() throws IOException {
+        final Path walk = sshConfig(dir.resolve("config"), "porelo-walk");
+        write(
+                """
+                {"form": 2,
+                 "machines": [
+                   {"name": "porelo-walk", "host": "porelo-walk",
+                    "remoteSocket": "/run/user/1017/porelo/porelod.sock",
+                    "kind": "host", "hostProject": "porelo-walk"},
+                   {"name": "half", "host": "porelo-walk", "kind": "host"}
+                 ]}
+                """);
+
+        final Machines.Listed listed = machines().read();
+
+        assertThat(listed.machines())
+                .as("the server over ssh, then this computer's daemon")
+                .containsExactly(
+                        Machine.overSsh(
+                                "porelo-walk",
+                                "porelo-walk",
+                                "/run/user/1017/porelo/porelod.sock",
+                                walk),
+                        new Machine(
+                                Machines.THIS_COMPUTER, dir.resolve("run/porelo/porelod.sock")));
+        assertThat(listed.unreachable())
+                .as("a server entry that names no remote socket")
+                .containsExactly(
+                        new Machines.Unreachable(
+                                "half",
+                                "is a server entry that names no host or no remote socket"));
+    }
+
+    @Test
     @DisplayName("This computer's daemon is not listed twice when the interface names it")
     void doesNotListThisComputerTwice() throws IOException {
         write(
@@ -380,5 +420,61 @@ class MachinesTest {
                 .as("a relative socket")
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("'here'");
+    }
+
+    @Test
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "it reads the interface's file as Linux writes it, with Linux sockets, which are no paths on Windows")
+    @DisplayName(
+            "A server entry without the ssh configuration from its card is not reached, naming the file")
+    void aServerWithoutItsSshConfigurationIsNotReached() throws IOException {
+        write(
+                """
+                {"form": 2, "machines": [
+                   {"name": "porelo-walk", "host": "porelo-walk",
+                    "remoteSocket": "/run/user/1017/porelo/porelod.sock", "kind": "host"}
+                 ]}
+                """);
+
+        assertThat(machines().read().unreachable())
+                .as("what it keeps but does not reach")
+                .containsExactly(
+                        new Machines.Unreachable(
+                                "porelo-walk",
+                                "has no ssh configuration from its host card, "
+                                        + dir.resolve("config/porelo/ssh/porelo-walk.conf")));
+    }
+
+    @Test
+    @DisplayName("On Windows a server entry is relayed to over ssh like any machine over ssh")
+    void onWindowsAServerEntryIsRelayedTo() throws IOException {
+        final Path file = dir.resolve("roaming/porelo/frontend.json");
+        Files.createDirectories(file.getParent());
+        final Path walk = sshConfig(dir.resolve("roaming"), "porelo-walk");
+        Files.writeString(
+                file,
+                """
+                {"form": 2, "machines": [
+                   {"name": "porelo-walk", "host": "porelo-walk",
+                    "remoteSocket": "/run/user/1017/porelo/porelod.sock", "kind": "host"}
+                 ]}
+                """,
+                StandardCharsets.UTF_8);
+        final Machines windows =
+                new Machines(
+                        Map.of("APPDATA", dir.resolve("roaming").toString()),
+                        dir.resolve("home"),
+                        true);
+
+        assertThat(windows.all())
+                .as("the server, over ssh, and no daemon of this computer's own")
+                .containsExactly(
+                        Machine.overSsh(
+                                "porelo-walk",
+                                "porelo-walk",
+                                "/run/user/1017/porelo/porelod.sock",
+                                walk));
     }
 }

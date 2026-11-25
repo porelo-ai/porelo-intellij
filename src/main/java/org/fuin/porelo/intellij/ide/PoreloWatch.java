@@ -70,7 +70,10 @@ public final class PoreloWatch implements Disposable {
 
     private final Connections connections =
             new Connections(
-                    PoreloWatch::runtimeDirectory, List.of(machines().ssh()), List.of("wsl.exe"));
+                    PoreloWatch::runtimeDirectory,
+                    List.of(machines().ssh()),
+                    List.of("wsl.exe"),
+                    windows());
 
     private final List<Consumer<Snapshot>> listeners = new CopyOnWriteArrayList<>();
 
@@ -779,9 +782,10 @@ public final class PoreloWatch implements Disposable {
     }
 
     private static Machines machines() {
-        return new Machines(
-                System.getenv(),
-                Path.of(System.getProperty("user.home")),
-                System.getProperty("os.name", "").startsWith("Windows"));
+        return new Machines(System.getenv(), Path.of(System.getProperty("user.home")), windows());
+    }
+
+    private static boolean windows() {
+        return System.getProperty("os.name", "").startsWith("Windows");
     }
 }

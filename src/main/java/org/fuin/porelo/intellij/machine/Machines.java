@@ -18,10 +18,12 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The interface keeps them in {@code $XDG_CONFIG_HOME/porelo/frontend.json}, under {@code
  * machines}, each with {@code name}, {@code socket}, and {@code host} with {@code remoteSocket} or
- * neither. An entry with a {@code kind} (a WSL distribution, with its {@code distribution}) is
- * reached on Windows only; elsewhere, and of any other kind, it is kept and shown as one the plugin
- * does not reach, never opened as a path. On Windows a machine over ssh is relayed to, and a socket
- * of a Linux machine is not reached. A machine over ssh is reached only through {@code
+ * neither. An entry of {@code kind} {@code host}, a server the interface set up or took from a host
+ * card, names {@code host} and {@code remoteSocket} and no socket of its own, and is reached over
+ * ssh. A WSL distribution ({@code kind} {@code wsl}, with its {@code distribution}) is reached on
+ * Windows only; elsewhere, and of any other kind, it is kept and shown as one the plugin does not
+ * reach, never opened as a path. On Windows a machine over ssh is relayed to, and a socket of a
+ * Linux machine is not reached. A machine over ssh is reached only through {@code
  * porelo/ssh/<host>.conf} beside that file, which the interface writes from the host's card; one
  * without it is kept and shown as one the plugin does not reach. Only those fields are read; the
  * file holds the interface's other settings too. This computer's own daemon is reached as well,
@@ -31,6 +33,9 @@ public final class Machines {
 
     /** What this computer's daemon is called when the interface's file does not name it. */
     public static final String THIS_COMPUTER = "This computer";
+
+    /** The {@code kind} of a server the interface set up or took from a host card. */
+    private static final String HOST_KIND = "host";
 
     /**
      * A host's name, as a host card gives it: one lower-case DNS label, which is also the name of
@@ -242,7 +247,9 @@ public final class Machines {
                 }
                 continue;
             }
-            if (!kind.isEmpty()) {
+            // A server the interface set up or took from a host card: reached over ssh as below.
+            final boolean server = kind.equals(HOST_KIND);
+            if (!kind.isEmpty() && !server) {
                 unreachable.add(
                         new Unreachable(
                                 name,
@@ -256,6 +263,12 @@ public final class Machines {
                 continue;
             }
             final String host = text(fields.get("host"));
+            if (server && (host.isEmpty() || text(fields.get("remoteSocket")).isEmpty())) {
+                unreachable.add(
+                        new Unreachable(
+                                name, "is a server entry that names no host or no remote socket"));
+                continue;
+            }
             final @Nullable Path sshConfig = host.isEmpty() ? null : sshConfig(host);
             if (!host.isEmpty() && (sshConfig == null || !Files.isRegularFile(sshConfig))) {
                 unreachable.add(
@@ -269,9 +282,9 @@ public final class Machines {
                                                 + sshConfig));
                 continue;
             }
-            if (windows && sshConfig != null) {
-                // The interface's socket is its own end of a tunnel; Windows relays over ssh
-                // instead.
+            if (sshConfig != null && (windows || server)) {
+                // The interface's socket, if any, is its own end of a tunnel; the plugin raises its
+                // own, or relays over ssh on Windows.
                 add(machines, unreachable, overSsh(file, name, fields, sshConfig));
                 continue;
             }

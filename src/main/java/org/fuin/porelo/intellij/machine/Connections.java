@@ -26,6 +26,8 @@ public final class Connections implements AutoCloseable {
 
     private final List<String> wsl;
 
+    private final boolean relay;
+
     private volatile boolean closed;
 
     /**
@@ -35,11 +37,16 @@ public final class Connections implements AutoCloseable {
      * @param ssh The ssh command, {@code ssh}, or Windows' own {@code ssh.exe} there, unless a test
      *     stands in for it.
      * @param wsl The {@code wsl.exe} command, {@code wsl.exe} unless a test stands in for it.
+     * @param relay Whether a machine over ssh without a socket of the interface's is relayed to
+     *     through {@code porelo daemon connect}, as on Windows, which cannot forward to a unix
+     *     socket; elsewhere the plugin raises its own tunnel to it.
      */
-    public Connections(Supplier<Path> runtimeDirectory, List<String> ssh, List<String> wsl) {
+    public Connections(
+            Supplier<Path> runtimeDirectory, List<String> ssh, List<String> wsl, boolean relay) {
         this.runtimeDirectory = runtimeDirectory;
         this.ssh = List.copyOf(ssh);
         this.wsl = List.copyOf(wsl);
+        this.relay = relay;
     }
 
     /**
@@ -73,7 +80,7 @@ public final class Connections implements AutoCloseable {
                             })
                     .socket();
         }
-        if (machine.relayedOverSsh()) {
+        if (machine.relayedOverSsh() && relay) {
             return relays.compute(
                             machine.name(),
                             (name, existing) -> {
@@ -87,7 +94,7 @@ public final class Connections implements AutoCloseable {
                             })
                     .socket();
         }
-        if (!machine.needsATunnel()) {
+        if (!machine.needsATunnel() && !machine.relayedOverSsh()) {
             return Objects.requireNonNull(
                     machine.socket(), "a machine reached directly has a socket");
         }

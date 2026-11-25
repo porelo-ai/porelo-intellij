@@ -192,4 +192,23 @@ class TunnelTest {
                 .isInstanceOf(MachinesException.class)
                 .hasMessageContaining("within 1500 ms");
     }
+
+    @Test
+    @DisplayName(
+            "A remote socket ssh's forward could split at a colon is refused before ssh starts")
+    void refusesARemoteSocketThatIsNoPlainPath() {
+        final Machine sly =
+                new Machine(
+                        "sly",
+                        Path.of("/run/user/1000/sly.sock"),
+                        "build1",
+                        "/x:evil.example:80",
+                        CONFIG);
+
+        assertThatThrownBy(() -> Tunnel.raise(sly, dir, ssh("forward"), LimitFactors.DEFAULT))
+                .as("a remote socket with a colon")
+                .isInstanceOf(MachinesException.class)
+                .hasMessageContaining("which ssh could read as more than a path");
+        assertThat(dir.resolve("args")).as("whether ssh was started").doesNotExist();
+    }
 }

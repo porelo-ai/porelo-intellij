@@ -75,8 +75,9 @@ The plugin reaches the machines the Porelo interface lists in its own settings, 
 on Linux, this computer's daemon whether the list names it or not. A machine elsewhere is reached through a tunnel over ssh,
 from Windows through its own `ssh.exe`, and only as its host card says: through the ssh configuration the interface
 writes from the card, `porelo/ssh/<host>.conf` beside its settings, with the card's host key pinned in
-`<host>.known_hosts`. That configuration is the only one ssh reads for it, for the tunnel and for every fetch of a
-review, so neither your own SSH configuration, your known hosts nor an ssh you named for git can lead it to another
+`<host>.conf.known_hosts`. A server the interface set up or took from a host card is reached the same way: on Linux
+through a tunnel of the plugin's own to its daemon's socket, from Windows through `porelo daemon connect` there. That
+configuration is the only one ssh reads for it, for the tunnel and for every fetch of a review, so neither your own SSH configuration, your known hosts nor an ssh you named for git can lead it to another
 machine. A host whose configuration is missing is listed as not reached, naming the file; a host that answers with
 another key than its card names is refused. A WSL 2 distribution on Windows is reached through `porelo daemon
 connect`. A review is fetched into the plugin's own cache, `porelo-intellij` under `$XDG_CACHE_HOME`, by default the cache folder in your home directory,

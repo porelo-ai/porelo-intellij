@@ -38,7 +38,8 @@ public final class Relay implements AutoCloseable {
     /** How long a command may take to answer and to end, before its factor. */
     static final Duration READY = Duration.ofSeconds(10);
 
-    private static final java.util.regex.Pattern PLAIN_PATH =
+    /** A remote socket neither a remote shell nor ssh's forward can read as more than a path. */
+    static final java.util.regex.Pattern PLAIN_PATH =
             java.util.regex.Pattern.compile("/[A-Za-z0-9._/-]*");
 
     private static final byte[] GET_INFO =

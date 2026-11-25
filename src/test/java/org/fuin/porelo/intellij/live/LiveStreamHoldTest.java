@@ -100,7 +100,7 @@ class LiveStreamHoldTest {
                         StandardOpenOption.CREATE,
                         StandardOpenOption.APPEND)) {
             state = new State(writer);
-            try (Connections connections = new Connections(() -> runtime, ssh, wsl)) {
+            try (Connections connections = new Connections(() -> runtime, ssh, wsl, false)) {
                 final Thread watcher =
                         Thread.ofVirtual()
                                 .start(
