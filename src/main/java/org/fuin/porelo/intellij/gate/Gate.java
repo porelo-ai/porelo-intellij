@@ -525,6 +525,195 @@ public final class Gate implements AutoCloseable {
         return told;
     }
 
+    /**
+     * Follows the daemon's stream of tasks, handing over how many items each task holds for the
+     * owner account's decision: every task's count again each time the list changed. Returns when
+     * the daemon ends the stream; {@link #close()} from another thread ends it.
+     *
+     * @param each Gets every answer, each task's name with its count, on this thread; the count is
+     *     {@code null} where the daemon cannot read the task's holds, which is unknown, never none.
+     * @throws GateException If the daemon refuses the call, or the stream is cut off.
+     */
+    public void watchHeld(java.util.function.Consumer<Map<String, @Nullable Integer>> each) {
+        try {
+            client.callMore(
+                    INTERFACE + ".Watch",
+                    Map.of(),
+                    reply -> {
+                        final Map<String, @Nullable Integer> held = new LinkedHashMap<>();
+                        for (final Map<String, Object> task : objects(reply, "tasks")) {
+                            held.put(string(task, "name"), optionalNumber(task, "held"));
+                        }
+                        each.accept(held);
+                        return true;
+                    });
+        } catch (VarlinkException ex) {
+            throw refusal("Watch", ex);
+        }
+    }
+
+    /**
+     * Reads every item held for the owner account's decision that is not decided yet, however many
+     * pages the daemon sends them in.
+     *
+     * @param task The task whose items are read; {@code null} for every task on the machine.
+     * @return The items, in the daemon's order, and the tasks whose holds the daemon cannot read.
+     * @throws GateException If the daemon answers a cursor it answered before, or an item lacks a
+     *     field this plugin shows.
+     */
+    public HeldList heldItems(@Nullable String task) {
+        final List<HeldItem> items = new ArrayList<>();
+        // A task may be named on every page; it is said once.
+        final java.util.Set<String> unreadable = new java.util.LinkedHashSet<>();
+        final java.util.Set<String> cursors = new java.util.HashSet<>();
+        @Nullable String cursor = null;
+        do {
+            final Map<String, Object> call = new LinkedHashMap<>();
+            if (task != null) {
+                call.put("task", task);
+            }
+            if (cursor != null) {
+                call.put("cursor", cursor);
+            }
+            final Map<String, Object> reply = read("HeldItems", call);
+            for (final Map<String, Object> item : objects(reply, "items")) {
+                items.add(heldItem(item));
+            }
+            unreadable.addAll(optionalStrings(reply, "unreadable"));
+            cursor = optionalString(reply, "cursor");
+            if (cursor != null && !cursors.add(cursor)) {
+                throw new GateException(
+                        "HeldItems answered the cursor " + shown(cursor) + " again");
+            }
+        } while (cursor != null);
+        return new HeldList(items, List.copyOf(unreadable));
+    }
+
+    // Absent is none; anything but a list of text is no answer to what it asked.
+    private static List<String> optionalStrings(Map<String, Object> reply, String field) {
+        final Object value = reply.get(field);
+        if (value == null) {
+            return List.of();
+        }
+        final List<String> texts = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (final Object entry : list) {
+                if (!(entry instanceof String text)) {
+                    throw new GateException(
+                            "The daemon's '"
+                                    + field
+                                    + "' holds something that is not text: "
+                                    + shown(reply));
+                }
+                texts.add(text);
+            }
+            return texts;
+        }
+        throw new GateException(
+                "The daemon answered '" + field + "' with no list: " + shown(reply));
+    }
+
+    private static HeldItem heldItem(Map<String, Object> item) {
+        final String way = string(item, "direction");
+        final HeldItem.Direction direction =
+                switch (way) {
+                    case "outgoing" -> HeldItem.Direction.OUTGOING;
+                    case "incoming" -> HeldItem.Direction.INCOMING;
+                    default ->
+                            throw new GateException(
+                                    "The daemon answered a held item going neither out nor in: "
+                                            + shown(item));
+                };
+        // An incoming item is shown by the forge account it came from; without it, who wrote it is
+        // unknown.
+        final @Nullable String from =
+                direction == HeldItem.Direction.INCOMING
+                        ? string(item, "from")
+                        : optionalString(item, "from");
+        final String operation = string(item, "operation");
+        // What a release sends is shown whole: a comment without its lines, or a reply without its
+        // thread, could not be shown as it would go out.
+        final HeldItem.@Nullable Anchor anchor;
+        final @Nullable String thread;
+        switch (operation) {
+            case "comment" -> {
+                anchor = anchor(item);
+                thread = null;
+            }
+            case "reply" -> {
+                anchor = null;
+                thread = string(item, "thread");
+            }
+            default ->
+                    throw new GateException(
+                            "The daemon answered a held item that is neither a comment nor a reply: "
+                                    + shown(item));
+        }
+        return new HeldItem(
+                string(item, "id"),
+                string(item, "task"),
+                string(item, "place"),
+                direction,
+                string(item, "destination"),
+                operation,
+                anchor,
+                thread,
+                optionalString(item, "suggestion"),
+                string(item, "commit"),
+                string(item, "text"),
+                string(item, "digest"),
+                from,
+                string(item, "at"),
+                number(item, "run"));
+    }
+
+    private static HeldItem.Anchor anchor(Map<String, Object> item) {
+        final String side = string(item, "side");
+        final int start = number(item, "startLine");
+        final int end = number(item, "endLine");
+        if (!side.equals("old") && !side.equals("new")) {
+            throw new GateException(
+                    "The daemon answered a comment on neither the old nor the new side: "
+                            + shown(item));
+        }
+        if (start < 1 || end < start) {
+            throw new GateException(
+                    "The daemon answered a comment on lines "
+                            + start
+                            + " to "
+                            + end
+                            + ": "
+                            + shown(item));
+        }
+        return new HeldItem.Anchor(string(item, "path"), side, start, end);
+    }
+
+    /**
+     * Decides one held item, as it was shown: the digest read with it goes with the decision, so an
+     * item that changed since is not decided.
+     *
+     * @param item The item as it was shown.
+     * @param decision What is decided; it must be one its direction takes.
+     * @throws IllegalArgumentException If the decision is not one of its direction's; nothing was
+     *     sent.
+     * @throws ItemRefusedException If the daemon refused it; nothing was decided.
+     */
+    public void decideItem(HeldItem item, HeldItem.Decision decision) {
+        if (!item.direction().decisions().contains(decision)) {
+            throw new IllegalArgumentException(
+                    "An "
+                            + item.direction().wire()
+                            + " item is not decided with "
+                            + decision.wire());
+        }
+        final Map<String, Object> call = new LinkedHashMap<>();
+        call.put("task", item.task());
+        call.put("id", item.id());
+        call.put("digest", item.digest());
+        call.put("decision", decision.wire());
+        read("DecideItem", call);
+    }
+
     @Override
     public void close() {
         try {
@@ -608,6 +797,15 @@ public final class Gate implements AutoCloseable {
                 return refused;
             }
         }
+        if (method.equals("DecideItem")
+                && error.startsWith(INTERFACE + ".")
+                && answer.get("id") instanceof String id) {
+            final @Nullable String words =
+                    itemRefusal(error.substring(INTERFACE.length() + 1), shown(id));
+            if (words != null) {
+                return new ItemRefusedException(error.substring(INTERFACE.length() + 1), id, words);
+            }
+        }
         // Without its fields it cannot be said in words; then the daemon's own words below stand.
         if (error.equals(INTERFACE + ".BranchExists")
                 && answer.get("branch") instanceof String branch
@@ -620,6 +818,25 @@ public final class Gate implements AutoCloseable {
                         + error.substring(error.lastIndexOf('.') + 1)
                         + (answer.isEmpty() ? "" : " " + shown(answer)),
                 ex);
+    }
+
+    // Every one says nothing was decided, so a person knows the item still stands as it was.
+    private static @Nullable String itemRefusal(String reason, String id) {
+        return switch (reason) {
+            case "NoSuchItem" -> "Item " + id + " is not held; nothing was decided";
+            case "DigestChanged" ->
+                    "Item "
+                            + id
+                            + " changed since it was shown; nothing was decided, and it is shown"
+                            + " again as it stands";
+            case "AlreadyDecided" -> "Item " + id + " was already decided; nothing was decided now";
+            case "Lapsed" ->
+                    "Item "
+                            + id
+                            + " lapsed with the run that held it; nothing was decided, and it"
+                            + " never went further";
+            default -> null;
+        };
     }
 
     // Each refusal in words where its fields are there; without them, the daemon's own words.

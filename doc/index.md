@@ -52,6 +52,23 @@ another; a branch that already holds other work is said, and the next free name 
 moved since it was shown is refused and shown again to be read. *Reject* asks why, and that reason reaches the task
 that pushed it.
 
+## Items held for your decision
+
+A task reviewing a pull request writes nothing to the forge on its own: each comment or reply it makes is held for
+you, and each comment from the forge that a check withheld from it is held too. The tool window's *Held* tab lists
+them by machine and task. A notice says when a task holds more than before: the plugin follows each machine's list of
+tasks as the daemon streams it, and reads the items again whenever a count moves. Holds the daemon cannot read are
+named below the list, never shown as holding none.
+
+Choosing an item shows its exact text as plain text, never as Markdown or links, with where it goes, the file, side
+and lines a comment stands on or the thread a reply answers, any replacement a comment proposes for those lines,
+exactly, the commit it was held for, its place, its run and when it was held; an item that came in names the forge
+account that wrote it. A comment or reply without all of that is refused rather than shown in part. Each item is decided alone: one going out is *Released* to the forge or *Refused*, and the task
+sees in its next run that a refused one never went out; one that came in is *Passed* to the task or *Dismissed*. The
+decision carries the digest of the text shown, so an item that changed since is not decided. A refusal is said in
+words - the item changed, was already decided, is no longer held, or lapsed with its run - and the list is read again
+after every decision. Nothing here starts a run.
+
 ## The machines and the cache
 
 The plugin reaches the machines the Porelo interface lists in its own settings, which it reads and never writes, and,

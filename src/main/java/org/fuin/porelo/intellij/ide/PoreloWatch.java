@@ -23,6 +23,8 @@ import java.util.function.Consumer;
 import org.fuin.porelo.intellij.cache.Changes;
 import org.fuin.porelo.intellij.cache.ReviewCache;
 import org.fuin.porelo.intellij.gate.Gate;
+import org.fuin.porelo.intellij.gate.HeldItem;
+import org.fuin.porelo.intellij.gate.HeldList;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Connections;
 import org.fuin.porelo.intellij.machine.Machine;
@@ -75,6 +77,22 @@ public final class PoreloWatch implements Disposable {
     private static final Logger LOG = Logger.getInstance(PoreloWatch.class);
 
     private volatile Snapshot last = Snapshot.NONE;
+
+    /** The machines whose stream of tasks is followed for their held items, by name. */
+    private final Map<String, Thread> heldStreams = new ConcurrentHashMap<>();
+
+    /** Each machine's tasks' held counts as last answered, kept across a stream that reopens. */
+    private final Map<String, Map<String, Integer>> heldCounts = new ConcurrentHashMap<>();
+
+    private final List<Consumer<Held>> heldListeners = new CopyOnWriteArrayList<>();
+
+    private volatile Held held = Held.NONE;
+
+    /** Guards each change of {@link #held}; never held while a machine is asked. */
+    private final Object heldLock = new Object();
+
+    /** One lock per machine, held while its items are read. */
+    private final Map<String, Object> heldReads = new ConcurrentHashMap<>();
 
     /** What has been announced, kept across a read in which its machine did not answer. */
     private Waiting seen = new Waiting(List.of(), List.of());
@@ -211,6 +229,75 @@ public final class PoreloWatch implements Disposable {
     public void listen(Consumer<Snapshot> listener, Disposable parent) {
         listeners.add(listener);
         com.intellij.openapi.util.Disposer.register(parent, () -> listeners.remove(listener));
+    }
+
+    /**
+     * Returns the held items read last.
+     *
+     * @return Every machine's held items, and the machines that could not be read.
+     */
+    public Held held() {
+        return held;
+    }
+
+    /**
+     * Tells a listener that the held items changed, on the thread that read them, until the given
+     * parent is disposed; two machines' changes may arrive out of order, so {@link #held()} gives
+     * what stands now.
+     *
+     * @param listener Gets each state.
+     * @param parent Ends the listening when it is disposed.
+     */
+    public void listenHeld(Consumer<Held> listener, Disposable parent) {
+        heldListeners.add(listener);
+        com.intellij.openapi.util.Disposer.register(parent, () -> heldListeners.remove(listener));
+    }
+
+    /** Reads every listed machine's held items again now, in the background. */
+    public void readHeldNow() {
+        AppExecutorUtil.getAppExecutorService()
+                .execute(
+                        () -> {
+                            final List<Machine> listed;
+                            try {
+                                listed = machines().read().machines();
+                            } catch (RuntimeException ex) {
+                                // Already said by the read of what waits.
+                                return;
+                            }
+                            listed.forEach(this::readHeld);
+                        });
+    }
+
+    /**
+     * Decides one held item as it was shown, then reads that machine's held items again, whether
+     * the daemon took the decision or refused it, so what is shown is what stands now.
+     *
+     * <p>Blocks; never call it on the event thread.
+     *
+     * @param machine The name of the machine that holds it.
+     * @param item The item as it was shown.
+     * @param decision What is decided.
+     * @throws org.fuin.porelo.intellij.gate.ItemRefusedException If the daemon refused it.
+     * @throws org.fuin.porelo.intellij.gate.GateException If the daemon could not be asked.
+     * @throws MachinesException If the machine is no longer listed.
+     */
+    public void decide(String machine, HeldItem item, HeldItem.Decision decision) {
+        final Machine listed =
+                machines().read().machines().stream()
+                        .filter(one -> one.name().equals(machine))
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new MachinesException(
+                                                "The machine "
+                                                        + machine
+                                                        + " is no longer listed; nothing was decided"));
+        try (Gate gate = gate(listed)) {
+            gate.decideItem(item, decision);
+        } finally {
+            readHeld(listed);
+        }
     }
 
     /**
@@ -399,7 +486,22 @@ public final class PoreloWatch implements Disposable {
             // Already said by the read.
             return;
         }
+        final java.util.Set<String> names =
+                listed.stream().map(Machine::name).collect(java.util.stream.Collectors.toSet());
+        final java.util.Set<String> shown = new java.util.HashSet<>(held.items().keySet());
+        shown.addAll(held.unreadable().keySet());
+        for (final String gone : shown) {
+            if (!names.contains(gone)) {
+                forgetHeld(gone);
+            }
+        }
         for (final Machine machine : listed) {
+            heldStreams.computeIfAbsent(
+                    machine.name(),
+                    name ->
+                            Thread.ofVirtual()
+                                    .name("Porelo held items of " + name)
+                                    .start(() -> streamHeld(machine)));
             streams.computeIfAbsent(
                     machine.name(),
                     name ->
@@ -447,6 +549,145 @@ public final class PoreloWatch implements Disposable {
         } finally {
             streams.remove(machine.name());
         }
+    }
+
+    /**
+     * Follows a machine's stream of tasks for their held counts: its held items are read again
+     * whenever a count moved, and a task whose count rose is announced once they are read.
+     */
+    private void streamHeld(Machine machine) {
+        try {
+            while (!disposed && listed(machine)) {
+                Gate gate = null;
+                @Nullable String ended = null;
+                try {
+                    gate = gate(machine);
+                    streaming.add(gate);
+                    // A stream opened again reads once, since what it missed is unknown.
+                    final java.util.concurrent.atomic.AtomicReference<
+                                    @Nullable Map<String, @Nullable Integer>>
+                            answered = new java.util.concurrent.atomic.AtomicReference<>();
+                    gate.watchHeld(
+                            counts -> {
+                                final Map<String, Integer> before =
+                                        heldCounts.getOrDefault(machine.name(), Map.of());
+                                heldCounts.put(machine.name(), Held.known(before, counts));
+                                updateHeld(now -> now.counted(machine.name(), counts));
+                                if (!counts.equals(answered.getAndSet(counts))) {
+                                    readHeld(machine);
+                                }
+                                announceHeld(machine.name(), Held.rose(before, counts));
+                            });
+                } catch (RuntimeException ex) {
+                    LOG.info("The stream of tasks of " + machine.name() + " ended", ex);
+                    ended = said(ex);
+                } finally {
+                    if (gate != null) {
+                        streaming.remove(gate);
+                        closeQuietly(gate);
+                    }
+                }
+                if (disposed) {
+                    return;
+                }
+                // A stream that ended may be a daemon that went; reading it again says so. One
+                // that answers the read but not the stream is said too: no rise would be announced.
+                if (readHeld(machine) && ended != null) {
+                    final String why = ended;
+                    updateHeld(
+                            before ->
+                                    before.unreadable(
+                                            machine.name(),
+                                            "its count of held items cannot be followed: " + why));
+                }
+                Thread.sleep(reopen(factorsOf(machine)).toMillis());
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        } finally {
+            // A machine listed again under its name meanwhile has a stream of its own, kept.
+            if (heldStreams.remove(machine.name(), Thread.currentThread())
+                    && !disposed
+                    && !named(machine.name())) {
+                forgetHeld(machine.name());
+            }
+        }
+    }
+
+    // One read per machine at a time, so an older answer is never published after a newer one.
+    private boolean readHeld(Machine machine) {
+        synchronized (heldReads.computeIfAbsent(machine.name(), name -> new Object())) {
+            try (Gate gate = gate(machine)) {
+                final HeldList read = gate.heldItems(null);
+                updateHeld(before -> before.with(machine.name(), read));
+                return true;
+            } catch (RuntimeException ex) {
+                updateHeld(before -> before.unreadable(machine.name(), said(ex)));
+                return false;
+            }
+        }
+    }
+
+    private static String said(RuntimeException ex) {
+        return ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+    }
+
+    private static boolean named(String name) {
+        try {
+            return machines().read().machines().stream().anyMatch(one -> one.name().equals(name));
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    private void forgetHeld(String machine) {
+        heldCounts.remove(machine);
+        updateHeld(before -> before.without(machine));
+    }
+
+    private void updateHeld(java.util.function.UnaryOperator<Held> change) {
+        final Held now;
+        synchronized (heldLock) {
+            now = change.apply(held);
+            held = now;
+        }
+        publishHeld(now);
+    }
+
+    private void publishHeld(Held now) {
+        for (final Consumer<Held> listener : heldListeners) {
+            try {
+                listener.accept(now);
+            } catch (RuntimeException ex) {
+                LOG.warn("A listener of the held items failed", ex);
+            }
+        }
+    }
+
+    private static void announceHeld(String machine, Map<String, Integer> rose) {
+        rose.forEach(
+                (task, count) -> {
+                    try {
+                        final Notification notification =
+                                notification(
+                                        count == 1
+                                                ? "One item held for your decision"
+                                                : count + " items held for your decision",
+                                        "Task " + task + " on " + machine);
+                        notification.addAction(
+                                NotificationAction.create(
+                                        "Show",
+                                        (event, shown) -> {
+                                            if (event.getProject() != null) {
+                                                HeldPanel.show(event.getProject());
+                                                shown.expire();
+                                            }
+                                        }));
+                        notification.notify(null);
+                    } catch (RuntimeException ex) {
+                        LOG.warn("Cannot announce the items held by " + task, ex);
+                    }
+                });
     }
 
     private static boolean listed(Machine machine) {

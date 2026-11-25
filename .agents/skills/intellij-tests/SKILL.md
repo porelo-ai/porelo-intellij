@@ -13,7 +13,8 @@ description: porelo-intellij's test tasks: documents, live tests against a real 
   and `PORELO_LIVE_SSH_CONFIG`, `PORELO_LIVE_FILES` for a push of more files than one message holds,
   `PORELO_LIVE_LIMITS` for the limits line the daemon's `config.yml` gives (a push that large may need
   `services` above 1.0 on a slow machine),
-  `PORELO_LIVE_FREE_BRANCH` for the taken-branch test, and `PORELO_LIVE_WSL`,
+  `PORELO_LIVE_FREE_BRANCH` for the taken-branch test, `PORELO_LIVE_HELD_TASK` for a task whose run holds an
+  outgoing item (the test refuses it, so it is set up anew for each run), and `PORELO_LIVE_WSL`,
   `PORELO_LIVE_WSL_DISTRIBUTION` and `PORELO_LIVE_PROJECT` for the WSL bridge, and `PORELO_LIVE_HOLD_MINUTES` and
   `PORELO_LIVE_HOLD_LOG` for holding the stream of projects for hours, as each test's comment says. The
   taken-branch test forwards the push, so it runs after the others. A change to how the plugin speaks to a daemon is
