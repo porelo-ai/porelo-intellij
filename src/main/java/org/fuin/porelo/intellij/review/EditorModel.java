@@ -121,12 +121,12 @@ final class EditorModel
 
     @Override
     public boolean canCreateComment(LineRange range) {
-        return located(range) != null;
+        return threads.canStart() && located(range) != null;
     }
 
     @Override
     public void requestNewComment(LineRange range) {
-        final Lines.@Nullable Located at = located(range);
+        final Lines.@Nullable Located at = threads.canStart() ? located(range) : null;
         if (at != null) {
             threads.requestNew(context, at.side(), at.range());
         }
@@ -163,7 +163,7 @@ final class EditorModel
                 new LineRange(first.getSecond(), first.getSecond() + range.end - range.start));
     }
 
-    /** Which lines carry threads, and that any line of the diff can take a new one. */
+    /** Which lines carry threads, and whether any line of the diff can take a new one. */
     private final class Controls implements CodeReviewEditorGutterControlsModel.ControlsState {
 
         private final Set<Integer> lines;
@@ -179,7 +179,7 @@ final class EditorModel
 
         @Override
         public boolean isLineCommentable(int line) {
-            return fromEditor.invoke(line) != null;
+            return threads.canStart() && fromEditor.invoke(line) != null;
         }
     }
 

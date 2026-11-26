@@ -402,33 +402,27 @@ public final class Gate implements AutoCloseable {
     public record Stored(String guid, String thread, String sarif) {}
 
     /**
-     * Reads every page of one run's comments on a pending push.
+     * Reads every page of a pending push's comment threads: the owner account's and its tasks',
+     * whatever review runs the push has.
      *
-     * <p>No count of pages bounds it, since a large project's analysis may yield any number; a
-     * daemon that hands new cursors forever is ended only by interrupting the reading thread.
+     * <p>No count of pages bounds it, since a large project's review may yield any number; a daemon
+     * that hands new cursors forever is ended only by interrupting the reading thread.
      *
      * @param project The project's name.
      * @param repository The repository's name.
      * @param name The push's name.
-     * @param run The run, as {@link ReviewSummary.Run#run()} names it.
-     * @param round The review round; {@code null} for the push's current one.
-     * @return Each page's SARIF document, in the daemon's order; only the last speaks for the run's
-     *     completeness.
+     * @return Each page's SARIF document, in the daemon's order; only the last speaks for the
+     *     threads' completeness.
      * @throws GateException If the daemon answers a cursor it answered before, or the reading
      *     thread is interrupted.
      */
-    public List<String> comments(
-            String project, String repository, String name, String run, @Nullable Integer round) {
+    public List<String> comments(String project, String repository, String name) {
         final List<String> pages = new ArrayList<>();
         final java.util.Set<String> cursors = new java.util.HashSet<>();
         @Nullable String cursor = null;
         do {
             final Map<String, Object> call = parameters(project, repository);
             call.put("name", name);
-            call.put("run", run);
-            if (round != null) {
-                call.put("round", round);
-            }
             if (cursor != null) {
                 call.put("cursor", cursor);
             }
@@ -437,9 +431,7 @@ public final class Gate implements AutoCloseable {
             cursor = optionalString(reply, "cursor");
             if (cursor != null && !cursors.add(cursor)) {
                 throw new GateException(
-                        "Run "
-                                + run
-                                + " of "
+                        "The threads of "
                                 + name
                                 + " answered the cursor "
                                 + shown(cursor)

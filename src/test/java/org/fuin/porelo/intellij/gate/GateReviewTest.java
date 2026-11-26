@@ -277,8 +277,8 @@ class GateReviewTest {
 
     @Test
     @DisplayName(
-            "A run's comments are read page by page, its run and round named, until the daemon gives no cursor")
-    void readsEveryPageOfARun() {
+            "A push's threads are read page by page, by the fields the daemon takes, until it gives no cursor")
+    void readsEveryPageOfAPush() {
         final List<Map<String, Object>> calls = new ArrayList<>();
         daemon.method(
                 "Comments",
@@ -295,7 +295,7 @@ class GateReviewTest {
                 });
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            assertThat(gate.comments("porelo", "core", "app", "r1", 2))
+            assertThat(gate.comments("porelo", "core", "app"))
                     .as("the pages, in order")
                     .containsExactly("page 1", "page 2", "page 3");
         }
@@ -305,30 +305,8 @@ class GateReviewTest {
                 .containsExactly(null, "c1", "c2");
         assertThat(calls.getFirst())
                 .as("the first page's call")
-                .containsEntry("run", "r1")
-                .containsEntry("name", "app");
-        // The wire reads every JSON number as a double.
-        assertThat(calls.getFirst().get("round"))
-                .as("the round asked")
-                .isInstanceOfSatisfying(
-                        Number.class,
-                        round -> assertThat(round.doubleValue()).as("its value").isEqualTo(2));
-    }
-
-    @Test
-    @DisplayName("The current round is read without naming one")
-    void readsTheCurrentRoundWithoutNamingOne() {
-        daemon.method(
-                "Comments",
-                (parameters, replies) -> {
-                    asked.set(parameters);
-                    replies.last(Map.of("sarif", "page"));
-                });
-
-        try (Gate gate = new Gate(daemon.socketPath())) {
-            gate.comments("porelo", "core", "app", "r1", null);
-        }
-        assertThat(asked.get()).as("what the daemon was asked").doesNotContainKey("round");
+                .containsEntry("name", "app")
+                .doesNotContainKeys("run", "round");
     }
 
     @Test
@@ -343,7 +321,7 @@ class GateReviewTest {
                 });
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            assertThatThrownBy(() -> gate.comments("porelo", "core", "app", "r1", null))
+            assertThatThrownBy(() -> gate.comments("porelo", "core", "app"))
                     .as("a cursor that does not move")
                     .isInstanceOf(GateException.class)
                     .hasMessageContaining("same");
@@ -352,8 +330,8 @@ class GateReviewTest {
     }
 
     @Test
-    @DisplayName("A run of more than 100 pages is read to its last page")
-    void aLongRunIsReadToItsEnd() {
+    @DisplayName("A push of more than 100 pages is read to its last page")
+    void aLongPushIsReadToItsEnd() {
         final int last = 150;
         daemon.method(
                 "Comments",
@@ -371,15 +349,15 @@ class GateReviewTest {
                 });
 
         try (Gate gate = new Gate(daemon.socketPath())) {
-            final List<String> pages = gate.comments("porelo", "core", "app", "r1", null);
-            assertThat(pages).as("every page of the run").hasSize(last);
-            assertThat(pages.getLast()).as("the run's last page").isEqualTo("page " + last);
+            final List<String> pages = gate.comments("porelo", "core", "app");
+            assertThat(pages).as("every page of the push").hasSize(last);
+            assertThat(pages.getLast()).as("the push's last page").isEqualTo("page " + last);
         }
     }
 
     @Test
-    @DisplayName("A run that never ends is left once its reader is interrupted, as Cancel does")
-    void aRunWithoutEndIsLeftOnInterrupt() throws Exception {
+    @DisplayName("A read that never ends is left once its reader is interrupted, as Cancel does")
+    void aReadWithoutEndIsLeftOnInterrupt() throws Exception {
         final AtomicInteger calls = new AtomicInteger();
         daemon.method(
                 "Comments",
@@ -394,7 +372,7 @@ class GateReviewTest {
                             .start(
                                     () -> {
                                         try {
-                                            gate.comments("porelo", "core", "app", "r1", null);
+                                            gate.comments("porelo", "core", "app");
                                         } catch (RuntimeException ex) {
                                             failed.set(ex);
                                         }

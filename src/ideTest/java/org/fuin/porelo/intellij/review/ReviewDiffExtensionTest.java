@@ -52,7 +52,11 @@ class ReviewDiffExtensionTest {
 
     /** The pushed side's line 4, "four", which only the pushed side has. */
     private static final CommentThread ON_FOUR =
-            new CommentThread("four", Side.RIGHT, new LineRange(3, 4), "On four");
+            new CommentThread(
+                    "four",
+                    Side.RIGHT,
+                    new LineRange(3, 4),
+                    List.of(new CommentThread.Said("task t", "On four")));
 
     @Test
     @DisplayName(
@@ -182,7 +186,10 @@ class ReviewDiffExtensionTest {
                         threads.replace(
                                 file,
                                 new CommentThread(
-                                        "first", Side.RIGHT, new LineRange(0, 1), "Changed"));
+                                        "first",
+                                        Side.RIGHT,
+                                        new LineRange(0, 1),
+                                        List.of(new CommentThread.Said("task t", "Changed"))));
                         waitFor("the changed seed drawn", () -> texts().contains("Changed"));
                         assertThat(texts())
                                 .as("the threads drawn, once the seed changed")
@@ -202,7 +209,11 @@ class ReviewDiffExtensionTest {
 
     /** The base's lines 2 and 3, "two" and "three", of which the pushed side changed the first. */
     private static final CommentThread ON_TWO_AND_THREE =
-            new CommentThread("base", Side.LEFT, new LineRange(1, 3), "On two and three");
+            new CommentThread(
+                    "base",
+                    Side.LEFT,
+                    new LineRange(1, 3),
+                    List.of(new CommentThread.Said("task t", "On two and three")));
 
     private static ReviewContext context(String path) {
         return new ReviewContext(
@@ -290,7 +301,9 @@ class ReviewDiffExtensionTest {
                     ((CodeReviewComponentInlayRenderer) inlay.getRenderer()).getComponent();
             for (final JTextComponent text :
                     UIUtil.findComponentsOfType(view, JTextComponent.class)) {
-                texts.add(text.getText());
+                if (ThreadView.TEXT.equals(text.getName())) {
+                    texts.add(text.getText());
+                }
             }
         }
         return texts;

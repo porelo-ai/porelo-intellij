@@ -45,6 +45,16 @@ Again* reads the push anew from its machine. A tab whose push moved to another c
 says so above its header within a minute, at once after a decision in this IDE, and *Approve* and *Reject* are
 disabled: a moved push is read again at its new commit, one decided elsewhere is closed.
 
+The push's comment threads, the owner account's from the command line and its tasks' replies, stand after their
+lines in the diff, each note under a line naming who wrote it in the plugin's own words: *owner account* or *task
+<name>*, and *resolved* once its thread is. A note's text is shown as plain text in a block of its own, so no text can
+pass as another writer's line. A thread that stands at no line of the diff - outdated, on a file the push does not
+change, or on lines the file does not have - is listed with why above the diff, never only counted. The threads are
+read whole for the commit shown or not at all: a page that breaks Porelo's review profile, holds a character that
+could hide or reorder text, names another push or commit, or a read that does not end complete, shows no thread and
+says why in red, and *Approve* then asks once before it forwards. A suggested replacement is not shown yet. Threads
+are written with `porelo gate comment` on the command line.
+
 ## Approving and rejecting
 
 *Approve* forwards exactly the commit that was shown onto the branch you name, `porelo/<push>` unless you name

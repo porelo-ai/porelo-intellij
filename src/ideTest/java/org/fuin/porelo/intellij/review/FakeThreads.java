@@ -34,6 +34,11 @@ final class FakeThreads implements Threads {
     }
 
     @Override
+    public boolean canStart() {
+        return true;
+    }
+
+    @Override
     public void requestNew(ReviewContext context, Side side, LineRange range) {
         throw new UnsupportedOperationException("No thread is asked for here");
     }
@@ -91,6 +96,10 @@ final class FakeThreads implements Threads {
 
     private static List<CommentThread> seed() {
         return List.of(
-                new CommentThread("first", Side.RIGHT, new LineRange(0, 1), "On the first line"));
+                new CommentThread(
+                        "first",
+                        Side.RIGHT,
+                        new LineRange(0, 1),
+                        List.of(new CommentThread.Said("task t", "On the first line"))));
     }
 }

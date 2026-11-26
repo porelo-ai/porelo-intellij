@@ -21,11 +21,12 @@ import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.GateException;
 import org.fuin.porelo.intellij.gate.MovedSinceReviewException;
 import org.fuin.porelo.intellij.gate.Review;
-import org.fuin.porelo.intellij.gate.ReviewSummary;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.review.Lines;
 import org.fuin.porelo.intellij.sarif.Note;
 import org.fuin.porelo.intellij.sarif.NoteReader;
+import org.fuin.porelo.intellij.sarif.Page;
+import org.fuin.porelo.intellij.sarif.ProfileNoteReader;
 import org.fuin.porelo.intellij.sarif.SarifRefusedException;
 import org.jspecify.annotations.Nullable;
 
@@ -105,7 +106,7 @@ final class ReviewTab {
      * @param files Each file as both sides have it, in the daemon's order.
      * @param into The open projects that hold the push's repository, where it can be opened.
      * @param threads The push's comment threads, at their lines or for the discussion panel.
-     * @param unread The runs whose comments could not be read, each with why.
+     * @param unread Why the push's threads could not be read; absent when they were.
      */
     record Read(
             Review review,
@@ -113,7 +114,7 @@ final class ReviewTab {
             List<Side> files,
             List<IntoProjects.Target> into,
             Placed threads,
-            List<Unread> unread) {}
+            @Nullable String unread) {}
 
     /**
      * One file as both sides have it.
@@ -219,7 +220,16 @@ final class ReviewTab {
         }
         final Comments comments;
         try (Gate gate = watch.gate(entry.machine())) {
-            comments = comments(gate, entry, NoteReader.NONE);
+            comments =
+                    comments(
+                            gate,
+                            entry,
+                            new ProfileNoteReader(
+                                    entry.project(),
+                                    entry.repository(),
+                                    entry.push().name(),
+                                    changes.commit(),
+                                    changes.base()));
         }
         return new Read(
                 review,
@@ -251,55 +261,72 @@ final class ReviewTab {
     }
 
     /**
-     * The comments of a push's runs, as far as they could be read.
+     * The threads of a push, read whole or not at all.
      *
-     * @param notes Every note of every run read, in the daemon's order.
-     * @param unread Each run that was not read, with why.
+     * @param notes Every note of every page, in the daemon's order; none when they were not read.
+     * @param unread Why they were not read; absent when they were.
      */
-    record Comments(List<Note> notes, List<Unread> unread) {}
+    record Comments(List<Note> notes, @Nullable String unread) {
+
+        /**
+         * Copies the list.
+         *
+         * @param notes The notes.
+         * @param unread Why not.
+         */
+        Comments {
+            notes = List.copyOf(notes);
+        }
+    }
 
     /**
-     * A run whose comments are not shown, so its threads are never taken for none.
-     *
-     * @param run The run.
-     * @param why What failed, in words.
-     */
-    record Unread(ReviewSummary.Run run, String why) {}
-
-    /**
-     * Reads every page of each of the push's runs of its current round. A run whose pages the
-     * daemon or the reader refuses is left out whole and said, never shown in part.
+     * Reads every page of the push's threads, whatever review runs it has. A page the daemon or the
+     * reader refuses, a page that is not the last but says the threads are complete, a last one
+     * that does not, or an item sent twice leaves every thread out and says why: a part shown would
+     * read as all there is.
      *
      * @param gate The push's daemon.
      * @param entry The push.
      * @param reader Reads each page.
-     * @return What was read, and what not.
+     * @return What was read, or why nothing was.
      */
     static Comments comments(Gate gate, Waiting.Entry entry, NoteReader reader) {
-        final ReviewSummary summary = entry.push().review();
         final List<Note> notes = new ArrayList<>();
-        final List<Unread> unread = new ArrayList<>();
-        if (summary == null) {
-            return new Comments(notes, unread);
-        }
-        for (final ReviewSummary.Run run : summary.runs()) {
-            try {
-                final List<Note> read = new ArrayList<>();
-                for (final String page :
-                        gate.comments(
-                                entry.project(),
-                                entry.repository(),
-                                entry.push().name(),
-                                run.run(),
-                                null)) {
-                    read.addAll(reader.read(page));
+        try {
+            final List<String> pages =
+                    gate.comments(entry.project(), entry.repository(), entry.push().name());
+            final java.util.Set<String> guids = new java.util.HashSet<>();
+            for (int index = 0; index < pages.size(); index++) {
+                final Page page = reader.read(pages.get(index));
+                final String expected = index == pages.size() - 1 ? "complete" : "partial";
+                if (!page.completeness().equals(expected)) {
+                    return new Comments(
+                            List.of(),
+                            "Page "
+                                    + (index + 1)
+                                    + " of "
+                                    + pages.size()
+                                    + " says the threads are "
+                                    + page.completeness()
+                                    + ", not "
+                                    + expected);
                 }
-                notes.addAll(read);
-            } catch (GateException | SarifRefusedException ex) {
-                unread.add(new Unread(run, String.valueOf(ex.getMessage())));
+                for (final Note note : page.notes()) {
+                    if (!guids.add(note.guid())) {
+                        return new Comments(
+                                List.of(), "The daemon sent the item " + note.guid() + " twice");
+                    }
+                    notes.add(note);
+                }
             }
+        } catch (GateException | SarifRefusedException ex) {
+            if (Thread.currentThread().isInterrupted()) {
+                // Cancelled: the read ends, nothing is said unread.
+                throw ex;
+            }
+            return new Comments(List.of(), String.valueOf(ex.getMessage()));
         }
-        return new Comments(notes, unread);
+        return new Comments(notes, null);
     }
 
     /**
@@ -338,26 +365,6 @@ final class ReviewTab {
          */
         Note first() {
             return notes.get(0);
-        }
-
-        /**
-         * Tells whether a note's suggestion may be shown as a read-only preview: a trusted note,
-         * not outdated, in a thread at its lines on the {@code new} side, at the thread's own
-         * place, whose replacement takes exactly those lines.
-         *
-         * @param note A note of this thread.
-         * @return {@code true} when its fix may be previewed.
-         */
-        boolean previewable(Note note) {
-            final Note.@Nullable Fix fix = note.fix();
-            final Lines.@Nullable Located located = at;
-            return fix != null
-                    && located != null
-                    && located.side() == com.intellij.diff.util.Side.RIGHT
-                    && !note.outdated()
-                    && note.origin().trusted()
-                    && note.anchor().equals(first().anchor())
-                    && fix.deleted().equals(note.anchor().region());
         }
     }
 
@@ -408,16 +415,17 @@ final class ReviewTab {
                 (id, thread) -> {
                     // The first note is the one that answers nothing, wherever the daemon put it.
                     final List<Note> ordered = new ArrayList<>(thread);
-                    ordered.stream()
-                            .filter(note -> note.thread().replyTo() == null)
-                            .findFirst()
-                            .ifPresent(
-                                    first -> {
-                                        ordered.remove(first);
-                                        ordered.add(0, first);
-                                    });
+                    final List<Note> roots =
+                            ordered.stream()
+                                    .filter(note -> note.thread().replyTo() == null)
+                                    .toList();
+                    if (roots.size() == 1) {
+                        ordered.remove(roots.getFirst());
+                        ordered.add(0, roots.getFirst());
+                    }
                     final Note first = ordered.get(0);
                     try {
+                        opened(roots.size(), ordered);
                         final Lines.Located at = located(first, byPath);
                         final String path = java.util.Objects.requireNonNull(first.anchor().path());
                         lines.computeIfAbsent(path, ignored -> new ArrayList<>())
@@ -427,6 +435,25 @@ final class ReviewTab {
                     }
                 });
         return new Placed(lines, panel);
+    }
+
+    /**
+     * Refuses a thread that is not one: opened by no note or by several, or with a reply away from
+     * the place of the note it answers, which would show the reply where it was not written.
+     */
+    private static void opened(int roots, List<Note> ordered) {
+        if (roots == 0) {
+            throw new IllegalArgumentException("No note opens this thread");
+        }
+        if (roots > 1) {
+            throw new IllegalArgumentException(roots + " notes open this thread");
+        }
+        final Note.Anchor place = ordered.get(0).anchor();
+        for (final Note note : ordered) {
+            if (!note.anchor().equals(place)) {
+                throw new IllegalArgumentException("A reply stands away from its thread's place");
+            }
+        }
     }
 
     /** Where a note's lines are in its file's diff, or why it has no such place. */

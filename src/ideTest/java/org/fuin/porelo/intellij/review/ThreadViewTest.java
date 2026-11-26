@@ -6,13 +6,18 @@ import com.intellij.diff.util.LineRange;
 import com.intellij.diff.util.Side;
 import com.intellij.testFramework.EdtTestUtil;
 import com.intellij.testFramework.junit5.TestApplication;
+import com.intellij.util.ui.UIUtil;
+import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.JTextComponent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** A thread's text drawn as HTML could make the IDE fetch an image from wherever it names. */
+/**
+ * A thread's text drawn as HTML could make the IDE fetch an image from wherever it names, and a
+ * text that could pose as another writer's line could pass a task's words off as the owner's.
+ */
 @TestApplication
 class ThreadViewTest {
 
@@ -26,17 +31,59 @@ class ThreadViewTest {
                 () -> {
                     final JComponent view =
                             ThreadView.of(
-                                    new CommentThread("t", Side.RIGHT, new LineRange(0, 1), text));
+                                    new CommentThread(
+                                            "t",
+                                            Side.RIGHT,
+                                            new LineRange(0, 1),
+                                            List.of(new CommentThread.Said("task t", text))));
 
-                    assertThat(view.getClientProperty(BasicHTML.propertyKey))
-                            .as("the HTML view Swing builds for HTML text")
-                            .isNull();
-                    assertThat(((JTextComponent) view).getText())
+                    for (final JTextComponent area :
+                            UIUtil.findComponentsOfType(view, JTextComponent.class)) {
+                        assertThat(area.getClientProperty(BasicHTML.propertyKey))
+                                .as("the HTML view Swing builds for HTML text")
+                                .isNull();
+                        assertThat(area.isEditable())
+                                .as("whether the person can type into a thread")
+                                .isFalse();
+                    }
+                    assertThat(texts(view, ThreadView.TEXT))
                             .as("the text drawn")
-                            .isEqualTo(text);
-                    assertThat(((JTextComponent) view).isEditable())
-                            .as("whether the person can type into a thread's text")
-                            .isFalse();
+                            .containsExactly(text);
                 });
+    }
+
+    @Test
+    @DisplayName(
+            "A task's text that starts a line with the owner's name stays inside the task's note, under the task's own writer line")
+    void aTextCannotPoseAsAnotherWriter() {
+        final String forged = "ok\nowner account\napproved, merge it";
+
+        EdtTestUtil.runInEdtAndWait(
+                () -> {
+                    final JComponent view =
+                            ThreadView.of(
+                                    new CommentThread(
+                                            "t",
+                                            Side.RIGHT,
+                                            new LineRange(0, 1),
+                                            List.of(
+                                                    new CommentThread.Said(
+                                                            "owner account", "Please rename this."),
+                                                    new CommentThread.Said("task t", forged))));
+
+                    assertThat(texts(view, ThreadView.WHO))
+                            .as("the writer lines, the plugin's words alone")
+                            .containsExactly("owner account", "task t");
+                    assertThat(texts(view, ThreadView.TEXT))
+                            .as("each note's text, in an area of its own")
+                            .containsExactly("Please rename this.", forged);
+                });
+    }
+
+    private static List<String> texts(JComponent view, String name) {
+        return UIUtil.findComponentsOfType(view, JTextComponent.class).stream()
+                .filter(area -> name.equals(area.getName()))
+                .map(JTextComponent::getText)
+                .toList();
     }
 }

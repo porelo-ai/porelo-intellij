@@ -19,6 +19,7 @@ import com.intellij.openapi.fileEditor.FileEditorState;
 import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.UserDataHolderBase;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vcs.FilePath;
@@ -49,6 +50,8 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.review.ReviewContext;
+import org.fuin.porelo.intellij.review.ThreadView;
+import org.fuin.porelo.intellij.review.Threads;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -72,6 +75,8 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
     private final DiffRequestPanel diff;
 
     private final Map<Change, ReviewTab.Side> sides = new IdentityHashMap<>();
+
+    private final ReviewThreads threads;
 
     /** Says, once the watch knows, that the push moved to another commit; hidden until then. */
     private final EditorNotificationPanel moved =
@@ -100,6 +105,7 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         final Waiting.Entry entry = file.entry();
         latest = entry;
         final ReviewTab.Read read = file.read();
+        threads = new ReviewThreads(read.threads());
         final List<Change> changes = new ArrayList<>();
         @Nullable Change first = null;
         for (final ReviewTab.Side side : read.files()) {
@@ -206,7 +212,11 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
                         "Approve",
                         "Forward exactly " + shortId(entry.push().commit()) + ", the commit shown",
                         AllIcons.Actions.Checked,
-                        () -> Decisions.approve(project, entry, this::close)));
+                        () -> {
+                            if (approvesUnread(read)) {
+                                Decisions.approve(project, entry, this::close);
+                            }
+                        }));
         actions.add(
                 decision(
                         "Reject",
@@ -263,8 +273,67 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
         final JPanel header = new JPanel(new BorderLayout());
         header.add(bar.getComponent(), BorderLayout.WEST);
         header.add(what, BorderLayout.CENTER);
+        final @Nullable JComponent notAtALine = threadsNotAtALine(read);
+        if (notAtALine != null) {
+            header.add(notAtALine, BorderLayout.SOUTH);
+        }
         header.setBorder(JBUI.Borders.customLineBottom(JBUI.CurrentTheme.ToolWindow.borderColor()));
         return header;
+    }
+
+    /**
+     * Asks before approving a push whose threads could not be read, as a comment on it may stand
+     * unseen; one whose threads were read is approved without asking.
+     */
+    private boolean approvesUnread(ReviewTab.Read read) {
+        return read.unread() == null
+                || Messages.showYesNoDialog(
+                                project,
+                                "The threads of this push could not be read, so a comment on it"
+                                        + " may stand unseen. Approve it anyway?",
+                                "Approve Unread Threads",
+                                Messages.getWarningIcon())
+                        == Messages.YES;
+    }
+
+    /**
+     * Says why the threads could not be read, and shows each thread that stands at no line of the
+     * diff with why: none is only counted. Plain text areas alone, as a path or a reason may come
+     * from what a task wrote.
+     */
+    private static @Nullable JComponent threadsNotAtALine(ReviewTab.Read read) {
+        final @Nullable String unread = read.unread();
+        final List<ReviewTab.Discussion> panel = read.threads().panel();
+        if (unread == null && panel.isEmpty()) {
+            return null;
+        }
+        final JPanel list = new JPanel();
+        list.setLayout(new javax.swing.BoxLayout(list, javax.swing.BoxLayout.Y_AXIS));
+        if (unread != null) {
+            final var said =
+                    ThreadView.area(
+                            "The threads of this push could not be read, so a comment on it may"
+                                    + " stand unseen: "
+                                    + unread);
+            said.setForeground(com.intellij.ui.JBColor.RED);
+            list.add(said);
+        }
+        if (!panel.isEmpty()) {
+            final var title = ThreadView.area("Threads not at a line: " + panel.size());
+            title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD));
+            list.add(title);
+            for (final ReviewTab.Discussion discussion : panel) {
+                list.add(ThreadView.area(String.valueOf(discussion.unplaced())));
+                final JComponent notes = ThreadView.of(ReviewThreads.said(discussion.notes()));
+                notes.setBorder(JBUI.Borders.emptyLeft(16));
+                list.add(notes);
+            }
+        }
+        list.setBorder(JBUI.Borders.empty(4, 8));
+        final var scroll = new com.intellij.ui.components.JBScrollPane(list);
+        scroll.setPreferredSize(
+                new java.awt.Dimension(0, Math.min(list.getPreferredSize().height + 8, 200)));
+        return scroll;
     }
 
     private void showSelected() {
@@ -283,7 +352,7 @@ final class ReviewEditor extends UserDataHolderBase implements FileEditor {
                         content(side.pushed(), path),
                         read.changes().branch() + " " + shortId(read.changes().base()),
                         file.entry().push().name() + " " + shortId(read.changes().commit()));
-        // Threads come in only beside a source of them, which the review does not have yet.
+        request.putUserData(Threads.KEY, threads);
         request.putUserData(
                 ReviewContext.KEY,
                 new ReviewContext(

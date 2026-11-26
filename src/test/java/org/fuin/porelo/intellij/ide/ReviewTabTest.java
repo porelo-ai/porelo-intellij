@@ -18,8 +18,12 @@ import org.fuin.porelo.intellij.gate.Review;
 import org.fuin.porelo.intellij.gate.ReviewSummary;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.fuin.porelo.intellij.machine.Machine;
+import org.fuin.porelo.intellij.review.CommentThread;
 import org.fuin.porelo.intellij.review.Lines;
+import org.fuin.porelo.intellij.review.ReviewContext;
 import org.fuin.porelo.intellij.sarif.Note;
+import org.fuin.porelo.intellij.sarif.NoteReader;
+import org.fuin.porelo.intellij.sarif.Page;
 import org.fuin.porelo.intellij.sarif.SarifRefusedException;
 import org.fuin.porelo.wire.varlink.VarlinkServer;
 import org.jspecify.annotations.Nullable;
@@ -196,52 +200,6 @@ class ReviewTabTest {
 
     @Test
     @DisplayName(
-            "Only a trusted new-side suggestion that replaces exactly its placed lines gets a preview; an old-side, out-of-range, E0 or reply-elsewhere one gets none")
-    void onlyAConfinedSuggestionIsPreviewed() {
-        final Note.Fix onAnchor = new Note.Fix(new Note.Region(2, 3), "b2\nc2\n");
-        final Note fixed = fixed(line("t1", "g1", "new", 2, 3), onAnchor, "I1");
-        final Note outside =
-                fixed(
-                        line("t1", "g2", "new", 2, 3),
-                        new Note.Fix(new Note.Region(2, 6), "x\n"),
-                        "A");
-        final Note fromOutside = fixed(line("t1", "g3", "new", 2, 3), onAnchor, "E0");
-        final Note unknown = fixed(line("t1", "g4", "new", 2, 3), onAnchor, null);
-        final Note projects = fixed(line("t1", "g7", "new", 2, 3), onAnchor, "E1");
-        final Note gone = outdated(fixed(line("t1", "g8", "new", 2, 3), onAnchor, "A"));
-        final Note elsewhere =
-                fixed(line("t1", "g5", "new", 4, 5), new Note.Fix(new Note.Region(4, 5), ""), "A");
-        final ReviewTab.Discussion onNew =
-                ReviewTab.place(
-                                List.of(file()),
-                                List.of(
-                                        fixed,
-                                        outside,
-                                        fromOutside,
-                                        unknown,
-                                        elsewhere,
-                                        projects,
-                                        gone))
-                        .lines()
-                        .get("A.java")
-                        .get(0);
-        final Note oldFixed =
-                fixed(line("t2", "g6", "old", 1, 2), new Note.Fix(new Note.Region(1, 2), ""), "A");
-        final ReviewTab.Discussion onOld =
-                ReviewTab.place(List.of(file()), List.of(oldFixed)).lines().get("A.java").get(0);
-
-        assertThat(onNew.previewable(fixed)).as("a trusted fix of its own lines").isTrue();
-        assertThat(onNew.previewable(outside)).as("a fix beyond its lines").isFalse();
-        assertThat(onNew.previewable(fromOutside)).as("a fix from E0").isFalse();
-        assertThat(onNew.previewable(unknown)).as("a fix from no stamped level").isFalse();
-        assertThat(onNew.previewable(elsewhere)).as("a reply's fix elsewhere").isFalse();
-        assertThat(onNew.previewable(projects)).as("a fix from E1").isTrue();
-        assertThat(onNew.previewable(gone)).as("an outdated reply's fix").isFalse();
-        assertThat(onOld.previewable(oldFixed)).as("an old-side fix").isFalse();
-    }
-
-    @Test
-    @DisplayName(
             "A review the daemon diffed against another base than the cache is refused, naming both; one that names none is read")
     void aReviewOfAnotherBaseIsRefused() {
         final Changes changes = new Changes("main", BASE, COMMIT, List.of());
@@ -271,73 +229,229 @@ class ReviewTabTest {
 
     @Test
     @DisplayName(
-            "Each run is read page by page; a run the daemon or the reader refuses is left out whole and said, never shown in part")
+            "A page the reader refuses leaves every thread of the push out and says why, never a part shown")
     @DisabledOnOs(
             value = OS.WINDOWS,
             disabledReason =
                     "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
-    void aRefusedRunIsLeftOutWholeAndSaid() throws Exception {
+    void aRefusedPageLeavesEveryThreadOut() throws Exception {
+        final ReviewTab.Comments comments =
+                readPages(
+                        List.of("p1", "p2"),
+                        page -> {
+                            if (page.equals("p2")) {
+                                throw new SarifRefusedException(
+                                        "unicode-format", "/runs/0", "a bidi control");
+                            }
+                            return new Page(
+                                    List.of(line("t-" + page, page, "new", 1, 1)), "partial");
+                        });
+
+        assertThat(comments.notes()).as("the notes of the page read before").isEmpty();
+        assertThat(comments.unread()).as("why").isEqualTo("a bidi control");
+    }
+
+    @Test
+    @DisplayName(
+            "Threads whose last page does not say complete, or whose earlier page does, are left out and said: a cut read would pass for all there is")
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
+    void anIncompleteReadIsLeftOutAndSaid() throws Exception {
+        final ReviewTab.Comments cut =
+                readPages(
+                        List.of("p1", "p2"),
+                        page -> new Page(List.of(line("t-" + page, page, "new", 1, 1)), "partial"));
+        final ReviewTab.Comments early =
+                readPages(
+                        List.of("p1", "p2"),
+                        page ->
+                                new Page(
+                                        List.of(line("t-" + page, page, "new", 1, 1)), "complete"));
+        final ReviewTab.Comments failed =
+                readPages(List.of("p1"), page -> new Page(List.of(), "failed"));
+
+        assertThat(cut.notes()).as("notes of a read whose last page is partial").isEmpty();
+        assertThat(cut.unread())
+                .as("why")
+                .isEqualTo("Page 2 of 2 says the threads are partial, not complete");
+        assertThat(early.notes()).as("notes of a read whose first page is complete").isEmpty();
+        assertThat(early.unread())
+                .as("why")
+                .isEqualTo("Page 1 of 2 says the threads are complete, not partial");
+        assertThat(failed.unread())
+                .as("why")
+                .isEqualTo("Page 1 of 1 says the threads are failed, not complete");
+    }
+
+    @Test
+    @DisplayName("An item the daemon sends twice leaves every thread out, as it could stand twice")
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
+    void anItemSentTwiceIsRefused() throws Exception {
+        final ReviewTab.Comments comments =
+                readPages(
+                        List.of("p1", "p2"),
+                        page ->
+                                new Page(
+                                        List.of(line("t1", "same", "new", 1, 1)),
+                                        page.equals("p1") ? "partial" : "complete"));
+
+        assertThat(comments.notes()).as("notes").isEmpty();
+        assertThat(comments.unread()).as("why").isEqualTo("The daemon sent the item same twice");
+    }
+
+    @Test
+    @DisplayName(
+            "A thread no note opens, one two notes open, and one whose reply stands elsewhere go to the list with why, never onto the diff")
+    void aThreadThatIsNoneGoesToTheList() {
+        final Note root = line("two", "g1", "new", 1, 1);
+        final Note otherRoot = line("two", "g2", "new", 2, 2);
+        final Note orphan = reply(line("none", "g3", "new", 1, 1), "g4");
+        final Note opener = line("away", "g5", "new", 1, 1);
+        final Note away = reply(line("away", "g6", "new", 3, 3), "g7");
+
+        final ReviewTab.Placed placed =
+                ReviewTab.place(List.of(file()), List.of(root, otherRoot, orphan, opener, away));
+
+        assertThat(placed.lines()).as("threads on the diff").isEmpty();
+        assertThat(placed.panel())
+                .extracting(ReviewTab.Discussion::id, ReviewTab.Discussion::unplaced)
+                .as("each thread, with why")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("two", "2 notes open this thread"),
+                        org.assertj.core.groups.Tuple.tuple("none", "No note opens this thread"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "away", "A reply stands away from its thread's place"));
+    }
+
+    @Test
+    @DisplayName(
+            "A push without review runs still shows its threads: the owner's comments are read from the push itself")
+    @DisabledOnOs(
+            value = OS.WINDOWS,
+            disabledReason =
+                    "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
+    void aPushWithoutRunsReadsItsThreads() throws Exception {
+        final java.util.List<Map<String, Object>> calls =
+                java.util.Collections.synchronizedList(new java.util.ArrayList<>());
         try (VarlinkServer daemon = new VarlinkServer(dir.resolve("d.sock"), Gate.INTERFACE)) {
-            Thread.ofVirtual().start(daemon);
             daemon.method(
                     "Comments",
                     (parameters, replies) -> {
-                        final String run = (String) parameters.get("run");
-                        final boolean first = parameters.get("cursor") == null;
-                        replies.last(
-                                first
-                                        ? Map.of("sarif", run + "-1", "cursor", run + "-c")
-                                        : Map.of("sarif", run + "-2"));
+                        calls.add(parameters);
+                        replies.last(Map.of("sarif", "owner"));
                     });
-            final ReviewSummary.Run good =
-                    new ReviewSummary.Run("r1", "task", "task", "complete", 2, 2);
-            final ReviewSummary.Run bad =
-                    new ReviewSummary.Run("r2", "lint", "scanner", "complete", 1, 1);
             final ReviewTab.Comments comments;
-            try (Gate gate = new Gate(daemon.socketPath())) {
+            try (Gate gate = startedGate(daemon)) {
                 comments =
                         ReviewTab.comments(
                                 gate,
-                                entry(new ReviewSummary(1, 3, 2, 0, 0, List.of(good, bad))),
-                                page -> {
-                                    if (page.equals("r2-2")) {
-                                        throw new SarifRefusedException(
-                                                "unicode-format", "/runs/0", "a bidi control");
-                                    }
-                                    return List.of(line("t-" + page, page, "new", 1, 1));
-                                });
+                                entry(null),
+                                page ->
+                                        new Page(
+                                                List.of(line("t-" + page, page, "new", 3, 3)),
+                                                "complete"));
             }
 
             assertThat(comments.notes())
                     .extracting(Note::guid)
-                    .as("every page of the run read, and nothing of the refused one")
-                    .containsExactly("r1-1", "r1-2");
-            assertThat(comments.unread())
-                    .as("the refused run, with why")
-                    .containsExactly(new ReviewTab.Unread(bad, "a bidi control"));
+                    .as("the owner's thread on a push nothing reviewed")
+                    .containsExactly("owner");
+            assertThat(calls).as("reads of the push").hasSize(1);
+            assertThat(calls.getFirst())
+                    .as("the push asked, by the fields the daemon takes")
+                    .containsEntry("name", "app")
+                    .doesNotContainKeys("run", "round");
         }
     }
 
     @Test
-    @DisplayName("A push without checks reads no comments and calls nothing")
+    @DisplayName(
+            "A push with two review runs shows each thread once, since the daemon answers the push's threads whatever run is named")
     @DisabledOnOs(
             value = OS.WINDOWS,
             disabledReason =
                     "its stand-in daemon, porelo-wire's VarlinkServer, makes its socket owner-only with POSIX permissions, which Windows has not")
-    void aPushWithoutChecksReadsNothing() throws Exception {
-        // The daemon answers no call, so any call would leave a run unread.
-        try (VarlinkServer daemon = new VarlinkServer(dir.resolve("d.sock"), Gate.INTERFACE);
-                Gate gate = startedGate(daemon)) {
-            final ReviewTab.Comments comments =
-                    ReviewTab.comments(
-                            gate,
-                            entry(null),
-                            page -> {
-                                throw new AssertionError("read " + page);
-                            });
+    void aPushWithTwoRunsReadsItsThreadsOnce() throws Exception {
+        try (VarlinkServer daemon = new VarlinkServer(dir.resolve("d.sock"), Gate.INTERFACE)) {
+            // As the daemon does: the push's threads, whatever else the call names.
+            daemon.method("Comments", (parameters, replies) -> replies.last(Map.of("sarif", "t1")));
+            final ReviewSummary.Run one =
+                    new ReviewSummary.Run("r1", "task", "task", "complete", 1, 1);
+            final ReviewSummary.Run two =
+                    new ReviewSummary.Run("r2", "lint", "scanner", "complete", 1, 1);
+            final ReviewTab.Comments comments;
+            try (Gate gate = startedGate(daemon)) {
+                comments =
+                        ReviewTab.comments(
+                                gate,
+                                entry(new ReviewSummary(1, 2, 2, 0, 0, List.of(one, two))),
+                                page ->
+                                        new Page(
+                                                List.of(line("t-" + page, page, "new", 3, 3)),
+                                                "complete"));
+            }
 
-            assertThat(comments.notes()).as("notes").isEmpty();
-            assertThat(comments.unread()).as("unread runs").isEmpty();
+            assertThat(comments.notes())
+                    .extracting(Note::guid)
+                    .as("the thread, once")
+                    .containsExactly("t1");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "Each file's diff gets its own threads at their lines, each note under its writer in the plugin's words, and no control to start one")
+    void eachFilesDiffGetsItsOwnThreads() {
+        final Note opened = line("t1", "g1", "new", 2, 3);
+        final Note answered = reply(opened, "g2");
+        final ReviewThreads threads =
+                new ReviewThreads(ReviewTab.place(List.of(file()), List.of(opened, answered)));
+        final List<List<CommentThread>> told = new java.util.ArrayList<>();
+
+        threads.follow(new ReviewContext("p", "r", BASE, COMMIT, "A.java"), told::add);
+        threads.follow(new ReviewContext("p", "r", BASE, COMMIT, "B.java"), told::add);
+
+        assertThat(told).as("what each follower was told").hasSize(2);
+        assertThat(told.get(0))
+                .extracting(CommentThread::id, CommentThread::range, CommentThread::notes)
+                .as("A.java's thread, at its lines, its notes in order")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                "t1",
+                                new LineRange(1, 3),
+                                List.of(
+                                        new CommentThread.Said("a task", "text of g1"),
+                                        new CommentThread.Said("a task", "reply"))));
+        assertThat(told.get(1)).as("the threads of a file without any").isEmpty();
+        assertThat(threads.canStart()).as("whether a new thread is offered").isFalse();
+    }
+
+    /** Reads a push whose daemon answers these pages, one per cursor, with a reader of them. */
+    private ReviewTab.Comments readPages(List<String> pages, NoteReader reader) throws Exception {
+        try (VarlinkServer daemon =
+                new VarlinkServer(dir.resolve("p" + System.nanoTime() + ".sock"), Gate.INTERFACE)) {
+            daemon.method(
+                    "Comments",
+                    (parameters, replies) -> {
+                        final Object cursor = parameters.get("cursor");
+                        final int index = cursor == null ? 0 : Integer.parseInt((String) cursor);
+                        replies.last(
+                                index == pages.size() - 1
+                                        ? Map.of("sarif", pages.get(index))
+                                        : Map.of(
+                                                "sarif",
+                                                pages.get(index),
+                                                "cursor",
+                                                String.valueOf(index + 1)));
+                    });
+            try (Gate gate = startedGate(daemon)) {
+                return ReviewTab.comments(gate, entry(null), reader);
+            }
         }
     }
 
@@ -404,32 +518,6 @@ class ReviewTabTest {
                 to.origin(),
                 false,
                 null);
-    }
-
-    private static Note fixed(Note note, Note.Fix fix, @Nullable String level) {
-        return new Note(
-                note.guid(),
-                note.kind(),
-                note.level(),
-                note.text(),
-                note.anchor(),
-                new Note.Threading(note.thread().id(), "g0", "open"),
-                new Note.Origin("task", level, "a task"),
-                false,
-                fix);
-    }
-
-    private static Note outdated(Note note) {
-        return new Note(
-                note.guid(),
-                note.kind(),
-                note.level(),
-                note.text(),
-                note.anchor(),
-                note.thread(),
-                note.origin(),
-                true,
-                note.fix());
     }
 
     private static byte[] bytes(String text) {

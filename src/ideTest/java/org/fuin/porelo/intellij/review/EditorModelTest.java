@@ -39,6 +39,11 @@ class EditorModelTest {
                 }
 
                 @Override
+                public boolean canStart() {
+                    return true;
+                }
+
+                @Override
                 public void requestNew(ReviewContext context, Side side, LineRange range) {
                     throw new UnsupportedOperationException("No thread is asked for here");
                 }
@@ -64,11 +69,23 @@ class EditorModelTest {
             "A thread folded stays folded when another thread comes or its lines move, follows them, and unfolds when it changes")
     void aFoldedThreadStaysFolded() throws Exception {
         final CommentThread seed =
-                new CommentThread("first", Side.RIGHT, new LineRange(0, 1), "On one");
+                new CommentThread(
+                        "first",
+                        Side.RIGHT,
+                        new LineRange(0, 1),
+                        List.of(new CommentThread.Said("task t", "On one")));
         final CommentThread other =
-                new CommentThread("other", Side.RIGHT, new LineRange(2, 3), "On three");
+                new CommentThread(
+                        "other",
+                        Side.RIGHT,
+                        new LineRange(2, 3),
+                        List.of(new CommentThread.Said("task t", "On three")));
         final CommentThread changed =
-                new CommentThread("first", Side.RIGHT, new LineRange(0, 1), "Changed");
+                new CommentThread(
+                        "first",
+                        Side.RIGHT,
+                        new LineRange(0, 1),
+                        List.of(new CommentThread.Said("task t", "Changed")));
         // How far down the viewer shows the side's lines, as after it diffed again.
         final AtomicInteger moved = new AtomicInteger();
         final EditorModel model =
@@ -121,6 +138,11 @@ class EditorModelTest {
                             }
 
                             @Override
+                            public boolean canStart() {
+                                return true;
+                            }
+
+                            @Override
                             public void requestNew(
                                     ReviewContext context, Side side, LineRange range) {
                                 asked.add(side + " " + range.start + "-" + range.end);
@@ -154,5 +176,42 @@ class EditorModelTest {
         assertThat(asked)
                 .as("the comments asked for, at the lines of their side")
                 .containsExactly("RIGHT 1-4", "LEFT 1-2");
+    }
+
+    @Test
+    @DisplayName(
+            "A source that only shows threads offers no line a new one, so no gutter control does nothing")
+    void aSourceThatOnlyShowsOffersNoNewThread() {
+        final List<String> asked = new ArrayList<>();
+        final EditorModel model =
+                new EditorModel(
+                        new ReviewContext("p", "r", "1", "2", "A.txt"),
+                        new Threads() {
+                            @Override
+                            public Runnable follow(
+                                    ReviewContext context, Consumer<List<CommentThread>> follower) {
+                                return () -> {};
+                            }
+
+                            @Override
+                            public boolean canStart() {
+                                return false;
+                            }
+
+                            @Override
+                            public void requestNew(
+                                    ReviewContext context, Side side, LineRange range) {
+                                asked.add(side + " " + range.start + "-" + range.end);
+                            }
+                        },
+                        at -> null,
+                        UNIFIED::get);
+
+        assertThat(model.canCreateComment(new LineRange(0, 1))).as("a line").isFalse();
+        assertThat(model.getGutterControlsState().getValue().isLineCommentable(0))
+                .as("a line's gutter control")
+                .isFalse();
+        model.requestNewComment(new LineRange(0, 1));
+        assertThat(asked).as("threads asked for").isEmpty();
     }
 }

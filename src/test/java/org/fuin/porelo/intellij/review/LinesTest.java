@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.intellij.diff.util.LineRange;
 import com.intellij.diff.util.Side;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -62,12 +63,19 @@ class LinesTest {
     @DisplayName(
             "A thread on no line, which would be drawn after the line before its own, is refused")
     void aThreadOnNoLineIsRefused() {
-        assertThatThrownBy(() -> new CommentThread("t", Side.RIGHT, new LineRange(2, 2), "x"))
+        assertThatThrownBy(() -> new CommentThread("t", Side.RIGHT, new LineRange(2, 2), SAID))
                 .as("a thread on an empty range")
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Thread t");
-        assertThatThrownBy(() -> new CommentThread("t", Side.RIGHT, new LineRange(-1, 1), "x"))
+        assertThatThrownBy(() -> new CommentThread("t", Side.RIGHT, new LineRange(-1, 1), SAID))
                 .as("a thread from before the first line")
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CommentThread("t", Side.RIGHT, new LineRange(0, 1), List.of()))
+                .as("a thread in which nothing was said")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("holds no note");
     }
+
+    private static final List<CommentThread.Said> SAID =
+            List.of(new CommentThread.Said("task t", "x"));
 }

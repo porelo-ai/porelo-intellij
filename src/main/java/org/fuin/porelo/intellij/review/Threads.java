@@ -26,6 +26,14 @@ public interface Threads {
     Runnable follow(ReviewContext context, Consumer<List<CommentThread>> threads);
 
     /**
+     * Tells whether the person may start a thread here; a source that only shows threads offers no
+     * gutter control that would do nothing.
+     *
+     * @return {@code true} when {@link #requestNew} starts one.
+     */
+    boolean canStart();
+
+    /**
      * Asks for a new thread on lines of one side, as the person marked them in the gutter.
      *
      * @param context The file.
