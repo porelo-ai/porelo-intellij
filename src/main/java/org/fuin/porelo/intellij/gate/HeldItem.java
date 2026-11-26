@@ -25,6 +25,8 @@ import org.jspecify.annotations.Nullable;
  * @param from An incoming item's forge account; {@code null} for an outgoing one.
  * @param at When it was held, in UTC to the second.
  * @param run The number of the run that holds it.
+ * @param mark What the daemon marks about how the item reached the hold, such as {@code unsigned}
+ *     when no certified key of the task signed it; {@code null} when it came signed.
  */
 public record HeldItem(
         String id,
@@ -41,7 +43,8 @@ public record HeldItem(
         String digest,
         @Nullable String from,
         String at,
-        int run) {
+        int run,
+        @Nullable String mark) {
 
     /**
      * Where a comment stands.

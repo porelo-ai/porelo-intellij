@@ -402,6 +402,10 @@ final class HeldPanel extends SimpleToolWindowPanel {
                                 ? AllIcons.Actions.Upload
                                 : AllIcons.Actions.Download);
                 append(item.operation(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
+                final String mark = Held.mark(item);
+                if (mark != null) {
+                    append("  " + mark, SimpleTextAttributes.ERROR_ATTRIBUTES);
+                }
                 append("  " + firstLine(item.text()), SimpleTextAttributes.REGULAR_ATTRIBUTES);
                 append("  " + item.at(), SimpleTextAttributes.GRAYED_ATTRIBUTES);
             }

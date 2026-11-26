@@ -97,12 +97,51 @@ class GateHeldTest {
                                     "sha256:2",
                                     "octo-reviewer",
                                     "2026-11-25T11:30:00Z",
-                                    3));
+                                    3,
+                                    null));
             assertThat(asked)
                     .as("what each page asked")
                     .containsExactly(
                             Map.of("task", "review-7"),
                             Map.of("task", "review-7", "cursor", "page-2"));
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "Every mark the interface can name reaches the owner with its item, so none is released unwarned, and an item without one is read as signed")
+    void readsAnItemsMark() {
+        final Map<String, Object> unsigned = comment();
+        unsigned.put("mark", "unsigned");
+        final Map<String, Object> signed = item("2", "outgoing", null);
+        final Map<String, Object> later = item("3", "outgoing", null);
+        later.put("mark", "Key_Revoked");
+        daemon.method(
+                "HeldItems",
+                (parameters, replies) ->
+                        replies.last(Map.of("items", List.of(unsigned, signed, later))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.heldItems(null).items())
+                    .as("each item's mark")
+                    .extracting(HeldItem::mark)
+                    .containsExactly("unsigned", null, "Key_Revoked");
+        }
+    }
+
+    @Test
+    @DisplayName("A mark that is no word ends the list instead of being shown to the owner")
+    void refusesAMarkThatIsNoWord() {
+        final Map<String, Object> item = comment();
+        item.put("mark", "signed\nby the owner");
+        daemon.method(
+                "HeldItems", (parameters, replies) -> replies.last(Map.of("items", List.of(item))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.heldItems(null))
+                    .as("a daemon whose item carries a mark of two lines")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("mark");
         }
     }
 
@@ -554,6 +593,7 @@ class GateHeldTest {
                 digest,
                 direction == HeldItem.Direction.INCOMING ? "octo" : null,
                 "2026-11-25T11:30:00Z",
-                3);
+                3,
+                null);
     }
 }

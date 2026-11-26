@@ -132,6 +132,35 @@ class HeldTest {
 
     @Test
     @DisplayName(
+            "An unsigned item says so right below its direction, with what to weigh before releasing it")
+    void saysAnItemIsUnsigned() {
+        final List<String> facts = Held.facts("laptop", marked("unsigned"));
+
+        assertThat(facts.get(1))
+                .as("the line below the direction of an unsigned item")
+                .contains("Unsigned")
+                .contains("release it only if you trust what the task wrote");
+        assertThat(Held.mark(marked("unsigned")))
+                .as("what its row shows beside the operation")
+                .isEqualTo("unsigned");
+    }
+
+    @Test
+    @DisplayName("A mark the plugin does not know is shown by its word, never dropped")
+    void showsAMarkItDoesNotKnow() {
+        assertThat(Held.facts("laptop", marked("forged")).get(1))
+                .as("the line below the direction of an item marked forged")
+                .contains("forged");
+        assertThat(Held.mark(marked("forged")))
+                .as("what its row shows beside the operation")
+                .isEqualTo("forged");
+        assertThat(Held.mark(item("4", "review-7", HeldItem.Direction.OUTGOING)))
+                .as("what the row of an item without a mark shows")
+                .isNull();
+    }
+
+    @Test
+    @DisplayName(
             "A reply names the thread it answers, and a replacement says which lines it replaces")
     void saysWhereAnItemStands() {
         final HeldItem comment = item("5", "a", HeldItem.Direction.OUTGOING);
@@ -151,7 +180,8 @@ class HeldTest {
                         "d",
                         null,
                         "2026-11-25T11:30:00Z",
-                        1);
+                        1,
+                        null);
         final HeldItem reply =
                 new HeldItem(
                         "7",
@@ -168,7 +198,8 @@ class HeldTest {
                         "d",
                         null,
                         "2026-11-25T11:30:00Z",
-                        1);
+                        1,
+                        null);
 
         assertThat(Held.where(oneLine))
                 .as("a comment on one line")
@@ -191,6 +222,27 @@ class HeldTest {
                 .containsExactly(HeldItem.Decision.PASS, HeldItem.Decision.DISMISS);
     }
 
+    private static HeldItem marked(String mark) {
+        final HeldItem item = item("5", "review-7", HeldItem.Direction.OUTGOING);
+        return new HeldItem(
+                item.id(),
+                item.task(),
+                item.place(),
+                item.direction(),
+                item.destination(),
+                item.operation(),
+                item.anchor(),
+                item.thread(),
+                item.suggestion(),
+                item.commit(),
+                item.text(),
+                item.digest(),
+                item.from(),
+                item.at(),
+                item.run(),
+                mark);
+    }
+
     private static HeldItem item(String id, String task, HeldItem.Direction direction) {
         return new HeldItem(
                 id,
@@ -207,6 +259,7 @@ class HeldTest {
                 "sha256:" + id,
                 direction == HeldItem.Direction.INCOMING ? "octo" : null,
                 "2026-11-25T11:30:00Z",
-                3);
+                3,
+                null);
     }
 }

@@ -27,6 +27,10 @@ public record Held(
     /** Nothing read yet. */
     public static final Held NONE = new Held(Map.of(), Map.of(), Map.of(), Map.of());
 
+    private static final String UNSIGNED =
+            "Unsigned. No certified key of the task signed this item; release it only if you trust"
+                    + " what the task wrote.";
+
     /**
      * Copies the maps, ordered by machine name.
      *
@@ -225,6 +229,10 @@ public record Held(
                 item.direction() == HeldItem.Direction.OUTGOING
                         ? "Going out to the forge, held before it was sent"
                         : "Came in from forge account " + item.from() + ", withheld from the task");
+        final String mark = item.mark();
+        if (mark != null) {
+            lines.add(marked(mark));
+        }
         lines.add("Destination: " + item.destination());
         lines.add(where(item));
         lines.add("Commit: " + item.commit());
@@ -232,6 +240,30 @@ public record Held(
         lines.add("Task: " + item.task() + " on " + machine + ", run " + item.run());
         lines.add("Held at: " + item.at());
         return lines;
+    }
+
+    /**
+     * Returns what an item's row shows beside its operation about how it reached the hold.
+     *
+     * @param item The item.
+     * @return The daemon's word for its mark, or {@code null} when it came signed.
+     */
+    static @org.jspecify.annotations.Nullable String mark(HeldItem item) {
+        return item.mark();
+    }
+
+    /**
+     * Says what an item's mark means for the decision.
+     *
+     * @param mark The daemon's word for it.
+     * @return One line.
+     */
+    static String marked(String mark) {
+        if (mark.equals("unsigned")) {
+            return UNSIGNED;
+        }
+        // A mark not known yet is still said, so nothing the daemon warns of is lost.
+        return "Marked " + mark + " by Porelo, unknown to this plugin; weigh it before deciding.";
     }
 
     /**

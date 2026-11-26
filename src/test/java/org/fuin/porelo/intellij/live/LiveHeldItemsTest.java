@@ -85,7 +85,8 @@ class LiveHeldItemsTest {
                                 "0".repeat(64),
                                 item.from(),
                                 item.at(),
-                                item.run());
+                                item.run(),
+                                item.mark());
                 assertThatThrownBy(() -> gate.decideItem(stale, HeldItem.Decision.REFUSE))
                         .as("a decision on a text that was not shown")
                         .isInstanceOfSatisfying(

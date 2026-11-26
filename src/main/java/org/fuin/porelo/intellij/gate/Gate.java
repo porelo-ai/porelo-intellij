@@ -41,6 +41,9 @@ public final class Gate implements AutoCloseable {
     /** What the daemon takes as a comment's id. */
     private static final Pattern COMMENT_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
+    // A mark is a name of the interface's enum; anything else could pose as the plugin's own words.
+    private static final Pattern MARK = Pattern.compile("[A-Za-z][A-Za-z0-9_]{0,63}");
+
     /** The calls whose refusals are a {@link ReviewRefusedException}. */
     private static final java.util.Set<String> COMMENT_CALLS =
             java.util.Set.of("Comment", "Comments", "ResolveThread");
@@ -664,7 +667,17 @@ public final class Gate implements AutoCloseable {
                 string(item, "digest"),
                 from,
                 string(item, "at"),
-                number(item, "run"));
+                number(item, "run"),
+                mark(item));
+    }
+
+    private static @Nullable String mark(Map<String, Object> item) {
+        final @Nullable String mark = optionalString(item, "mark");
+        if (mark != null && !MARK.matcher(mark).matches()) {
+            throw new GateException(
+                    "The daemon answered a held item whose mark is no word: " + shown(item));
+        }
+        return mark;
     }
 
     private static HeldItem.Anchor anchor(Map<String, Object> item) {

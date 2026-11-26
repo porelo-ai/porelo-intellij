@@ -63,7 +63,10 @@ named below the list, never shown as holding none.
 Choosing an item shows its exact text as plain text, never as Markdown or links, with where it goes, the file, side
 and lines a comment stands on or the thread a reply answers, any replacement a comment proposes for those lines,
 exactly, the commit it was held for, its place, its run and when it was held; an item that came in names the forge
-account that wrote it. A comment or reply without all of that is refused rather than shown in part. Each item is decided alone: one going out is *Released* to the forge or *Refused*, and the task
+account that wrote it. A comment or reply without all of that is refused rather than shown in part. An item no
+certified key of its task signed - a reviewing task's comment off a host - is marked *unsigned* on its row and says so
+above its text: release it only if you trust what the task wrote. A mark the plugin does not know yet is shown by its
+word, never dropped. Each item is decided alone: one going out is *Released* to the forge or *Refused*, and the task
 sees in its next run that a refused one never went out; one that came in is *Passed* to the task or *Dismissed*. The
 decision carries the digest of the text shown, so an item that changed since is not decided. A refusal is said in
 words - the item changed, was already decided, is no longer held, or lapsed with its run - and the list is read again
