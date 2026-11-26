@@ -3,7 +3,9 @@ package org.fuin.porelo.intellij.machine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.ServerSocketChannel;
@@ -96,6 +98,18 @@ class TunnelTest {
     }
 
     @Test
+    @DisplayName(
+            "Closing the tunnel lets ssh end on its own, so it can end what it started, such as a proxy command")
+    void letsSshEndOnItsOwn() throws IOException {
+        try (Tunnel tunnel = Tunnel.raise(BUILD1, dir, ssh("forward"), LimitFactors.DEFAULT)) {
+            assertThat(tunnel.up()).as("whether ssh runs").isTrue();
+        }
+        assertThat(dir.resolve("args.ended"))
+                .as("what ssh left once it could end on its own, after the tunnel was closed")
+                .exists();
+    }
+
+    @Test
     @DisplayName("When ssh refuses, its own words are said")
     void saysWhatSshSaid() {
         assertThatThrownBy(() -> Tunnel.raise(BUILD1, dir, ssh("refuse"), LimitFactors.DEFAULT))
@@ -120,6 +134,54 @@ class TunnelTest {
             left = fakeSsh(dir);
         }
         assertThat(left).as("the ssh started for it, still running").isEmpty();
+    }
+
+    @Test
+    @DisplayName(
+            "When the IDE is killed, the ssh it raised ends with it and the next start can raise the tunnel again")
+    void endsSshWhenTheIdeIsKilled() throws IOException, InterruptedException {
+        final List<String> command = new java.util.ArrayList<>();
+        command.add(ProcessHandle.current().info().command().orElseThrow());
+        // In an argument file: the test's class path is longer than one command line may be.
+        final Path classPath = dir.resolve("child.args");
+        Files.writeString(
+                classPath,
+                "-cp\n\"" + System.getProperty("java.class.path") + "\"\n",
+                StandardCharsets.UTF_8);
+        command.add("@" + classPath);
+        command.add(TunnelChild.class.getName());
+        command.add(dir.toString());
+        command.addAll(ssh("forward"));
+        final ProcessBuilder builder = new ProcessBuilder(command);
+        builder.redirectError(ProcessBuilder.Redirect.INHERIT);
+        final Process ide = builder.start();
+        final List<ProcessHandle> started;
+        try {
+            final BufferedReader says =
+                    new BufferedReader(
+                            new InputStreamReader(ide.getInputStream(), StandardCharsets.UTF_8));
+            assertThat(says.readLine())
+                    .as("what the IDE said once its tunnel was up")
+                    .startsWith("up ");
+            started = ide.descendants().toList();
+        } finally {
+            ide.destroyForcibly();
+        }
+        ide.waitFor();
+        assertThat(started).as("the processes the IDE started for its tunnel").isNotEmpty();
+        final long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+        while (System.nanoTime() < deadline && started.stream().anyMatch(ProcessHandle::isAlive)) {
+            Thread.sleep(100);
+        }
+        final List<ProcessHandle> left = started.stream().filter(ProcessHandle::isAlive).toList();
+        // A failing run must not leave them running past the suite.
+        left.forEach(ProcessHandle::destroyForcibly);
+        assertThat(left)
+                .as("what of the killed IDE's tunnel still runs after the tunnel's ready time")
+                .isEmpty();
+        try (Tunnel again = Tunnel.raise(BUILD1, dir, ssh("forward"), LimitFactors.DEFAULT)) {
+            assertThat(again.up()).as("whether the tunnel raised after the kill runs").isTrue();
+        }
     }
 
     // This test's own: another test's stand-in may still be ending.

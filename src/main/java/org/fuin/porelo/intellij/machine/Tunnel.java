@@ -2,6 +2,7 @@ package org.fuin.porelo.intellij.machine;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.SocketChannel;
@@ -40,6 +41,14 @@ public final class Tunnel implements AutoCloseable {
 
     private final Process ssh;
 
+    private final OutputStream lifeline;
+
+    // Read by the watchdog, which ends ssh when this end closes, however the IDE ended.
+    private static final String WATCHDOG =
+            "exec 3<&0; \"$@\" </dev/null 3<&- & p=$!;"
+                    + " ( while read -r _; do :; done; kill \"$p\" 2>/dev/null ) <&3 3<&- & r=$!;"
+                    + " wait \"$p\"; rc=$?; kill \"$r\" 2>/dev/null; exit \"$rc\"";
+
     private final StringBuilder said = new StringBuilder();
 
     private final Thread listener;
@@ -48,6 +57,7 @@ public final class Tunnel implements AutoCloseable {
 
     private Tunnel(Machine machine, Path socket, Process ssh, Duration ready) {
         this.machine = machine;
+        this.lifeline = ssh.getOutputStream();
         this.ready = ready;
         this.socket = socket;
         this.ssh = ssh;
@@ -135,12 +145,13 @@ public final class Tunnel implements AutoCloseable {
                         socket + ":" + remote,
                         "--",
                         host));
+        // Windows relays instead of tunneling, so /bin/sh is always there.
+        final List<String> watched = new ArrayList<>(List.of("/bin/sh", "-c", WATCHDOG, "sh"));
+        watched.addAll(command);
         final Process process;
         try {
             process =
-                    new ProcessBuilder(command)
-                            .redirectInput(
-                                    ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
+                    new ProcessBuilder(watched)
                             .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                             .start();
         } catch (IOException ex) {
@@ -177,15 +188,26 @@ public final class Tunnel implements AutoCloseable {
 
     @Override
     public void close() {
-        ssh.destroy();
+        final List<ProcessHandle> started = ssh.descendants().toList();
         try {
+            lifeline.close();
+        } catch (IOException ex) {
+            // The watchdog sees the end of the pipe either way; destroy below is the fallback.
+        }
+        try {
+            // ssh ends on its own first, so it can end a proxy command it started.
             if (!ssh.waitFor(ready.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)) {
-                ssh.destroyForcibly();
+                ssh.destroy();
+                if (!ssh.waitFor(ready.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    ssh.destroyForcibly();
+                }
             }
+            started.stream().filter(ProcessHandle::isAlive).forEach(ProcessHandle::destroyForcibly);
             Files.deleteIfExists(socket);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             ssh.destroyForcibly();
+            started.forEach(ProcessHandle::destroyForcibly);
         } catch (IOException ex) {
             throw new MachinesException("Cannot remove " + socket + ": " + ex.getMessage(), ex);
         }

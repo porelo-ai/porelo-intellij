@@ -20,7 +20,8 @@ import java.util.List;
  * what its first argument says - binds the local end of {@code -L} as ssh would, joins standard
  * input and output to the socket a remote {@code porelo daemon connect --socket <path>} names, as a
  * remote shell would read that line, says what ssh says when a host key is unknown and ends with
- * 255, or does nothing at all.
+ * 255, or does nothing at all. Ended by a signal it may handle, it leaves a file named as the
+ * arguments' file with {@code .ended} added.
  */
 public final class FakeSsh {
 
@@ -47,6 +48,18 @@ public final class FakeSsh {
         } else {
             Files.write(Path.of(args[1]), given, StandardCharsets.UTF_8);
         }
+        // Runs on TERM, never on KILL: what a test reads to see that ssh could end on its own.
+        final Path ended = Path.of(args[1] + ".ended");
+        Runtime.getRuntime()
+                .addShutdownHook(
+                        new Thread(
+                                () -> {
+                                    try {
+                                        Files.writeString(ended, "ended");
+                                    } catch (IOException ex) {
+                                        // The test then sees no file and says so.
+                                    }
+                                }));
         switch (args[0]) {
             case "forward" -> forward(given);
             case "connect" -> connect(given.getLast());

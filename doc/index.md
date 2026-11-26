@@ -84,7 +84,8 @@ configuration is the only one ssh reads for it, for the tunnel and for every fet
 machine. A host whose configuration is missing is listed as not reached, naming the file; a host that answers with
 another key than its card names is refused. A WSL 2 distribution on Windows is reached through `porelo daemon
 connect`. A review is fetched into the plugin's own cache, `porelo-intellij` under `$XDG_CACHE_HOME`, by default the cache folder in your home directory,
-one repository with no working tree for each gate.
+one repository with no working tree for each gate. A tunnel ends with the IDE however the IDE ends, killed or
+crashed too, so the next start reaches the machine again.
 
 ## Time limits
 
