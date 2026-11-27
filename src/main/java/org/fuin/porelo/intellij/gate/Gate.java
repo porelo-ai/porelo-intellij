@@ -484,20 +484,22 @@ public final class Gate implements AutoCloseable {
      * @param name The push's name.
      * @param branch The branch it goes onto; never guessed.
      * @param commit The full commit id the person reviewed.
-     * @return What was forwarded, as the daemon says it.
+     * @return What was forwarded, as the daemon says it, and whether the push's end was kept.
      * @throws MovedSinceReviewException If the push moved after it was shown; nothing was
      *     forwarded.
      * @throws BranchExistsException If the branch holds a commit the work did not grow from;
      *     nothing was forwarded.
      */
-    public String approve(
+    public Approved approve(
             String project, String repository, String name, String branch, String commit) {
         final Map<String, Object> call = parameters(project, repository);
         call.put("name", name);
         call.put("branch", branch);
         call.put("commit", commit);
         final Map<String, Object> reply = call("Approve", call, forward);
-        return string(reply, "forwarded") + " onto " + string(reply, "branch");
+        return new Approved(
+                string(reply, "forwarded") + " onto " + string(reply, "branch"),
+                optionalString(reply, "endUnkept"));
     }
 
     /**
@@ -507,9 +509,9 @@ public final class Gate implements AutoCloseable {
      * @param repository The repository's name.
      * @param name The push's name.
      * @param reason The person's words, which reach the task.
-     * @return Whether the task was told; {@code false} when it is gone from the machine.
+     * @return Whether the task was told, and whether the push's end was kept.
      */
-    public boolean reject(String project, String repository, String name, String reason) {
+    public Rejected reject(String project, String repository, String name, String reason) {
         final Map<String, Object> call = parameters(project, repository);
         call.put("name", name);
         call.put("reason", reason);
@@ -517,7 +519,7 @@ public final class Gate implements AutoCloseable {
         if (!(reply.get("told") instanceof Boolean told)) {
             throw new GateException("Reject answered without 'told': " + shown(reply));
         }
-        return told;
+        return new Rejected(told, optionalString(reply, "endUnkept"));
     }
 
     /**

@@ -8,9 +8,11 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
+import org.fuin.porelo.intellij.gate.Approved;
 import org.fuin.porelo.intellij.gate.BranchExistsException;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.MovedSinceReviewException;
+import org.fuin.porelo.intellij.gate.Rejected;
 import org.fuin.porelo.intellij.gate.Waiting;
 import org.jspecify.annotations.Nullable;
 
@@ -61,7 +63,7 @@ final class Decisions {
                 "Approving " + entry.push().name(),
                 gate -> {
                     try {
-                        final String forwarded =
+                        final Approved forwarded =
                                 gate.approve(
                                         entry.project(),
                                         entry.repository(),
@@ -69,7 +71,8 @@ final class Decisions {
                                         branch.strip(),
                                         entry.push().commit());
                         IntoProjects.decided(project, entry, true);
-                        return "Forwarded " + forwarded;
+                        return new Said(
+                                "Forwarded " + forwarded.forwarded(), forwarded.endUnkept());
                     } catch (MovedSinceReviewException ex) {
                         // What it holds now has to be read before it can go: the review is closed,
                         // the list reads it again.
@@ -119,16 +122,18 @@ final class Decisions {
                 project,
                 "Rejecting " + entry.push().name(),
                 gate -> {
-                    final boolean told =
+                    final Rejected rejected =
                             gate.reject(
                                     entry.project(),
                                     entry.repository(),
                                     entry.push().name(),
                                     reason.strip());
                     IntoProjects.decided(project, entry, false);
-                    return told
-                            ? "Rejected; its task was told"
-                            : "Rejected; its task is gone from the machine and was not told";
+                    return new Said(
+                            rejected.told()
+                                    ? "Rejected; its task was told"
+                                    : "Rejected; its task is gone from the machine and was not told",
+                            rejected.endUnkept());
                 },
                 entry,
                 done);
@@ -138,7 +143,39 @@ final class Decisions {
         /**
          * Returns what was done, or {@code null} when nothing was and the person is asked again.
          */
-        @Nullable String on(Gate gate);
+        @Nullable Said on(Gate gate);
+    }
+
+    /**
+     * What a person is told once a decision stood.
+     *
+     * @param done What was done.
+     * @param endUnkept The daemon's sentence that the push's end could not be kept; {@code null}
+     *     when it was.
+     */
+    record Said(String done, @Nullable String endUnkept) {
+
+        /**
+         * Returns the notification's text in IntelliJ's markup: what was done, and on a line of its
+         * own why its end was not kept, both as text.
+         *
+         * @return The text.
+         */
+        String text() {
+            return endUnkept == null
+                    ? Notices.escaped(done)
+                    : Notices.escaped(done) + "<br>" + Notices.escaped(endUnkept);
+        }
+
+        /**
+         * Returns how the notification is marked: a warning when the end was not kept, since the
+         * task still waits on something that will not come.
+         *
+         * @return Its type.
+         */
+        NotificationType type() {
+            return endUnkept == null ? NotificationType.INFORMATION : NotificationType.WARNING;
+        }
     }
 
     private static void run(
@@ -148,7 +185,7 @@ final class Decisions {
                         new Task.Backgroundable(project, title, false) {
                             @Override
                             public void run(ProgressIndicator indicator) {
-                                final String said;
+                                final @Nullable Said said;
                                 Gate gate = null;
                                 try {
                                     gate = PoreloWatch.get().gate(entry.machine());
@@ -156,7 +193,7 @@ final class Decisions {
                                 } catch (RuntimeException ex) {
                                     tell(
                                             project,
-                                            title + " failed: " + ex.getMessage(),
+                                            Notices.escaped(title + " failed: " + ex.getMessage()),
                                             NotificationType.ERROR);
                                     PoreloWatch.get().readNow();
                                     return;
@@ -166,7 +203,7 @@ final class Decisions {
                                     }
                                 }
                                 if (said != null) {
-                                    tell(project, said, NotificationType.INFORMATION);
+                                    tell(project, said.text(), said.type());
                                     ApplicationManager.getApplication()
                                             .invokeLater(done, project.getDisposed());
                                 }

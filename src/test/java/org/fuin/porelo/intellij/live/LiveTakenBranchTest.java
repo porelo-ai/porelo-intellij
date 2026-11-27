@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.fuin.porelo.intellij.gate.Approved;
 import org.fuin.porelo.intellij.gate.BranchExistsException;
 import org.fuin.porelo.intellij.gate.Gate;
 import org.fuin.porelo.intellij.gate.Waiting;
@@ -64,7 +65,7 @@ class LiveTakenBranchTest {
                             .orElseThrow(() -> new AssertionError("no push of " + task));
             final List<String> refused = new ArrayList<>();
             String branch = "porelo/" + task;
-            String forwarded = null;
+            Approved forwarded = null;
             for (int tries = 0; tries < 5 && forwarded == null; tries++) {
                 try {
                     forwarded =
@@ -87,8 +88,8 @@ class LiveTakenBranchTest {
                                                             + "(-[0-9]+)? already holds [0-9a-f]+, from earlier work\\. Nothing was"
                                                             + " forwarded\\."));
             assertThat(forwarded)
-                    .as("what was forwarded, and where")
-                    .isEqualTo(task + " onto " + free);
+                    .as("what was forwarded, and where, with its end kept")
+                    .isEqualTo(new Approved(task + " onto " + free, null));
         }
     }
 }

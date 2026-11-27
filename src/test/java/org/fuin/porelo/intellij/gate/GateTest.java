@@ -303,8 +303,8 @@ class GateTest {
 
         try (Gate gate = new Gate(daemon.socketPath())) {
             assertThat(gate.approve("porelo", "core", "app", "main", COMMIT))
-                    .as("what was forwarded")
-                    .isEqualTo("app onto main");
+                    .as("what was forwarded, with its end kept")
+                    .isEqualTo(new Approved("app onto main", null));
         }
         assertThat(asked.get())
                 .as("what the daemon was asked")
@@ -427,12 +427,78 @@ class GateTest {
 
         try (Gate gate = new Gate(daemon.socketPath())) {
             assertThat(gate.reject("porelo", "core", "app", "Tests are missing"))
-                    .as("whether the task was told")
-                    .isFalse();
+                    .as("whether the task was told, with its end kept")
+                    .isEqualTo(new Rejected(false, null));
         }
         assertThat(asked.get())
                 .as("what the daemon was asked")
                 .containsEntry("reason", "Tests are missing");
+    }
+
+    @Test
+    @DisplayName(
+            "An Approve or Reject whose push's end could not be kept hands over the daemon's sentence")
+    void handsOverAnEndNotKept() {
+        daemon.method(
+                "Approve",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "forwarded",
+                                        "app",
+                                        "branch",
+                                        "main",
+                                        "endUnkept",
+                                        "Approved, but its task's end could not be kept.")));
+        daemon.method(
+                "Reject",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of(
+                                        "rejected",
+                                        "app",
+                                        "told",
+                                        true,
+                                        "endUnkept",
+                                        "Rejected, but its task's end could not be kept.")));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.approve("porelo", "core", "app", "main", COMMIT))
+                    .as("an approve whose end could not be kept")
+                    .isEqualTo(
+                            new Approved(
+                                    "app onto main",
+                                    "Approved, but its task's end could not be kept."));
+            assertThat(gate.reject("porelo", "core", "app", "No"))
+                    .as("a reject whose end could not be kept")
+                    .isEqualTo(
+                            new Rejected(true, "Rejected, but its task's end could not be kept."));
+        }
+    }
+
+    @Test
+    @DisplayName("An endUnkept that is no text is refused, never read as kept")
+    void refusesAnEndUnkeptThatIsNoText() {
+        daemon.method(
+                "Approve",
+                (parameters, replies) ->
+                        replies.last(
+                                Map.of("forwarded", "app", "branch", "main", "endUnkept", true)));
+        daemon.method(
+                "Reject",
+                (parameters, replies) ->
+                        replies.last(Map.of("told", true, "endUnkept", List.of("x"))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.approve("porelo", "core", "app", "main", COMMIT))
+                    .as("an approve answering endUnkept with a flag")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("'endUnkept' with no text");
+            assertThatThrownBy(() -> gate.reject("porelo", "core", "app", "No"))
+                    .as("a reject answering endUnkept with a list")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("'endUnkept' with no text");
+        }
     }
 
     @Test
@@ -677,13 +743,13 @@ class GateTest {
         try (Gate reading = new Gate(daemon.socketPath(), LimitFactors.parse("services=2.0"));
                 Gate approving =
                         new Gate(daemon.socketPath(), LimitFactors.parse("services=2.0"))) {
-            final java.util.concurrent.CompletableFuture<String> approved =
+            final java.util.concurrent.CompletableFuture<Approved> approved =
                     java.util.concurrent.CompletableFuture.supplyAsync(
                             () -> approving.approve("porelo", "core", "app", "main", COMMIT));
             assertThat(reading.projects()).as("projects answered after 31 s").isEmpty();
             assertThat(approved.get())
                     .as("an approval answered after 31 s")
-                    .isEqualTo(COMMIT + " onto main");
+                    .isEqualTo(new Approved(COMMIT + " onto main", null));
         }
     }
 
