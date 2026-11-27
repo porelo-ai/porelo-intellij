@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.fuin.porelo.intellij.gate.HeldItem;
 import org.fuin.porelo.intellij.gate.HeldList;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -212,6 +213,80 @@ class HeldTest {
     }
 
     @Test
+    @DisplayName("A resolve is shown by the thread it marks, in its row and above its empty text")
+    void showsAResolveByItsThread() {
+        final HeldItem resolve = operated("resolve", "4021");
+
+        assertThat(Held.where(resolve))
+                .as("its line above the text")
+                .isEqualTo("Resolve thread 4021");
+        assertThat(Held.row(resolve)).as("its row").isEqualTo("Resolve thread 4021");
+        assertThat(Held.withheld(resolve)).as("why its decisions are withheld").isNull();
+    }
+
+    @Test
+    @DisplayName(
+            "A resolve that came in says its decisions are withheld, since only a task sends one")
+    void saysWhyAnIncomingResolveIsNotDecided() {
+        final HeldItem resolve = operated("resolve", "4021");
+        final HeldItem incoming =
+                new HeldItem(
+                        resolve.id(),
+                        resolve.task(),
+                        resolve.place(),
+                        HeldItem.Direction.INCOMING,
+                        resolve.destination(),
+                        "resolve",
+                        null,
+                        "4021",
+                        null,
+                        resolve.commit(),
+                        "",
+                        resolve.digest(),
+                        "octo",
+                        resolve.at(),
+                        resolve.run(),
+                        null);
+
+        assertThat(incoming.decisions()).as("what it offers").isEmpty();
+        assertThat(Held.withheld(incoming))
+                .as("why its decisions are withheld")
+                .isEqualTo(
+                        "Pass and Dismiss are withheld: a resolve comes only from a task's run, so"
+                                + " one that came in cannot be shown as it would go.");
+    }
+
+    @Test
+    @DisplayName(
+            "An operation the plugin does not know is shown by its word and says its decisions are withheld")
+    void showsAnUnknownOperationByItsWord() {
+        final HeldItem unknown = operated("approve", null);
+
+        assertThat(Held.row(unknown)).as("its row").isEqualTo("approve");
+        assertThat(Held.where(unknown))
+                .as("its line above the text")
+                .isEqualTo("Operation approve, unknown to this plugin");
+        assertThat(Held.withheld(unknown))
+                .as("why its decisions are withheld")
+                .contains("Release and Refuse are withheld")
+                .contains("update the Porelo plugin");
+        assertThat(unknown.decisions()).as("what it offers").isEmpty();
+        assertThat(Held.facts("laptop", unknown))
+                .as("the lines above its text")
+                .contains(Held.where(unknown), Held.withheld(unknown));
+    }
+
+    @Test
+    @DisplayName("A reply's row starts with its operation, and shows its text's first line")
+    void showsARepliesRowByItsFirstLine() {
+        final HeldItem reply = operated("reply", "4021");
+
+        assertThat(Held.row(reply)).as("a reply's row").isEqualTo("reply");
+        assertThat(Held.firstLine(reply.text())).as("its first line").isEqualTo("first line");
+        assertThat(Held.firstLine("")).as("the first line of no text").isEmpty();
+    }
+
+    @Test
     @DisplayName("An outgoing item is released or refused, an incoming one passed or dismissed")
     void offersEachDirectionsDecisions() {
         assertThat(HeldItem.Direction.OUTGOING.decisions())
@@ -220,6 +295,26 @@ class HeldTest {
         assertThat(HeldItem.Direction.INCOMING.decisions())
                 .as("an incoming item's decisions")
                 .containsExactly(HeldItem.Decision.PASS, HeldItem.Decision.DISMISS);
+    }
+
+    private static HeldItem operated(String operation, @Nullable String thread) {
+        return new HeldItem(
+                "8",
+                "a",
+                "p",
+                HeldItem.Direction.OUTGOING,
+                "p",
+                operation,
+                null,
+                thread,
+                null,
+                "c",
+                operation.equals("reply") ? "first line\nsecond line" : "",
+                "d",
+                null,
+                "2026-11-25T11:30:00Z",
+                1,
+                null);
     }
 
     private static HeldItem marked(String mark) {

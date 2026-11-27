@@ -626,23 +626,40 @@ public final class Gate implements AutoCloseable {
                         ? string(item, "from")
                         : optionalString(item, "from");
         final String operation = string(item, "operation");
-        // What a release sends is shown whole: a comment without its lines, or a reply without its
-        // thread, could not be shown as it would go out.
+        if (!MARK.matcher(operation).matches()) {
+            throw new GateException(
+                    "The daemon answered a held item whose operation is no word: " + shown(item));
+        }
+        // What a release sends is shown whole: a comment without its lines, or a reply or resolve
+        // without its thread, could not be shown as it would go out.
         final HeldItem.@Nullable Anchor anchor;
         final @Nullable String thread;
+        final String text;
         switch (operation) {
             case "comment" -> {
                 anchor = anchor(item);
                 thread = null;
+                text = string(item, "text");
             }
             case "reply" -> {
                 anchor = null;
                 thread = string(item, "thread");
+                text = string(item, "text");
             }
-            default ->
-                    throw new GateException(
-                            "The daemon answered a held item that is neither a comment nor a reply: "
-                                    + shown(item));
+            case "resolve" -> {
+                anchor = null;
+                thread = string(item, "thread");
+                // A resolve says nothing; one that came with text shows it, never drops it.
+                final @Nullable String said = optionalString(item, "text");
+                text = said == null ? "" : said;
+            }
+            default -> {
+                // Listed by its word so nothing held is hidden; HeldItem offers it no decision.
+                anchor = null;
+                thread = optionalString(item, "thread");
+                final @Nullable String said = optionalString(item, "text");
+                text = said == null ? "" : said;
+            }
         }
         return new HeldItem(
                 string(item, "id"),
@@ -655,7 +672,7 @@ public final class Gate implements AutoCloseable {
                 thread,
                 optionalString(item, "suggestion"),
                 string(item, "commit"),
-                string(item, "text"),
+                text,
                 string(item, "digest"),
                 from,
                 string(item, "at"),
@@ -698,16 +715,18 @@ public final class Gate implements AutoCloseable {
      * item that changed since is not decided.
      *
      * @param item The item as it was shown.
-     * @param decision What is decided; it must be one its direction takes.
-     * @throws IllegalArgumentException If the decision is not one of its direction's; nothing was
-     *     sent.
+     * @param decision What is decided; it must be one the item offers.
+     * @throws IllegalArgumentException If the item does not offer the decision, as an item of an
+     *     operation this plugin does not know offers none; nothing was sent.
      * @throws ItemRefusedException If the daemon refused it; nothing was decided.
      */
     public void decideItem(HeldItem item, HeldItem.Decision decision) {
-        if (!item.direction().decisions().contains(decision)) {
+        if (!item.decisions().contains(decision)) {
             throw new IllegalArgumentException(
                     "An "
                             + item.direction().wire()
+                            + " "
+                            + item.operation()
                             + " item is not decided with "
                             + decision.wire());
         }

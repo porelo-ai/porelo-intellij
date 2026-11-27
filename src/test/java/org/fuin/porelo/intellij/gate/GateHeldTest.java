@@ -323,31 +323,210 @@ class GateHeldTest {
         }
     }
 
+    @ParameterizedTest(name = "a {0} without its thread")
+    @CsvSource({"reply", "resolve"})
+    @DisplayName("A reply or a resolve without its thread is refused, not shown")
+    void refusesAnItemWithoutItsThread(String operation) {
+        final Map<String, Object> item = item("1", "outgoing", null);
+        item.put("operation", operation);
+        item.remove("thread");
+        daemon.method(
+                "HeldItems", (parameters, replies) -> replies.last(Map.of("items", List.of(item))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.heldItems(null))
+                    .as("a " + operation + " without its thread")
+                    .isInstanceOf(GateException.class)
+                    .hasMessageContaining("without 'thread'");
+        }
+    }
+
     @Test
-    @DisplayName("A reply without its thread, or an item neither comment nor reply, is refused")
-    void refusesAReplyWithoutItsThread() {
-        final Map<String, Object> reply = item("1", "outgoing", null);
-        reply.remove("thread");
+    @DisplayName("A resolve is read with its thread and no text, and is released or refused")
+    void readsAResolve() {
+        final Map<String, Object> item = item("1", "outgoing", null);
+        item.put("operation", "resolve");
+        item.remove("text");
+        daemon.method(
+                "HeldItems", (parameters, replies) -> replies.last(Map.of("items", List.of(item))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            final HeldItem read = gate.heldItems(null).items().getFirst();
+            assertThat(read.operation()).as("its operation").isEqualTo("resolve");
+            assertThat(read.thread()).as("the thread it marks").isEqualTo("4021");
+            assertThat(read.anchor()).as("where a resolve stands").isNull();
+            assertThat(read.text()).as("the text of a resolve, which says nothing").isEmpty();
+            assertThat(read.decisions())
+                    .as("its decisions")
+                    .containsExactly(HeldItem.Decision.RELEASE, HeldItem.Decision.REFUSE);
+        }
+    }
+
+    @Test
+    @DisplayName("A resolve that carries text is shown with it, never with it dropped")
+    void showsTheTextOfAResolveThatCarriesOne() {
+        final Map<String, Object> item = item("1", "outgoing", null);
+        item.put("operation", "resolve");
+        item.put("text", "Closing as won't fix");
+        daemon.method(
+                "HeldItems", (parameters, replies) -> replies.last(Map.of("items", List.of(item))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.heldItems(null).items().getFirst().text())
+                    .as("the text a resolve came with")
+                    .isEqualTo("Closing as won't fix");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "A resolve that came in, which no task's run sends, is listed with no decision offered")
+    void withholdsTheDecisionsOfAnIncomingResolve() {
+        final Map<String, Object> item = item("1", "incoming", "octo");
+        item.put("operation", "resolve");
+        item.remove("text");
+        daemon.method(
+                "HeldItems", (parameters, replies) -> replies.last(Map.of("items", List.of(item))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThat(gate.heldItems(null).items().getFirst().decisions())
+                    .as("an incoming resolve's decisions")
+                    .isEmpty();
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({"RELEASE", "REFUSE"})
+    @DisplayName("A resolve is decided by the digest it was shown with")
+    void decidesAResolveByItsDigest(HeldItem.Decision decision) {
+        final AtomicReference<Map<String, Object>> asked = new AtomicReference<>();
+        daemon.method(
+                "DecideItem",
+                (parameters, replies) -> {
+                    asked.set(parameters);
+                    replies.last(Map.of());
+                });
+        final HeldItem comment = held("7", HeldItem.Direction.OUTGOING, "sha256:resolve");
+        final HeldItem resolve =
+                new HeldItem(
+                        comment.id(),
+                        comment.task(),
+                        comment.place(),
+                        comment.direction(),
+                        comment.destination(),
+                        "resolve",
+                        null,
+                        "4021",
+                        null,
+                        comment.commit(),
+                        "",
+                        comment.digest(),
+                        null,
+                        comment.at(),
+                        comment.run(),
+                        null);
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            gate.decideItem(resolve, decision);
+        }
+
+        assertThat(asked.get())
+                .as("what the " + decision + " of a resolve sent")
+                .isEqualTo(
+                        Map.of(
+                                "task",
+                                "review-7",
+                                "id",
+                                "7",
+                                "digest",
+                                "sha256:resolve",
+                                "decision",
+                                decision.wire()));
+    }
+
+    @Test
+    @DisplayName(
+            "An operation the plugin does not know is listed beside the others, with no decision offered")
+    void listsAnUnknownOperationBesideTheOthers() {
         final Map<String, Object> other = item("2", "outgoing", null);
         other.put("operation", "approve");
+        other.remove("thread");
+        other.remove("text");
         daemon.method(
                 "HeldItems",
                 (parameters, replies) ->
                         replies.last(
                                 Map.of(
                                         "items",
-                                        List.of(parameters.get("task") == null ? reply : other))));
+                                        List.of(item("1", "outgoing", null), other, comment()))));
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            final List<HeldItem> read = gate.heldItems(null).items();
+            assertThat(read)
+                    .as("every item, the unknown one among them")
+                    .extracting(HeldItem::operation)
+                    .containsExactly("reply", "approve", "comment");
+            assertThat(read.get(1).decisions()).as("the unknown one's decisions").isEmpty();
+            assertThat(read.get(0).decisions()).as("a reply's decisions").hasSize(2);
+        }
+    }
+
+    @Test
+    @DisplayName("An operation that is no word is refused, not shown")
+    void refusesAnOperationThatIsNoWord() {
+        final Map<String, Object> other = item("2", "outgoing", null);
+        other.put("operation", "approve\nall");
+        daemon.method(
+                "HeldItems",
+                (parameters, replies) -> replies.last(Map.of("items", List.of(other))));
 
         try (Gate gate = new Gate(daemon.socketPath())) {
             assertThatThrownBy(() -> gate.heldItems(null))
-                    .as("a reply without its thread")
+                    .as("an operation with a line break")
                     .isInstanceOf(GateException.class)
-                    .hasMessageContaining("without 'thread'");
-            assertThatThrownBy(() -> gate.heldItems("review-7"))
-                    .as("an item that approves")
-                    .isInstanceOf(GateException.class)
-                    .hasMessageContaining("neither a comment nor a reply");
+                    .hasMessageContaining("operation is no word");
         }
+    }
+
+    @Test
+    @DisplayName("An item of an operation the plugin does not know is never decided")
+    void neverDecidesAnUnknownOperation() {
+        final List<Map<String, Object>> asked = new CopyOnWriteArrayList<>();
+        daemon.method(
+                "DecideItem",
+                (parameters, replies) -> {
+                    asked.add(parameters);
+                    replies.last(Map.of());
+                });
+        final HeldItem known = held("7", HeldItem.Direction.OUTGOING, "d");
+        final HeldItem unknown =
+                new HeldItem(
+                        known.id(),
+                        known.task(),
+                        known.place(),
+                        known.direction(),
+                        known.destination(),
+                        "approve",
+                        null,
+                        null,
+                        null,
+                        known.commit(),
+                        "",
+                        known.digest(),
+                        null,
+                        known.at(),
+                        known.run(),
+                        null);
+
+        try (Gate gate = new Gate(daemon.socketPath())) {
+            assertThatThrownBy(() -> gate.decideItem(unknown, HeldItem.Decision.RELEASE))
+                    .as("releasing an item that approves")
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> gate.decideItem(unknown, HeldItem.Decision.REFUSE))
+                    .as("refusing an item that approves")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        assertThat(asked).as("what reached the daemon").isEmpty();
     }
 
     @Test

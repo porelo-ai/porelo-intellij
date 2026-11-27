@@ -2,6 +2,7 @@ package org.fuin.porelo.intellij.gate;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,13 +15,14 @@ import org.jspecify.annotations.Nullable;
  * @param direction Whether it goes out to the forge or came in from it.
  * @param destination Where it goes or came from, as the daemon names it.
  * @param operation What it does there: {@code comment} opens a thread at a file's lines, {@code
- *     reply} answers a thread.
- * @param anchor A comment's file, side and lines; {@code null} for a reply.
- * @param thread The thread a reply answers; {@code null} for a comment.
+ *     reply} answers a thread, {@code resolve} marks a thread resolved; any other word is an
+ *     operation this plugin does not know, listed but never decided.
+ * @param anchor A comment's file, side and lines; {@code null} for any other operation.
+ * @param thread The thread a reply answers or a resolve marks; {@code null} for a comment.
  * @param suggestion A comment's proposed replacement of its lines, exact; {@code null} when it has
  *     none.
  * @param commit The full commit id it was held for.
- * @param text Its exact text, shown as plain text only.
+ * @param text Its exact text, shown as plain text only; empty for a resolve, which says nothing.
  * @param digest The daemon's digest of everything a release sends, which a decision names.
  * @param from An incoming item's forge account; {@code null} for an outgoing one.
  * @param at When it was held, in UTC to the second.
@@ -45,6 +47,23 @@ public record HeldItem(
         String at,
         int run,
         @Nullable String mark) {
+
+    /** The operations this plugin shows whole, and so lets a person decide. */
+    public static final Set<String> KNOWN = Set.of("comment", "reply", "resolve");
+
+    /**
+     * Returns the decisions a person is offered for it: its direction's, or none when its operation
+     * is one this plugin does not know, or a resolve that came in, which only a task's run sends;
+     * neither can be shown as it would go.
+     *
+     * @return Its decisions, the one that lets it through first; empty for an item it cannot show.
+     */
+    public List<Decision> decisions() {
+        final boolean shown =
+                KNOWN.contains(operation)
+                        && !(operation.equals("resolve") && direction == Direction.INCOMING);
+        return shown ? direction.decisions() : List.of();
+    }
 
     /**
      * Where a comment stands.

@@ -307,7 +307,7 @@ final class HeldPanel extends SimpleToolWindowPanel {
             replaces.setText(heading == null ? "" : heading);
             suggestion.setText(replacement == null ? "" : replacement);
             suggestion.setCaretPosition(0);
-            for (final HeldItem.Decision decision : one.item().direction().decisions()) {
+            for (final HeldItem.Decision decision : one.item().decisions()) {
                 final JButton button = new JButton(decision.label());
                 button.setEnabled(!deciding);
                 button.addActionListener(event -> decide(one, decision));
@@ -401,22 +401,17 @@ final class HeldPanel extends SimpleToolWindowPanel {
                         item.direction() == HeldItem.Direction.OUTGOING
                                 ? AllIcons.Actions.Upload
                                 : AllIcons.Actions.Download);
-                append(item.operation(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
+                append(Held.row(item), SimpleTextAttributes.REGULAR_ATTRIBUTES);
                 final String mark = Held.mark(item);
                 if (mark != null) {
                     append("  " + mark, SimpleTextAttributes.ERROR_ATTRIBUTES);
                 }
-                append("  " + firstLine(item.text()), SimpleTextAttributes.REGULAR_ATTRIBUTES);
+                final String first = Held.firstLine(item.text());
+                if (!first.isEmpty()) {
+                    append("  " + first, SimpleTextAttributes.REGULAR_ATTRIBUTES);
+                }
                 append("  " + item.at(), SimpleTextAttributes.GRAYED_ATTRIBUTES);
             }
-        }
-
-        private static String firstLine(String text) {
-            final String line = text.lines().findFirst().orElse("");
-            // Cut between code points, never inside a surrogate pair.
-            return line.codePointCount(0, line.length()) <= 80
-                    ? line
-                    : line.substring(0, line.offsetByCodePoints(0, 80)) + "...";
         }
     }
 }

@@ -235,6 +235,10 @@ public record Held(
         }
         lines.add("Destination: " + item.destination());
         lines.add(where(item));
+        final @org.jspecify.annotations.Nullable String withheld = withheld(item);
+        if (withheld != null) {
+            lines.add(withheld);
+        }
         lines.add("Commit: " + item.commit());
         lines.add("Place: " + item.place());
         lines.add("Task: " + item.task() + " on " + machine + ", run " + item.run());
@@ -267,24 +271,82 @@ public record Held(
     }
 
     /**
-     * Says where a comment stands or which thread a reply answers.
+     * Says where a comment stands, which thread a reply answers or a resolve marks, or which
+     * operation this plugin does not know.
      *
      * @param item The item.
      * @return One line.
      */
     static String where(HeldItem item) {
         final HeldItem.Anchor anchor = item.anchor();
-        if (anchor != null) {
-            return "Comment on "
-                    + anchor.path()
-                    + ", "
-                    + anchor.side()
-                    + " side, "
-                    + (anchor.startLine() == anchor.endLine()
-                            ? "line " + anchor.startLine()
-                            : "lines " + anchor.startLine() + " to " + anchor.endLine());
+        return switch (item.operation()) {
+            case "comment" ->
+                    anchor == null
+                            ? "Comment"
+                            : "Comment on "
+                                    + anchor.path()
+                                    + ", "
+                                    + anchor.side()
+                                    + " side, "
+                                    + (anchor.startLine() == anchor.endLine()
+                                            ? "line " + anchor.startLine()
+                                            : "lines "
+                                                    + anchor.startLine()
+                                                    + " to "
+                                                    + anchor.endLine());
+            case "reply" -> "Reply in thread " + item.thread();
+            case "resolve" -> "Resolve thread " + item.thread();
+            default -> "Operation " + item.operation() + ", unknown to this plugin";
+        };
+    }
+
+    /**
+     * Returns how an item's row starts, before its mark: a resolve by the thread it marks, anything
+     * else by its operation.
+     *
+     * @param item The item.
+     * @return The row's first words.
+     */
+    static String row(HeldItem item) {
+        return item.operation().equals("resolve") ? where(item) : item.operation();
+    }
+
+    /**
+     * Returns a text's first line as a row shows it after the mark.
+     *
+     * @param text The item's text.
+     * @return Its first line, cut after 80 code points; empty for no text.
+     */
+    static String firstLine(String text) {
+        final String line = text.lines().findFirst().orElse("");
+        // Cut between code points, never inside a surrogate pair.
+        return line.codePointCount(0, line.length()) <= 80
+                ? line
+                : line.substring(0, line.offsetByCodePoints(0, 80)) + "...";
+    }
+
+    /**
+     * Says why an item offers no decision.
+     *
+     * @param item The item.
+     * @return One line, or {@code null} when it offers its direction's decisions.
+     */
+    static @org.jspecify.annotations.Nullable String withheld(HeldItem item) {
+        if (!item.decisions().isEmpty()) {
+            return null;
         }
-        return "Reply in thread " + item.thread();
+        final List<HeldItem.Decision> decisions = item.direction().decisions();
+        final String both = decisions.getFirst().label() + " and " + decisions.getLast().label();
+        if (HeldItem.KNOWN.contains(item.operation())) {
+            return both
+                    + " are withheld: a "
+                    + item.operation()
+                    + " comes only from a task's run, so one that came in cannot be shown as it"
+                    + " would go.";
+        }
+        return both
+                + " are withheld: this plugin cannot show what it would do; update the Porelo"
+                + " plugin to decide it.";
     }
 
     /**

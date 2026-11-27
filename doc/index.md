@@ -64,8 +64,8 @@ that pushed it.
 
 ## Items held for your decision
 
-A task reviewing a pull request writes nothing to the forge on its own: each comment or reply it makes is held for
-you, and each comment from the forge that a check withheld from it is held too. The tool window's *Held* tab lists
+A task reviewing a pull request writes nothing to the forge on its own: each comment or reply it makes, and each
+thread it marks resolved, is held for you, and each comment from the forge that a check withheld from it is held too. The tool window's *Held* tab lists
 them by machine and task. A notice says when a task holds more than before: the plugin follows each machine's list of
 tasks as the daemon streams it, and reads the items again whenever a count moves. Holds the daemon cannot read are
 named below the list, never shown as holding none.
@@ -73,7 +73,10 @@ named below the list, never shown as holding none.
 Choosing an item shows its exact text as plain text, never as Markdown or links, with where it goes, the file, side
 and lines a comment stands on or the thread a reply answers, any replacement a comment proposes for those lines,
 exactly, the commit it was held for, its place, its run and when it was held; an item that came in names the forge
-account that wrote it. A comment or reply without all of that is refused rather than shown in part. An item no
+account that wrote it. A resolve has no text: its row and its details say *Resolve thread* and the thread's id. A
+comment, reply or resolve without all of that is refused rather than shown in part. An operation the plugin does not
+know yet is listed by its word beside the others, with its decisions withheld until the plugin is updated, so nothing
+held is hidden and nothing is decided unseen. An item no
 certified key of its task signed - a reviewing task's comment off a host - is marked *unsigned* on its row and says so
 above its text: release it only if you trust what the task wrote. A mark the plugin does not know yet is shown by its
 word, never dropped. Each item is decided alone: one going out is *Released* to the forge or *Refused*, and the task
