@@ -21,6 +21,5 @@ description: porelo-intellij's test tasks: documents, live tests against a real 
   handed over only after they ran.
 - **The tests tagged `windows-ssh` run only in the *Windows* workflow, as `./gradlew windowsSshTest`**, on every
   push to main and every pull request, beside the Build; Publish does not wait for it. They reach a stand-in daemon
-  through Windows' own `ssh.exe` and an OpenSSH server on the same runner. That job runs on the runner's own Java 25
-  (`JAVA_HOME_25_X64`), the one exception to the pinned GraalVM: `porelo-machines` pins one for Linux only, and the
-  job publishes nothing.
+  through Windows' own `ssh.exe` and an OpenSSH server on the same runner. That job runs on the Windows build of the
+  GraalVM `porelo-machines` pins, as every other job runs on its Linux build.

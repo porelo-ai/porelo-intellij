@@ -24,26 +24,20 @@ jobs:
         if: vars.PORELO_PUBLISH != 'false'
         runs-on: windows-2025
         timeout-minutes: 45
+        # Where Porelo's snapshots come from: only this forge's own values differ, and the pinned-JDK action checks them.
+        env:
+            MAVEN_SNAPSHOTS_URL: ${{ vars.MAVEN_SNAPSHOTS_URL }}
+            PORELO_PACKAGES_READ_TOKEN: ${{ secrets.PORELO_PACKAGES_READ_TOKEN }}
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               # No step pushes with git, so the job's token is not kept in .git/config for the build's code to read.
               with:
                   persist-credentials: false
 
-            # gradlew runs gradle-wrapper.jar; it is checked against the checksums Gradle publishes before it first runs.
-            - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-
-            # Fetched libraries remain available when Maven Central is down.
-            - name: The libraries
-              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-              with:
-                  path: |
-                      ~/.gradle/caches/modules-2/files-2.1/*
-                      !~/.gradle/caches/modules-2/files-2.1/idea
-                      ~/.gradle/caches/modules-2/metadata-*
-                      ~/.gradle/wrapper
-                  key: gradle-libraries-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml', '*.gradle.kts', 'gradle.properties') }}
-                  restore-keys: gradle-libraries-${{ runner.os }}-
+            # The Windows zip of the release porelo-machines pins, as every other job's JDK; the action also checks
+            # gradle-wrapper.jar and keeps the libraries between runs.
+            - name: The pinned GraalVM
+              uses: ./.github/actions/pinned-jdk
 
             # A fetched IDE remains available when JetBrains' download server is down.
             - name: The IDEs' archives
@@ -52,17 +46,9 @@ jobs:
                   path: ~/.gradle/caches/modules-2/files-2.1/idea
                   key: idea-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
 
-            # porelo-machines pins a GraalVM for Linux only. This job publishes nothing, so it runs on
-            # the runner's own Java 25, as AGENTS.md names it.
-            - name: The runner's Java 25
+            - name: The pinned GraalVM's version
               shell: pwsh
-              run: |
-                  if (-not $env:JAVA_HOME_25_X64) {
-                      Write-Output "::error::this runner has no Java 25 to run the build with (JAVA_HOME_25_X64)"
-                      exit 1
-                  }
-                  "JAVA_HOME=$env:JAVA_HOME_25_X64" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-                  & "$env:JAVA_HOME_25_X64\bin\java.exe" -version
+              run: '& "$env:JAVA_HOME\bin\java.exe" -version'
 
             - name: The plugin's tests
               shell: pwsh
@@ -86,7 +72,7 @@ jobs:
 
                   $bin = 'C:\porelo-stand-in'
                   New-Item -ItemType Directory -Force -Path $bin | Out-Null
-                  $java = "$env:JAVA_HOME_25_X64\bin\java.exe" -replace '\\', '/'
+                  $java = "$env:JAVA_HOME\bin\java.exe" -replace '\\', '/'
                   $source = "$env:GITHUB_WORKSPACE\src\test\java\org\fuin\porelo\intellij\machine\FakePorelo.java" -replace '\\', '/'
                   # A flag file beside it makes the stand-in drop the daemon's NUL bytes, as the red run of the test needs:
                   # the server's session does not take the test's environment.

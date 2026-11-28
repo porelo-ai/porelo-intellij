@@ -14,8 +14,8 @@ image:
             && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl git \
             && rm -rf /var/lib/apt/lists/*
         RUN curl -fsSL -o /tmp/graalvm.tar.gz \
-                https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.4.4.1.1/graalvm-community-jdk-25i4-25.0.4.1.1_linux-x64_bin.tar.gz \
-            && echo "05ccbbe783210b6886ff7b08fcd0b061c5dce4852b05db87284fc0e24abb08e2  /tmp/graalvm.tar.gz" | sha256sum -c - \
+                https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.6.5.1/graalvm-community-jdk-25i6-25.0.5.1_linux-x64_bin.tar.gz \
+            && echo "d792848db26f1602f0a5cf2cd9279d9a652d32ab450d891ce616c9ca67e359d0  /tmp/graalvm.tar.gz" | sha256sum -c - \
             && mkdir -p /opt/graalvm && tar -xzf /tmp/graalvm.tar.gz -C /opt/graalvm --strip-components=1 \
             && rm /tmp/graalvm.tar.gz \
             && for tool in java javac jar; do ln -s /opt/graalvm/bin/$tool /usr/local/bin/$tool; done
